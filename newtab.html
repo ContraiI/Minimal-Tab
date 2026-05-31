@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>ZE 新标签页</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 页面顶部居中Toast提示 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 壁纸背景层（双图层交叉淡入淡出） -->
+  <div id="bgLayerA" class="bg-layer"></div>
+  <div id="bgLayerB" class="bg-layer" style="opacity:0"></div>
+
+  <div class="container">
+    <!-- ===== 右上角设置面板 ===== -->
+    <div class="settings-wrap" id="settingsWrap" aria-hidden="false">
+      <div class="settings-btn" id="settingsBtn" title="设置">
+        <img src="./icons/setting-white.svg" alt="设置" />
+      </div>
+      <div class="settings-menu" id="settingsMenu" aria-hidden="true">
+        <div class="settings-item">
+          <button id="importWallpaperBtn" class="settings-action">更改壁纸</button>
+        </div>
+        <div class="settings-item">
+          <button id="manageEnginesBtn" class="settings-action">搜索引擎</button>
+          <!-- 搜索引擎子菜单（复选框，从右侧弹出） -->
+          <div class="engine-manager" id="engineManager" aria-hidden="true"></div>
+        </div>
+        <div class="settings-item">
+          <button id="defaultEngineBtn" class="settings-action">默认引擎</button>
+          <!-- 默认引擎子菜单（单选框，从右侧弹出） -->
+          <div class="engine-manager" id="defaultEngineManager" aria-hidden="true"></div>
+        </div>
+        <div class="settings-item">
+          <button id="moreSettingsBtn" class="settings-action">更多设置</button>
+          <div class="engine-manager" id="moreSettingsManager" aria-hidden="true">
+            <label class="engine-toggle">
+              <span>搜索历史</span>
+              <input type="checkbox" id="searchHistoryToggle" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <label class="engine-toggle">
+              <span>数字时钟</span>
+              <input type="checkbox" id="clockToggle" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <label class="engine-toggle">
+              <span>夜间模式</span>
+              <input type="checkbox" id="nightModeToggle" checked>
+              <span class="toggle-switch"></span>
+            </label>
+            <button id="resetSettingsBtn" class="reset-settings-btn">恢复默认</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 搜索块：搜索框 + 时钟 ===== -->
+    <div class="search-block">
+      <div class="search-container">
+        <div class="search-wrapper">
+
+          <!-- 搜索引擎选择器：图标 + 下拉菜单 -->
+          <div class="engine-selector">
+            <!-- 双图标叠加（白色/彩色），通过opacity和.focused类切换 -->
+            <div class="engine-icon-wrap">
+              <img id="currentEngineIconWhite" class="engine-icon engine-icon-white" src="./icons/bing-white.svg" alt="必应">
+              <img id="currentEngineIconDefault" class="engine-icon engine-icon-default" src="./icons/bing-default.svg" alt="必应">
+            </div>
+
+            <!-- 引擎下拉列表 -->
+            <div class="engine-list" id="engineList">
+              <div class="engine-column">
+                <div class="engine-item active" data-engine="bing" data-white="./icons/bing-white.svg" data-default="./icons/bing-default.svg">
+                  <img class="engine-icon sm" src="./icons/bing-white.svg">
+                  <span>必应</span>
+                </div>
+
+                <div class="engine-item" data-engine="google" data-white="./icons/google-white.svg" data-default="./icons/google-default.svg">
+                  <img class="engine-icon sm" src="./icons/google-white.svg">
+                  <span>Google</span>
+                </div>
+
+                <div class="engine-item" data-engine="github" data-white="./icons/github-white.svg" data-default="./icons/github-default.svg">
+                  <img class="engine-icon sm" src="./icons/github-white.svg">
+                  <span>GitHub</span>
+                </div>
+
+                <div class="engine-item" data-engine="baidu" data-white="./icons/baidu-white.svg" data-default="./icons/baidu-default.svg">
+                  <img class="engine-icon sm" src="./icons/baidu-white.svg">
+                  <span>百度</span>
+              </div>
+            </div>
+          </div>
+         </div>
+
+          <!-- 搜索输入框 + 历史下拉 -->
+          <div class="search-input-wrap">
+            <input type="text" id="search-input" placeholder="输入搜索内容..." class="search-input"
+                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+                   data-lpignore="true">
+
+            <!-- 搜索历史下拉列表 -->
+            <div id="history-dropdown" class="history-dropdown">
+              <div class="history-header">
+                <span class="history-title">搜索历史</span>
+                <button id="clear-history-btn" class="clear-history-btn">清除历史记录</button>
+              </div>
+              <div id="history-list" class="history-list"></div>
+            </div>
+
+            <!-- 搜索框右侧：清除按钮 + 搜索按钮 -->
+            <div class="search-btns-wrap">
+              <!-- 清除按钮：白色X和黑色X叠加 -->
+              <button id="clear-btn" class="clear-btn" style="display: none;">
+                <svg class="clear-icon white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                </svg>
+                <svg class="clear-icon black" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                </svg>
+              </button>
+
+              <button id="search-btn" class="search-btn" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 数码管数字时钟 -->
+      <div id="digital-clock" class="digital-clock"></div>
+    </div>
+  </div>
+
+  <!-- 壁纸管理弹窗 -->
+  <div id="wallpaperModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card wallpaper-card">
+      <h3 class="modal-title">更改壁纸</h3>
+      <div class="wallpaper-toolbar">
+        <button id="wallpaperImportBtn" class="modal-btn-save">导入本地壁纸</button>
+        <label class="opacity-slider-label">
+          遮罩
+          <input type="range" id="overlayOpacity" min="0" max="0.5" step="0.01" value="0.3">
+          <span id="overlayOpacityVal">0.30</span>
+        </label>
+        <button id="wallpaperResetBtn" class="modal-btn-cancel">恢复默认</button>
+        <button id="wallpaperClearBtn" class="modal-btn-cancel">清空</button>
+      </div>
+      <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none">
+      <div id="wallpaperGrid" class="wallpaper-grid"></div>
+      <div class="modal-btns">
+        <button id="wallpaperCancel" class="modal-btn-cancel">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自定义搜索引擎弹窗 -->
+  <div id="customEngineModal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card">
+      <h3 class="modal-title">添加自定义搜索引擎</h3>
+      <div class="modal-field">
+        <label>名称</label>
+        <input type="text" id="customEngineName" placeholder="搜索引擎名称">
+      </div>
+      <div class="modal-field">
+        <label>搜索 URL</label>
+        <input type="text" id="customEngineUrl" placeholder="https://example.com/search?q=">
+      </div>
+      <div class="modal-field">
+        <label>白色图标 (SVG)</label>
+        <div class="file-input-wrap">
+          <input type="file" id="customEngineIconWhite" accept=".svg">
+          <span id="customEngineIconWhiteName"></span>
+          <img id="customEngineIconWhitePreview" class="icon-preview" alt="">
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>彩色图标 (SVG)</label>
+        <div class="file-input-wrap">
+          <input type="file" id="customEngineIconDefault" accept=".svg">
+          <span id="customEngineIconDefaultName"></span>
+          <img id="customEngineIconDefaultPreview" class="icon-preview" alt="">
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button id="customEngineDelete" class="modal-btn-delete" style="display:none">删除</button>
+        <button id="customEngineCancel" class="modal-btn-cancel">取消</button>
+        <button id="customEngineSave" class="modal-btn-save">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 拼音数据集（须在业务逻辑前加载） -->
+  <script src="pinyin-data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

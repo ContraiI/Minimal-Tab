@@ -1,0 +1,1132 @@
+/* ===== 数码管字体 ===== */
+@font-face {
+  font-family: 'DS-Digital';
+  src: local('DS-Digital'),
+       url('./fonts/DS-DIGI-1.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== 全局重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* ===== 页面背景：壁纸层 + 半透明遮罩 ===== */
+body {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Microsoft YaHei", sans-serif;
+  position: relative;
+  padding: 0 20px;
+}
+
+.bg-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('./images/bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -2;
+  transition: opacity 0.4s ease;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, var(--overlay-opacity, 0.3));
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ===== 主容器：居中，最大800px ===== */
+.container {
+  text-align: center;
+  color: white;
+  background: transparent;
+  width: 100%;
+  max-width: 800px;
+  z-index: 1;
+}
+
+/* ===== 搜索框区域 ===== */
+.search-container {
+  width: 100%;
+  position: relative;
+  z-index: 0;
+}
+
+.search-wrapper {
+  width: 100%;
+  height: 45px;
+  position: relative;
+  margin-bottom: 50px;
+}
+
+.search-input-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* 搜索输入框：透明底白字，聚焦时白底蓝字 */
+.search-input {
+  width: 100%;
+  height: 100%;
+  padding: 0 90px 0 50px; /* 左留给引擎图标，右留给按钮 */
+  border: 2px solid #ffffff;
+  border-radius: 25px;
+  background: transparent;
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  transition: background 0.2s ease 0.1s, border-color 0.3s, color 0.3s, border-radius 0.2s;
+  position: relative;
+}
+
+.search-input:focus {
+  background: #ffffff;
+  color: #0078d4;
+  border-color: #ffffff;
+}
+
+/* 历史下拉展开时，输入框去掉下方圆角 */
+.search-input.expanded {
+  border-radius: 25px 25px 0 0;
+  transition: background 0.2s ease 0.1s, border-color 0.3s, color 0.3s, border-radius 0.1s ease 0.1s;
+}
+
+/* 有内容但未聚焦时保持透明（防止Edge自动填充改变背景） */
+.search-input:not(:focus):not(:placeholder-shown) {
+  background: transparent;
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* 覆盖浏览器自动填充样式 */
+.search-input:-webkit-autofill {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  box-shadow: 0 0 0px 1000px transparent inset !important;
+  background-color: transparent !important;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== 引擎选择器：搜索框左侧图标 ===== */
+.engine-selector {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* 双图标叠加容器，pointer-events穿透让点击落到engine-selector上 */
+.engine-icon-wrap {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* 白色/彩色图标绝对定位叠加，opacity过渡与搜索框背景同步 */
+.engine-icon-white,
+.engine-icon-default {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  transition: opacity 0.2s ease 0.1s;
+}
+
+.engine-icon-white { opacity: 1; }   /* 未聚焦：白色可见 */
+.engine-icon-default { opacity: 0; }  /* 未聚焦：彩色隐藏 */
+
+.engine-icon-wrap.focused .engine-icon-white { opacity: 0; }  /* 聚焦：白色隐藏 */
+.engine-icon-wrap.focused .engine-icon-default { opacity: 1; } /* 聚焦：彩色可见 */
+
+/* 引擎下拉菜单中的小图标 */
+.engine-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.engine-icon.sm {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  object-fit: contain;
+}
+
+/* 引擎下拉列表：绝对定位在图标下方，visibility+opacity动画 */
+.engine-list {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  min-width: 120px;
+  width: max-content;
+  max-width: 300px;
+  background-color: rgba(0,0,0,0.7);
+  border-radius: 8px;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: top left;
+  transition: opacity .18s ease, visibility .18s ease, transform .18s ease;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.engine-selector.open .engine-list {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(6px);
+  z-index: 20;
+}
+
+.engine-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.engine-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.engine-item:hover, .engine-item.active {
+  background-color: rgba(0, 102, 204, 0.5);
+}
+
+.engine-item span {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+/* ===== 搜索框右侧按钮 ===== */
+.search-btns-wrap {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  z-index: 8;
+  pointer-events: auto;
+}
+
+/* 清除按钮：白色X和黑色X叠加，聚焦时切换颜色 */
+.clear-btn {
+  height: 38px;
+  width: 38px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  position: relative;
+  z-index: 9;
+}
+
+.clear-icon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  transition: opacity 0.3s;
+}
+
+.clear-icon.white { fill: #ffffff; opacity: 1; }
+.clear-icon.black { fill: #000000; opacity: 0; }
+
+/* 聚焦：黑色X可见，白色X隐藏 */
+.search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 0; }
+.search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 1; }
+/* 未聚焦：白色X可见 */
+.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 1 !important; }
+.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 0 !important; }
+
+/* 搜索按钮 */
+.search-btn {
+  height: 32px;
+  width: 32px;
+  border: none;
+  border-radius: 50%;
+  background-color: #0066cc;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px;
+  transition: background-color 0.3s, fill 0.3s;
+  position: relative;
+  z-index: 9;
+}
+
+.search-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: #ffffff;
+  transition: fill 0.3s;
+}
+
+.search-input:focus ~ .search-btns-wrap .search-btn { background-color: #0066cc !important; }
+/* 有内容但未聚焦：透明背景 */
+.search-input:not(:focus):not(:placeholder-shown) ~ .search-btns-wrap .search-btn { background-color: transparent !important; }
+/* 无内容：隐藏搜索按钮 */
+.search-input:not(:focus):placeholder-shown ~ .search-btns-wrap .search-btn { display: none; }
+
+.search-btn:hover { background-color: #0052a3 !important; }
+.search-btn:hover svg { fill: #e0e0e0 !important; }
+
+/* ===== 历史记录下拉 ===== */
+.history-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-radius: 0 0 25px 25px;
+  border: 2px solid #ffffff;
+  border-top: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 10;
+  margin-top: -2px; /* 与输入框边框重叠 */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease 0s, visibility 0.2s ease 0s, transform 0.2s ease 0s, background 0.3s ease 0s;
+}
+
+.history-dropdown.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  background: #ffffff;
+  transition: opacity 0.2s ease 0.1s, visibility 0.2s ease 0.1s, transform 0.2s ease 0.1s, background 0.3s ease 0s;
+}
+
+.history-header {
+  padding: 4px 15px 14px 15px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.history-title {
+  position: absolute;
+  top: 2px;
+  left: 15px;
+  color: #999;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.clear-history-btn {
+  position: absolute;
+  top: 2px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: background-color 0.2s, color 0.2s;
+  line-height: 1;
+}
+
+.clear-history-btn:hover { color: #d32f2f; }
+
+.history-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 6px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s;
+  color: #333;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1.2;
+}
+
+.history-item:hover { background-color: rgba(0, 123, 255, 0.1); }
+.history-item:last-child { border-bottom: none; }
+
+.history-item .history-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.history-item .history-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.history-item .history-delete {
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  opacity: 0.5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: opacity 0.2s, background-color 0.2s, fill 0.2s;
+  flex-shrink: 0;
+}
+
+.history-item .history-delete:hover {
+  opacity: 1;
+  background-color: #f0f0f0;
+  fill: #333;
+}
+
+.history-item .history-delete svg {
+  width: 14px;
+  height: 14px;
+  fill: #666;
+}
+
+/* ===== 数字时钟 ===== */
+.digital-clock {
+  font-family: 'DS-Digital', monospace;
+  font-size: 80px;
+  letter-spacing: 4px;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* ===== Toast提示（页面顶部居中弹出） ===== */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-120px); /* 默认隐藏在视口上方 */
+  background: rgba(211, 47, 47, 0.92);
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.toast.success {
+  background: rgba(0, 102, 204, 0.92);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ===== 搜索块（时钟+搜索框） ===== */
+.search-block {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -200px;
+}
+
+/* ===== 右上角设置面板 ===== */
+.settings-wrap {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10000;
+  width: 34px;
+  height: 34px;
+  pointer-events: auto;
+}
+
+/* 设置菜单：visibility+opacity+transform动画，visibility延迟切换确保动画播完再隐藏 */
+.settings-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  visibility: hidden;
+  background: rgba(20,20,20,0.9);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px;
+  min-width: 140px;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
+  transform-origin: top right;
+  z-index: 10001;
+  pointer-events: none;
+}
+
+.settings-menu.show {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0s;
+  pointer-events: auto;
+}
+
+/* 设置按钮：悬停父容器时显示 */
+.settings-btn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity .18s ease, transform .12s ease;
+}
+
+.settings-wrap:hover .settings-btn { opacity: 1; }
+
+.settings-btn img {
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.settings-item { margin: 4px 0; display: flex; align-items: center; gap: 6px; }
+.settings-action {
+  background: transparent;
+  color: #fff;
+  border: none;
+  text-align: left;
+  padding: 6px 8px;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.settings-action:hover { background: rgba(255,255,255,0.05); }
+
+.settings-menu .settings-item { position: relative; }
+
+/* ===== 搜索引擎子菜单（从右侧弹出） ===== */
+.engine-manager {
+  position: absolute;
+  right: 100%;
+  top: 0;
+  margin-right: 4px;
+  min-width: 130px;
+  width: max-content;
+  max-width: 280px;
+  background: rgba(18,18,18,0.98);
+  border-radius: 6px;
+  padding: 6px 4px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(6px) scale(0.96); /* 从右向左滑入 */
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0.18s;
+  transform-origin: top right;
+  z-index: 10002;
+  box-sizing: border-box;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.engine-manager.show {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s 0s;
+  pointer-events: auto;
+}
+
+.engine-manager .engine-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  line-height: 18px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+}
+
+.engine-manager .engine-toggle:last-child { border-bottom: none; }
+
+/* 隐藏原生复选框/单选框 */
+.engine-toggle input[type="checkbox"],
+.engine-toggle input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* 滑动开关 */
+.toggle-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  background: #555;
+  border-radius: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.engine-toggle input:checked ~ .toggle-switch {
+  background: #0066cc;
+}
+
+.engine-toggle input:checked ~ .toggle-switch::after {
+  transform: translateX(12px);
+}
+
+/* 自定义引擎开关标签（名称+开关联动） */
+.engine-toggle-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.engine-toggle-label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 自定义引擎编辑图标 */
+.engine-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.5;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.engine-edit-btn:hover { opacity: 1; }
+
+.engine-edit-btn svg {
+  width: 13px;
+  height: 13px;
+  fill: #fff;
+}
+
+/* 自定义按钮加号图标 */
+.add-icon {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* 删除按钮 */
+.modal-btn-delete {
+  background: transparent;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.modal-btn-delete:hover {
+  background: #d32f2f;
+  color: #fff;
+}
+
+/* 重置设置按钮 */
+.reset-settings-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  color: #fff;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.reset-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== 设置浅色模式 ===== */
+.settings-wrap.light .settings-menu {
+  background: rgba(240, 240, 240, 0.95);
+  color: #333;
+}
+
+.settings-wrap.light .settings-action {
+  color: #333;
+}
+
+.settings-wrap.light .settings-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.settings-wrap.light .engine-manager {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.settings-wrap.light .engine-toggle {
+  color: #333;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.settings-wrap.light .engine-edit-btn svg {
+  fill: #333;
+}
+
+.settings-wrap.light .reset-settings-btn {
+  color: #333;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.settings-wrap.light .reset-settings-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.settings-wrap.light .add-icon {
+  filter: invert(1);
+}
+
+/* ===== 自定义搜索引擎弹窗 ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 20000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0s 0.2s;
+}
+
+.modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s, visibility 0s 0s;
+}
+
+.modal-card {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: normal;
+  margin-bottom: 20px;
+}
+
+.modal-field {
+  margin-bottom: 14px;
+}
+
+.modal-field label {
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.modal-field input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #333;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-field input[type="text"]:focus {
+  border-color: #0066cc;
+}
+
+.file-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-input-wrap input[type="file"] {
+  font-size: 12px;
+  color: #aaa;
+  width: 66px;
+  overflow: hidden;
+}
+
+.file-input-wrap input[type="file"]::file-selector-button {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.file-input-wrap span {
+  font-size: 11px;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-preview {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.modal-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.modal-btn-cancel {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.modal-btn-cancel:hover {
+  background: #555;
+}
+
+.modal-btn-save {
+  background: #0066cc;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.modal-btn-save:hover {
+  background: #0052a3;
+}
+
+/* ===== 弹窗浅色模式 ===== */
+body.light-mode .modal-card {
+  background: #f0f0f0;
+  color: #333;
+}
+
+body.light-mode .modal-field label {
+  color: #666;
+}
+
+body.light-mode .modal-field input[type="text"] {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+
+body.light-mode .file-input-wrap input[type="file"]::file-selector-button {
+  background: #ddd;
+  color: #333;
+}
+
+body.light-mode .modal-btn-cancel {
+  background: #ddd;
+  color: #333;
+}
+
+body.light-mode .modal-btn-cancel:hover {
+  background: #ccc;
+}
+
+body.light-mode .wallpaper-toolbar .modal-btn-cancel {
+  background: #ddd;
+  color: #333;
+}
+
+body.light-mode .wallpaper-toolbar .modal-btn-cancel:hover {
+  background: #ccc;
+}
+
+body.light-mode .wallpaper-card .modal-btns {
+  background: #f0f0f0;
+}
+
+/* ===== 壁纸管理弹窗 ===== */
+.wallpaper-card {
+  width: 900px;
+  min-height: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.wallpaper-card .modal-btns {
+  position: sticky;
+  bottom: 0;
+  background: #2a2a2a;
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.wallpaper-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.wallpaper-toolbar .modal-btn-save {
+  width: auto;
+}
+
+.wallpaper-toolbar .modal-btn-cancel:last-of-type {
+  margin-left: 0;
+}
+
+.wallpaper-toolbar .modal-btn-cancel:nth-last-of-type(2) {
+  margin-left: 0;
+}
+
+.opacity-slider-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+  margin-left: auto;
+}
+
+.opacity-slider-label input[type="range"] {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #555;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.opacity-slider-label input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0066cc;
+  cursor: pointer;
+}
+
+.opacity-slider-label span {
+  font-size: 11px;
+  color: #888;
+  min-width: 30px;
+  text-align: right;
+}
+
+.wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wallpaper-item {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  overflow: hidden;
+}
+
+.wallpaper-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wallpaper-item:hover,
+.wallpaper-item.active {
+  border-color: #0066cc;
+}
+
+.wallpaper-item.active::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0066cc;
+}
+
+.wallpaper-delete {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 0;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 11px;
+  color: #fff;
+}
+
+.wallpaper-item:hover .wallpaper-delete {
+  opacity: 1;
+}
+
+.wallpaper-delete svg {
+  width: 10px;
+  height: 10px;
+  fill: #fff;
+}
+
+.wallpaper-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #888;
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+/* ===== 响应式：平板 ===== */
+@media (max-width: 800px) {
+  .digital-clock { font-size: 50px; letter-spacing: 5px; }
+  .search-btns-wrap { right: 5px; gap: 3px; }
+  .clear-btn { height: 28px; width: 28px; }
+  .search-btn { height: 28px; width: 28px; }
+  .clear-icon, .search-btn svg { width: 16px; height: 16px; }
+  .engine-icon { width: 20px; height: 20px; }
+  .engine-icon.sm { width: 16px; height: 16px; }
+}
+
+/* ===== 响应式：手机 ===== */
+@media (max-width: 500px) {
+  .search-wrapper { width: 100%; }
+  .digital-clock { font-size: 40px; letter-spacing: 3px; }
+}
+
+/* ===== 全局覆盖浏览器自动填充 ===== */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+  box-shadow: 0 0 0 30px transparent inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-color: transparent !important;
+}
