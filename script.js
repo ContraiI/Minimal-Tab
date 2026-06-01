@@ -62,7 +62,6 @@ const LS_SEARCH_HISTORY = 'searchHistory';
 const LS_SEARCH_HISTORY_ENABLED = 'searchHistoryEnabled';
 const LS_CLOCK_VISIBLE = 'clockVisible';
 const LS_CUSTOM_ENGINES = 'customEngines';
-const LS_WALLPAPER_HISTORY = 'wallpaperHistory';
 const MAX_WALLPAPER_HISTORY = 12;
 const MAX_HISTORY_ITEMS = 20;
 
@@ -454,7 +453,6 @@ if (engineSelectorEl && engineListEl) {
   if (nightModeToggle) {
     nightModeToggle.checked = localStorage.getItem(LS_NIGHT_MODE) !== 'false';
     if (!nightModeToggle.checked) { settingsWrap.classList.add('light'); document.body.classList.add('light-mode'); }
-    if (!nightModeToggle.checked) document.body.classList.add('light-mode');
     nightModeToggle.addEventListener('change', () => {
       localStorage.setItem(LS_NIGHT_MODE, nightModeToggle.checked.toString());
       settingsWrap.classList.toggle('light', !nightModeToggle.checked);
@@ -544,14 +542,43 @@ if (engineSelectorEl && engineListEl) {
   wallpaperFileInput.addEventListener('change', (ev) => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
+
+    // 校验文件类型
+    if (!file.type.startsWith('image/')) {
+      showToast('请选择图片文件', 3000);
+      wallpaperFileInput.value = '';
+      return;
+    }
+
+    // 校验文件大小（限制 5MB，localStorage + base64 编码会更大）
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showToast('请选择较小的图片', 3000);
+      wallpaperFileInput.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = function () {
-      addWallpaperToHistory(reader.result);
-      applyWallpaper(reader.result);
-      renderWallpaperGrid();
-      showToast('导入成功', 2000, 'success');
+      try {
+        addWallpaperToHistory(reader.result);
+        applyWallpaper(reader.result);
+        renderWallpaperGrid();
+        showToast('导入成功', 2000, 'success');
+      } catch (e) {
+        showToast('存储空间不足', 3000);
+      }
     };
-    reader.readAsDataURL(file);
+    reader.onerror = function () {
+      showToast('文件读取异常', 3000);
+      wallpaperFileInput.value = '';
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch (e) {
+      showToast('无法读取文件', 3000);
+      wallpaperFileInput.value = '';
+    }
   });
 
   wallpaperCancel.addEventListener('click', () => wallpaperModal.classList.remove('show'));
@@ -636,22 +663,34 @@ if (engineSelectorEl && engineListEl) {
   const ceIconWhitePreview = document.getElementById('customEngineIconWhitePreview');
   const ceIconDefaultPreview = document.getElementById('customEngineIconDefaultPreview');
 
+  function readIconFile(file, inputEl, nameEl, previewEl, onDone) {
+    if (!file.type.includes('svg')) {
+      showToast('请选择 SVG 格式图标', 3000);
+      inputEl.value = '';
+      return;
+    }
+    if (file.size > 512 * 1024) {
+      showToast('图标文件过大，请选择小于 512KB 的文件', 3000);
+      inputEl.value = '';
+      return;
+    }
+    nameEl.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => { onDone(reader.result); previewEl.src = reader.result; };
+    reader.onerror = () => { showToast('图标读取失败', 3000); inputEl.value = ''; };
+    reader.readAsDataURL(file);
+  }
+
   customEngineIconWhite.addEventListener('change', () => {
     const file = customEngineIconWhite.files[0];
     if (!file) return;
-    customEngineIconWhiteName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = () => { ceWhiteData = reader.result; ceIconWhitePreview.src = reader.result; };
-    reader.readAsDataURL(file);
+    readIconFile(file, customEngineIconWhite, customEngineIconWhiteName, ceIconWhitePreview, (data) => { ceWhiteData = data; });
   });
 
   customEngineIconDefault.addEventListener('change', () => {
     const file = customEngineIconDefault.files[0];
     if (!file) return;
-    customEngineIconDefaultName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = () => { ceDefaultData = reader.result; ceIconDefaultPreview.src = reader.result; };
-    reader.readAsDataURL(file);
+    readIconFile(file, customEngineIconDefault, customEngineIconDefaultName, ceIconDefaultPreview, (data) => { ceDefaultData = data; });
   });
 
   function openCustomEngineModal(editId) {
@@ -849,12 +888,10 @@ if (engineSelectorEl && engineListEl) {
           openCustomEngineModal(key);
         });
         row.appendChild(editBtn);
-        toggleSwitch.style.marginLeft = 'auto';
         row.appendChild(cb);
         row.appendChild(toggleSwitch);
       } else {
         row.appendChild(span);
-        toggleSwitch.style.marginLeft = 'auto';
         row.appendChild(cb);
         row.appendChild(toggleSwitch);
       }
@@ -870,7 +907,6 @@ if (engineSelectorEl && engineListEl) {
     });
     engineManager.appendChild(addBtn);
   }
-  if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
 })();
 
 
@@ -982,7 +1018,6 @@ function populateDefaultEngineManager() {
     radio.addEventListener('click', (ev) => ev.stopPropagation());
     const toggleSwitch = document.createElement('span');
     toggleSwitch.className = 'toggle-switch';
-    toggleSwitch.style.marginLeft = 'auto';
     row.appendChild(span);
     row.appendChild(radio);
     row.appendChild(toggleSwitch);
