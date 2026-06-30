@@ -14,46 +14,10 @@
   <div id="bgLayerB" class="bg-layer" style="opacity:0"></div>
 
   <div class="container">
-    <!-- ===== 右上角设置面板 ===== -->
+    <!-- ===== 右上角设置按钮（点击展开侧边栏） ===== -->
     <div class="settings-wrap" id="settingsWrap" aria-hidden="false">
       <div class="settings-btn" id="settingsBtn" title="设置">
         <img src="./icons/setting-white.svg" alt="设置" />
-      </div>
-      <div class="settings-menu" id="settingsMenu" aria-hidden="true">
-        <div class="settings-item">
-          <button id="importWallpaperBtn" class="settings-action">更改壁纸</button>
-        </div>
-        <div class="settings-item">
-          <button id="manageEnginesBtn" class="settings-action">搜索引擎</button>
-          <!-- 搜索引擎子菜单（复选框，从右侧弹出） -->
-          <div class="engine-manager" id="engineManager" aria-hidden="true"></div>
-        </div>
-        <div class="settings-item">
-          <button id="defaultEngineBtn" class="settings-action">默认引擎</button>
-          <!-- 默认引擎子菜单（单选框，从右侧弹出） -->
-          <div class="engine-manager" id="defaultEngineManager" aria-hidden="true"></div>
-        </div>
-        <div class="settings-item">
-          <button id="moreSettingsBtn" class="settings-action">更多设置</button>
-          <div class="engine-manager" id="moreSettingsManager" aria-hidden="true">
-            <label class="engine-toggle">
-              <span>搜索历史</span>
-              <input type="checkbox" id="searchHistoryToggle" checked>
-              <span class="toggle-switch"></span>
-            </label>
-            <label class="engine-toggle">
-              <span>数字时钟</span>
-              <input type="checkbox" id="clockToggle" checked>
-              <span class="toggle-switch"></span>
-            </label>
-            <label class="engine-toggle">
-              <span>夜间模式</span>
-              <input type="checkbox" id="nightModeToggle" checked>
-              <span class="toggle-switch"></span>
-            </label>
-            <button id="resetSettingsBtn" class="reset-settings-btn">恢复默认</button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -142,14 +106,9 @@
   <!-- 壁纸管理弹窗 -->
   <div id="wallpaperModal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card wallpaper-card">
-      <h3 class="modal-title">更改壁纸</h3>
+      <h3 class="modal-title">壁纸管理</h3>
       <div class="wallpaper-toolbar">
         <button id="wallpaperImportBtn" class="modal-btn-save">导入本地壁纸</button>
-        <label class="opacity-slider-label">
-          遮罩
-          <input type="range" id="overlayOpacity" min="0" max="0.5" step="0.01" value="0.3">
-          <span id="overlayOpacityVal">0.30</span>
-        </label>
         <button id="wallpaperResetBtn" class="modal-btn-cancel">恢复默认</button>
         <button id="wallpaperClearBtn" class="modal-btn-cancel">清空</button>
       </div>
@@ -161,38 +120,141 @@
     </div>
   </div>
 
-  <!-- 自定义搜索引擎弹窗 -->
-  <div id="customEngineModal" class="modal-overlay" aria-hidden="true">
-    <div class="modal-card">
-      <h3 class="modal-title">添加自定义搜索引擎</h3>
-      <div class="modal-field">
-        <label>名称</label>
-        <input type="text" id="customEngineName" placeholder="搜索引擎名称">
-      </div>
-      <div class="modal-field">
-        <label>搜索 URL</label>
-        <input type="text" id="customEngineUrl" placeholder="https://example.com/search?q=">
-      </div>
-      <div class="modal-field">
-        <label>白色图标 (SVG)</label>
-        <div class="file-input-wrap">
-          <input type="file" id="customEngineIconWhite" accept=".svg">
-          <span id="customEngineIconWhiteName"></span>
-          <img id="customEngineIconWhitePreview" class="icon-preview" alt="">
+  <!-- 右侧边栏 -->
+  <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+  <div id="sidebar" class="sidebar" aria-hidden="true">
+    <div class="sidebar-header">
+      <span>设置</span>
+    </div>
+    <div class="sidebar-main">
+      <nav class="sidebar-nav">
+        <div class="sidebar-nav-item active" data-panel="theme">主题/壁纸</div>
+        <div class="sidebar-nav-item" data-panel="engines">搜索引擎</div>
+        <div class="sidebar-nav-item" data-panel="personalize">个性化</div>
+	        <div class="sidebar-nav-item" data-panel="moreSettings">更多设置</div>
+      </nav>
+      <div class="sidebar-content">
+        <div class="sidebar-panel active" id="sidebarPanelTheme">
+          <div class="sidebar-section-label">整体外观</div>
+          <div class="sidebar-toggle">
+            <span>外观模式</span>
+            <div class="theme-mode-seg" id="themeModeSeg">
+              <button class="theme-mode-opt active" data-mode="system">系统</button>
+              <button class="theme-mode-opt" data-mode="light">浅色</button>
+              <button class="theme-mode-opt" data-mode="dark">深色</button>
+            </div>
+          </div>
+          <div class="sidebar-section-label">主题色</div>
+          <div class="theme-color-row" id="themeColorRow">
+            <span class="theme-color-swatch" data-color="#0066cc" style="background:#0066cc"></span>
+            <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
+            <span class="theme-color-swatch" data-color="#059669" style="background:#059669"></span>
+            <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
+            <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
+            <span class="theme-color-swatch" data-color="#0891b2" style="background:#0891b2"></span>
+            <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
+            <span class="theme-color-swatch" data-color="#d97706" style="background:#d97706"></span>
+            <span class="theme-color-swatch" data-color="#65a30d" style="background:#65a30d"></span>
+            <span class="theme-color-swatch" data-color="#4f46e5" style="background:#4f46e5"></span>
+            <span class="theme-color-swatch custom" id="themeColorCustomSwatch"></span>
+          </div>
+          <div class="custom-color-panel" id="customColorPanel">
+            <input type="text" id="customColorHex" class="custom-color-hex" placeholder="#0066cc" maxlength="7" spellcheck="false">
+            <button id="customColorPickBtn" class="custom-color-pick-btn" title="取色器">
+              <svg viewBox="0 0 24 24"><path d="M19.35 11.72l-2.13 2.13-1.41-1.41-7.71 7.71L3.5 22 2 20.5l1.86-4.6 7.71-7.71-1.41-1.41 2.13-2.13c.78-.78 2.05-.78 2.83 0l1.41 1.41 1.41-1.41.71.71-1.41 1.41 1.41 1.41-.71.71-1.41-1.41-1.41 1.41c-.78.78-.78 2.05 0 2.83l1.41 1.41c.78.78 2.05.78 2.83 0l4.25-4.25c.78-.78.78-2.05 0-2.83z"/></svg>
+            </button>
+            <span id="customColorPreview" class="custom-color-preview"></span>
+            <input type="color" id="themeColorPicker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px">
+          </div>
+          <div class="sidebar-section-label">壁纸</div>
+          <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
+            <img id="sidebarWallpaperThumbImg" src="" alt="当前壁纸">
+            <button id="sidebarWallpaperBtn" class="sidebar-thumb-btn">更改壁纸</button>
+          </div>
+          <div class="sidebar-slider-group">
+            <span>遮罩</span>
+            <input type="range" id="sidebarOverlaySlider" min="0" max="0.5" step="0.01" value="0.3">
+            <span id="sidebarOverlayVal">0.30</span>
+          </div>
+          <div class="sidebar-slider-group">
+            <span>模糊</span>
+            <input type="range" id="sidebarBlurSlider" min="0" max="10" step="0.5" value="0">
+            <span id="sidebarBlurVal">0</span>
+          </div>
+          <div class="sidebar-rotate-row">
+            <span class="sidebar-rotate-label">壁纸轮换</span>
+            <div class="rotate-dropdown" id="wallpaperRotateDropdown">
+              <span class="rotate-trigger" id="rotateTrigger">不进行轮换</span>
+              <div class="rotate-sizer" id="rotateSizer" aria-hidden="true"></div>
+              <div class="rotate-list" id="rotateList"></div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="modal-field">
-        <label>彩色图标 (SVG)</label>
-        <div class="file-input-wrap">
-          <input type="file" id="customEngineIconDefault" accept=".svg">
-          <span id="customEngineIconDefaultName"></span>
-          <img id="customEngineIconDefaultPreview" class="icon-preview" alt="">
+        <div class="sidebar-panel" id="sidebarPanelPersonalize">
+          <div class="sidebar-section-label">侧边栏</div>
+          <div class="sidebar-slider-group">
+            <span>透明度</span>
+            <input type="range" id="sidebarOpacitySlider" min="0.2" max="1" step="0.01" value="1">
+            <span id="sidebarOpacityVal">1.00</span>
+          </div>
+          <div class="sidebar-slider-group">
+            <span>毛玻璃</span>
+            <input type="range" id="sidebarBlurSlider2" min="0" max="10" step="0.5" value="0">
+            <span id="sidebarBlurVal2">0</span>
+          </div>
+          <label class="sidebar-toggle">
+            <span>数字时钟</span>
+            <input type="checkbox" id="sidebarClockToggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
         </div>
-      </div>
-      <div class="modal-btns">
-        <button id="customEngineDelete" class="modal-btn-delete" style="display:none">删除</button>
-        <button id="customEngineCancel" class="modal-btn-cancel">取消</button>
-        <button id="customEngineSave" class="modal-btn-save">添加</button>
+        <div class="sidebar-panel" id="sidebarPanelEngines">
+          <div class="sidebar-section-label">搜索引擎</div>
+          <div id="sidebarEngineList" class="sidebar-engine-list"></div>
+          <!-- 自定义搜索引擎表单（侧边栏内下拉展开） -->
+          <div id="customEngineForm" class="custom-engine-form">
+            <div class="sidebar-section-label" id="customEngineFormTitle">添加自定义搜索引擎</div>
+            <div class="ce-field">
+              <label>名称</label>
+              <input type="text" id="customEngineName" placeholder="搜索引擎名称">
+            </div>
+            <div class="ce-field">
+              <label>搜索 URL</label>
+              <input type="text" id="customEngineUrl" placeholder="https://example.com/search?q=">
+            </div>
+            <div class="ce-field">
+              <label>白色图标 (SVG)</label>
+              <div class="ce-file-wrap">
+                <input type="file" id="customEngineIconWhite" accept=".svg">
+                <span id="customEngineIconWhiteName"></span>
+                <img id="customEngineIconWhitePreview" class="icon-preview" alt="">
+              </div>
+            </div>
+            <div class="ce-field">
+              <label>彩色图标 (SVG)</label>
+              <div class="ce-file-wrap">
+                <input type="file" id="customEngineIconDefault" accept=".svg">
+                <span id="customEngineIconDefaultName"></span>
+                <img id="customEngineIconDefaultPreview" class="icon-preview" alt="">
+              </div>
+            </div>
+            <div class="ce-btns">
+              <button id="customEngineDelete" class="modal-btn-delete" style="display:none">删除</button>
+              <button id="customEngineCancel" class="modal-btn-cancel">取消</button>
+              <button id="customEngineSave" class="modal-btn-save">添加</button>
+            </div>
+          </div>
+          <div class="sidebar-section-label">默认引擎</div>
+          <div id="sidebarDefaultEngineList" class="sidebar-engine-list"></div>
+        </div>
+        <div class="sidebar-panel" id="sidebarPanelMoreSettings">
+          <label class="sidebar-toggle">
+            <span>搜索历史</span>
+            <input type="checkbox" id="sidebarHistoryToggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <button id="sidebarResetBtn" class="sidebar-action-btn danger">恢复默认</button>
+        </div>
       </div>
     </div>
   </div>

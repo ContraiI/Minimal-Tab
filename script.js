@@ -364,7 +364,7 @@ if (engineSelectorEl && engineListEl) {
     updateEngineIcon();
     engineSelectorEl.classList.remove('open');
     preventReopenUntil = Date.now() + 300;
-    try { searchInput.focus(); } catch (err) {}
+    searchInput.focus();
   });
   // 点击外部关闭下拉
   document.addEventListener('click', (e) => {
@@ -379,18 +379,28 @@ if (engineSelectorEl && engineListEl) {
 // 设置面板（导入壁纸 / 搜索引擎管理 / 搜索历史开关）
 (function(){
   const settingsBtn = document.getElementById('settingsBtn');
-  const settingsMenu = document.getElementById('settingsMenu');
-  const importBtn = document.getElementById('importWallpaperBtn');
-  const manageEnginesBtn = document.getElementById('manageEnginesBtn');
-  const engineManager = document.getElementById('engineManager');
-  const moreSettingsBtn = document.getElementById('moreSettingsBtn');
-  const moreSettingsManager = document.getElementById('moreSettingsManager');
-  const settingsWrap = document.getElementById('settingsWrap');
-  const historyToggle = document.getElementById('searchHistoryToggle');
+  const sidebar = document.getElementById('sidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  const engineManager = document.getElementById('sidebarEngineList');
+  const historyToggle = document.getElementById('sidebarHistoryToggle');
   const LS_BG = 'customBg';
   const bgLayerA = document.getElementById('bgLayerA');
   const bgLayerB = document.getElementById('bgLayerB');
   let bgActive = 'a';
+
+  function openSidebar() {
+    sidebar.classList.add('open');
+    sidebarOverlay.classList.add('show');
+    settingsBtn.style.opacity = '1';
+    populateEngineManager();
+    populateDefaultEngineManager();
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    sidebarOverlay.classList.remove('show');
+    settingsBtn.style.opacity = '';
+  }
 
   function setBgDirect(url) {
     bgLayerA.style.backgroundImage = url ? `url(${url})` : '';
@@ -415,6 +425,7 @@ if (engineSelectorEl && engineListEl) {
     });
     bgActive = bgActive === 'a' ? 'b' : 'a';
     localStorage.setItem(LS_BG, dataUrl);
+    updateWallpaperThumb();
   }
 
   function resetWallpaper() {
@@ -427,6 +438,7 @@ if (engineSelectorEl && engineListEl) {
     });
     bgActive = bgActive === 'a' ? 'b' : 'a';
     localStorage.removeItem(LS_BG);
+    updateWallpaperThumb();
   }
 
   if (historyToggle) {
@@ -437,7 +449,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
-  const clockToggle = document.getElementById('clockToggle');
+  const clockToggle = document.getElementById('sidebarClockToggle');
   if (clockToggle) {
     clockToggle.checked = isClockVisible();
     if (!isClockVisible()) hideDigitalClock();
@@ -448,26 +460,152 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
-  const nightModeToggle = document.getElementById('nightModeToggle');
-  const LS_NIGHT_MODE = 'nightMode';
-  if (nightModeToggle) {
-    nightModeToggle.checked = localStorage.getItem(LS_NIGHT_MODE) !== 'false';
-    if (!nightModeToggle.checked) { settingsWrap.classList.add('light'); document.body.classList.add('light-mode'); }
-    nightModeToggle.addEventListener('change', () => {
-      localStorage.setItem(LS_NIGHT_MODE, nightModeToggle.checked.toString());
-      settingsWrap.classList.toggle('light', !nightModeToggle.checked);
-      document.body.classList.toggle('light-mode', !nightModeToggle.checked);
+  // 外观模式选择器（三段：系统 / 浅色 / 深色）
+  const themeModeSeg = document.getElementById('themeModeSeg');
+  const LS_THEME_MODE = 'themeMode';
+  const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function applyTheme(isDark) {
+    sidebar.classList.toggle('light', !isDark);
+    document.body.classList.toggle('light-mode', !isDark);
+  }
+
+  function getSystemDark() { return darkModeQuery.matches; }
+
+  function setThemeMode(mode) {
+    themeModeSeg.querySelectorAll('.theme-mode-opt').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    localStorage.setItem(LS_THEME_MODE, mode);
+    if (mode === 'system') {
+      applyTheme(getSystemDark());
+    } else {
+      applyTheme(mode === 'dark');
+    }
+  }
+
+  if (themeModeSeg) {
+    const savedMode = localStorage.getItem(LS_THEME_MODE) || 'system';
+    setThemeMode(savedMode);
+
+    darkModeQuery.addEventListener('change', () => {
+      if (localStorage.getItem(LS_THEME_MODE) === 'system') {
+        applyTheme(getSystemDark());
+      }
+    });
+
+    themeModeSeg.querySelectorAll('.theme-mode-opt').forEach(btn => {
+      btn.addEventListener('click', () => setThemeMode(btn.dataset.mode));
     });
   }
 
+  // 设置按钮点击 → 切换侧边栏
   settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const show = settingsMenu.classList.toggle('show');
-    if (!show) {
-      engineManager.classList.remove('show');
-      moreSettingsManager.classList.remove('show');
+    if (sidebar.classList.contains('open')) {
+      closeSidebar();
+    } else {
+      openSidebar();
     }
   });
+
+  // 关闭侧边栏（仅遮罩可关闭）
+  sidebarOverlay.addEventListener('click', closeSidebar);
+
+  // 主题色管理
+  const LS_ACCENT = 'accentColor';
+  function applyAccent(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    document.body.style.setProperty('--accent', hex);
+    document.body.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+    localStorage.setItem(LS_ACCENT, hex);
+  }
+
+  const savedAccent = localStorage.getItem(LS_ACCENT) || '#0066cc';
+  applyAccent(savedAccent);
+
+  // 预设色块点击
+  const themeColorRow = document.getElementById('themeColorRow');
+  const themeColorPicker = document.getElementById('themeColorPicker');
+  const themeColorCustom = document.getElementById('themeColorCustomSwatch');
+  const customColorPanel = document.getElementById('customColorPanel');
+  const customColorHex = document.getElementById('customColorHex');
+  const customColorPreview = document.getElementById('customColorPreview');
+
+  function highlightSwatch(hex) {
+    themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
+      s.classList.toggle('active', s.dataset.color === hex);
+    });
+    const hasPreset = themeColorRow.querySelector('.theme-color-swatch.active');
+    themeColorCustom.classList.toggle('active', !hasPreset);
+    themeColorPicker.value = hex;
+    customColorHex.value = hex;
+    customColorPreview.style.background = hex;
+  }
+  highlightSwatch(savedAccent);
+
+  themeColorRow.querySelectorAll('.theme-color-swatch:not(.custom)').forEach(s => {
+    s.addEventListener('click', () => {
+      const hex = s.dataset.color;
+      applyAccent(hex);
+      highlightSwatch(hex);
+      customColorPanel.classList.remove('open');
+      colorPanelOpen = false;
+    });
+  });
+
+  // 自定义取色面板：展开/收起
+  let colorPanelOpen = false;
+  themeColorCustom.addEventListener('click', () => {
+    colorPanelOpen = !colorPanelOpen;
+    customColorPanel.classList.toggle('open', colorPanelOpen);
+    if (colorPanelOpen) {
+      customColorHex.value = localStorage.getItem(LS_ACCENT) || '#0066cc';
+      customColorPreview.style.background = customColorHex.value;
+      customColorHex.focus();
+    }
+  });
+
+  // 十六进制输入：回车或失焦时应用
+  function applyHexInput() {
+    let val = customColorHex.value.trim();
+    if (val.charAt(0) !== '#') val = '#' + val;
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      const hex = val.toLowerCase();
+      applyAccent(hex);
+      highlightSwatch(hex);
+    } else {
+      customColorHex.value = localStorage.getItem(LS_ACCENT) || '#0066cc';
+    }
+  }
+  customColorHex.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applyHexInput(); }
+  });
+  customColorHex.addEventListener('blur', applyHexInput);
+
+  // 取色器按钮 → 打开原生色盘
+  document.getElementById('customColorPickBtn').addEventListener('click', () => themeColorPicker.click());
+  themeColorPicker.addEventListener('input', () => {
+    const hex = themeColorPicker.value;
+    applyAccent(hex);
+    highlightSwatch(hex);
+  });
+
+  // 左侧导航点击切换右侧面板
+  sidebar.querySelectorAll('.sidebar-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const panelId = item.dataset.panel;
+      if (!panelId || item.classList.contains('active')) return;
+      // 切换导航高亮
+      sidebar.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      // 切换内容面板
+      sidebar.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('sidebarPanel' + panelId.charAt(0).toUpperCase() + panelId.slice(1));
+      if (panel) panel.classList.add('active');
+    });
+  });
+
   // 壁纸管理
   const wallpaperModal = document.getElementById('wallpaperModal');
   const wallpaperGrid = document.getElementById('wallpaperGrid');
@@ -485,6 +623,56 @@ if (engineSelectorEl && engineListEl) {
 
   function saveWallpaperHistory(list) {
     localStorage.setItem(LS_WH, JSON.stringify(list.slice(0, MAX_WALLPAPER_HISTORY)));
+  }
+
+  function compressWallpaper(dataUrl, callback) {
+    const MAX_DIM = 1920;
+    const QUALITY = 0.85;
+
+    // SVG 无法绘制到 Canvas，直接原样存储
+    if (dataUrl.startsWith('data:image/svg')) {
+      callback(dataUrl);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = function () {
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+
+      // 尺寸已经很小，无需压缩
+      if (w <= MAX_DIM && h <= MAX_DIM) {
+        callback(dataUrl);
+        return;
+      }
+
+      // 等比缩放
+      if (w > h) {
+        h = Math.round(h * MAX_DIM / w);
+        w = MAX_DIM;
+      } else {
+        w = Math.round(w * MAX_DIM / h);
+        h = MAX_DIM;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      try {
+        const compressed = canvas.toDataURL('image/jpeg', QUALITY);
+        callback(compressed);
+      } catch (e) {
+        // Canvas 导出失败（极少见），回退到原图
+        callback(dataUrl);
+      }
+    };
+    img.onerror = function () {
+      callback(dataUrl);
+    };
+    img.src = dataUrl;
   }
 
   function addWallpaperToHistory(dataUrl) {
@@ -532,7 +720,8 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
-  importBtn.addEventListener('click', () => {
+  // 整个缩略图区域可点击打开壁纸管理（按钮点击冒泡至此）
+  document.getElementById('sidebarWallpaperThumb').addEventListener('click', () => {
     renderWallpaperGrid();
     wallpaperModal.classList.add('show');
   });
@@ -550,24 +739,18 @@ if (engineSelectorEl && engineListEl) {
       return;
     }
 
-    // 校验文件大小（限制 5MB，localStorage + base64 编码会更大）
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      showToast('请选择较小的图片', 3000);
-      wallpaperFileInput.value = '';
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = function () {
-      try {
-        addWallpaperToHistory(reader.result);
-        applyWallpaper(reader.result);
-        renderWallpaperGrid();
-        showToast('导入成功', 2000, 'success');
-      } catch (e) {
-        showToast('存储空间不足', 3000);
-      }
+      compressWallpaper(reader.result, (compressed) => {
+        try {
+          addWallpaperToHistory(compressed);
+          applyWallpaper(compressed);
+          renderWallpaperGrid();
+          showToast('导入成功', 2000, 'success');
+        } catch (e) {
+          showToast('存储空间不足', 3000);
+        }
+      });
     };
     reader.onerror = function () {
       showToast('文件读取异常', 3000);
@@ -586,13 +769,22 @@ if (engineSelectorEl && engineListEl) {
     if (e.target === wallpaperModal) wallpaperModal.classList.remove('show');
   });
 
+  function updateWallpaperThumb() {
+    const thumb = document.getElementById('sidebarWallpaperThumbImg');
+    if (!thumb) return;
+    const bg = localStorage.getItem(LS_BG);
+    thumb.src = bg || './images/bg.webp';
+  }
+  updateWallpaperThumb();
+
   document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
     resetWallpaper();
     renderWallpaperGrid();
-    overlaySlider.value = '0.3';
-    overlayVal.textContent = '0.30';
+    sidebarOverlaySlider.value = '0.3';
+    sidebarOverlayVal.textContent = '0.30';
     document.body.style.setProperty('--overlay-opacity', '0.3');
     localStorage.removeItem('overlayOpacity');
+    updateWallpaperThumb();
     showToast('已恢复', 2000, 'success');
   });
 
@@ -607,47 +799,196 @@ if (engineSelectorEl && engineListEl) {
     showToast('已清空', 2000, 'success');
   });
 
-  // 遮罩透明度滑块
-  const overlaySlider = document.getElementById('overlayOpacity');
-  const overlayVal = document.getElementById('overlayOpacityVal');
+  // 壁纸自动轮换
+  const rotateDropdown = document.getElementById('wallpaperRotateDropdown');
+  const rotateTrigger = document.getElementById('rotateTrigger');
+  const rotateSizer = document.getElementById('rotateSizer');
+  const rotateList = document.getElementById('rotateList');
+  const LS_WALLPAPER_ROTATE = 'wallpaperRotation';
+  const rotateOptions = [
+    { value: 'off', label: '不进行轮换' },
+    { value: '1h',  label: '每 1 小时轮换' },
+    { value: '6h',  label: '每 6 小时轮换' },
+    { value: '12h', label: '每 12 小时轮换' },
+    { value: '24h', label: '每 24 小时轮换' }
+  ];
+  let rotateTimer = null;
+
+  rotateOptions.forEach(opt => {
+    const el = document.createElement('div');
+    el.className = 'rotate-option';
+    el.setAttribute('data-value', opt.value);
+    el.textContent = opt.label;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectRotation(opt.value);
+      rotateDropdown.classList.remove('open');
+    });
+    rotateList.appendChild(el);
+
+    // sizer：隐藏的宽度占位，确保容器宽度 ≥ 最长选项
+    const sz = document.createElement('span');
+    sz.textContent = opt.label;
+    rotateSizer.appendChild(sz);
+  });
+
+  function selectRotation(value) {
+    const opt = rotateOptions.find(o => o.value === value);
+    if (opt) rotateTrigger.textContent = opt.label;
+    rotateList.querySelectorAll('.rotate-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-value') === value));
+    localStorage.setItem(LS_WALLPAPER_ROTATE, value);
+    startWallpaperRotation(value);
+  }
+
+  function getRotateIntervalMs(value) {
+    switch (value) {
+      case '1h':  return 3600000;
+      case '6h':  return 21600000;
+      case '12h': return 43200000;
+      case '24h': return 86400000;
+      default:    return 0;
+    }
+  }
+
+  function startWallpaperRotation(value) {
+    if (rotateTimer) { clearInterval(rotateTimer); rotateTimer = null; }
+    const ms = getRotateIntervalMs(value);
+    if (!ms) return;
+    rotateTimer = setInterval(() => {
+      const history = getWallpaperHistory();
+      if (history.length < 2) return;
+      const current = localStorage.getItem(LS_BG);
+      const others = history.filter(h => h !== current);
+      const pick = others[Math.floor(Math.random() * others.length)];
+      if (pick) applyWallpaper(pick);
+    }, ms);
+  }
+
+  rotateTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rotateDropdown.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!rotateDropdown.contains(e.target)) rotateDropdown.classList.remove('open');
+  });
+
+  const savedRotation = localStorage.getItem(LS_WALLPAPER_ROTATE) || 'off';
+  selectRotation(savedRotation);
+
+  // 侧边栏遮罩透明度滑块
+  const sidebarOverlaySlider = document.getElementById('sidebarOverlaySlider');
+  const sidebarOverlayVal = document.getElementById('sidebarOverlayVal');
   const savedOpacity = localStorage.getItem('overlayOpacity');
   if (savedOpacity) {
-    overlaySlider.value = savedOpacity;
+    sidebarOverlaySlider.value = savedOpacity;
     document.body.style.setProperty('--overlay-opacity', savedOpacity);
   }
-  overlayVal.textContent = parseFloat(overlaySlider.value).toFixed(2);
+  sidebarOverlayVal.textContent = parseFloat(sidebarOverlaySlider.value).toFixed(2);
 
-  overlaySlider.addEventListener('input', () => {
-    const v = overlaySlider.value;
-    overlayVal.textContent = parseFloat(v).toFixed(2);
+  sidebarOverlaySlider.addEventListener('input', () => {
+    const v = sidebarOverlaySlider.value;
+    sidebarOverlayVal.textContent = parseFloat(v).toFixed(2);
     document.body.style.setProperty('--overlay-opacity', v);
     localStorage.setItem('overlayOpacity', v);
   });
 
-  overlaySlider.addEventListener('wheel', (e) => {
+  sidebarOverlaySlider.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const step = parseFloat(overlaySlider.step);
+    const step = parseFloat(sidebarOverlaySlider.step);
     const delta = e.deltaY > 0 ? -step : step;
-    overlaySlider.value = Math.max(0, Math.min(0.5, parseFloat(overlaySlider.value) + delta));
-    overlaySlider.dispatchEvent(new Event('input'));
+    sidebarOverlaySlider.value = Math.max(0, Math.min(0.5, parseFloat(sidebarOverlaySlider.value) + delta));
+    sidebarOverlaySlider.dispatchEvent(new Event('input'));
   });
 
-  manageEnginesBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    engineManager.classList.toggle('show');
-    defaultEngineManager.classList.remove('show');
-    moreSettingsManager.classList.remove('show');
-    populateEngineManager();
-  });
-  moreSettingsBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    moreSettingsManager.classList.toggle('show');
-    engineManager.classList.remove('show');
-    defaultEngineManager.classList.remove('show');
+  // 侧边栏模糊滑块
+  const sidebarBlurSlider = document.getElementById('sidebarBlurSlider');
+  const sidebarBlurVal = document.getElementById('sidebarBlurVal');
+  const LS_BLUR = 'wallpaperBlur';
+  const savedBlur = localStorage.getItem(LS_BLUR) || '0';
+  sidebarBlurSlider.value = savedBlur;
+  document.body.style.setProperty('--blur-px', savedBlur + 'px');
+  sidebarBlurVal.textContent = savedBlur;
+
+  sidebarBlurSlider.addEventListener('input', () => {
+    const v = sidebarBlurSlider.value;
+    sidebarBlurVal.textContent = v;
+    document.body.style.setProperty('--blur-px', v + 'px');
+    localStorage.setItem(LS_BLUR, v);
   });
 
-  // 自定义搜索引擎弹窗
-  const customEngineModal = document.getElementById('customEngineModal');
+  sidebarBlurSlider.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = parseFloat(sidebarBlurSlider.step);
+    const delta = e.deltaY > 0 ? -step : step;
+    sidebarBlurSlider.value = Math.max(0, Math.min(10, parseFloat(sidebarBlurSlider.value) + delta));
+    sidebarBlurSlider.dispatchEvent(new Event('input'));
+  });
+
+  // 侧边栏透明度滑块
+  const sidebarOpacitySlider = document.getElementById('sidebarOpacitySlider');
+  const sidebarOpacityVal = document.getElementById('sidebarOpacityVal');
+  const LS_SIDEBAR_OPACITY = 'sidebarOpacity';
+  const savedSidebarOpacity = localStorage.getItem(LS_SIDEBAR_OPACITY) || '1';
+
+  function applySidebarOpacity(v) {
+    const opacity = parseFloat(v);
+    document.body.style.setProperty('--sidebar-opacity', v);
+    sidebarOpacityVal.textContent = opacity.toFixed(2);
+
+    // 浅色模式下透明度降低时加深文字，保证可读性
+    const factor = (opacity - 0.2) / 0.8;                  // 0.2→0, 1→1
+    const mainGray = Math.round(51 * factor);               // #333→#000
+    const navGray = Math.round(51 + 71 * factor);           // #7a7a7a→#333
+    const labelGray = Math.round(51 + 85 * factor);          // #888→#333
+    document.body.style.setProperty('--sidebar-main-rgb', `${mainGray},${mainGray},${mainGray}`);
+    document.body.style.setProperty('--sidebar-nav-rgb', `${navGray},${navGray},${navGray}`);
+    document.body.style.setProperty('--sidebar-label-rgb', `${labelGray},${labelGray},${labelGray}`);
+  }
+
+  sidebarOpacitySlider.value = savedSidebarOpacity;
+  applySidebarOpacity(savedSidebarOpacity);
+
+  sidebarOpacitySlider.addEventListener('input', () => {
+    const v = sidebarOpacitySlider.value;
+    applySidebarOpacity(v);
+    localStorage.setItem(LS_SIDEBAR_OPACITY, v);
+  });
+
+  sidebarOpacitySlider.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = parseFloat(sidebarOpacitySlider.step);
+    const delta = e.deltaY > 0 ? -step : step;
+    sidebarOpacitySlider.value = Math.max(0.2, Math.min(1, parseFloat(sidebarOpacitySlider.value) + delta));
+    sidebarOpacitySlider.dispatchEvent(new Event('input'));
+  });
+
+  // 侧边栏毛玻璃滑块
+  const sidebarBlurSlider2 = document.getElementById('sidebarBlurSlider2');
+  const sidebarBlurVal2 = document.getElementById('sidebarBlurVal2');
+  const LS_SIDEBAR_BLUR = 'sidebarBlur';
+  const savedSidebarBlur = localStorage.getItem(LS_SIDEBAR_BLUR) || '0';
+  sidebarBlurSlider2.value = savedSidebarBlur;
+  document.body.style.setProperty('--sidebar-blur', savedSidebarBlur);
+  sidebarBlurVal2.textContent = savedSidebarBlur;
+
+  sidebarBlurSlider2.addEventListener('input', () => {
+    const v = sidebarBlurSlider2.value;
+    sidebarBlurVal2.textContent = v;
+    document.body.style.setProperty('--sidebar-blur', v);
+    localStorage.setItem(LS_SIDEBAR_BLUR, v);
+  });
+
+  sidebarBlurSlider2.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = parseFloat(sidebarBlurSlider2.step);
+    const delta = e.deltaY > 0 ? -step : step;
+    sidebarBlurSlider2.value = Math.max(0, Math.min(10, parseFloat(sidebarBlurSlider2.value) + delta));
+    sidebarBlurSlider2.dispatchEvent(new Event('input'));
+  });
+
+  // 自定义搜索引擎表单（侧边栏内下拉展开）
+  const customEngineForm = document.getElementById('customEngineForm');
   const customEngineName = document.getElementById('customEngineName');
   const customEngineUrl = document.getElementById('customEngineUrl');
   const customEngineIconWhite = document.getElementById('customEngineIconWhite');
@@ -659,6 +1000,7 @@ if (engineSelectorEl && engineListEl) {
   let ceWhiteData = null;
   let ceDefaultData = null;
   let ceEditingId = null;
+  let ceOpenFor = null; // 记录当前为哪个触发器展开：null | 'add' | engineId
 
   const ceIconWhitePreview = document.getElementById('customEngineIconWhitePreview');
   const ceIconDefaultPreview = document.getElementById('customEngineIconDefaultPreview');
@@ -693,11 +1035,24 @@ if (engineSelectorEl && engineListEl) {
     readIconFile(file, customEngineIconDefault, customEngineIconDefaultName, ceIconDefaultPreview, (data) => { ceDefaultData = data; });
   });
 
-  function openCustomEngineModal(editId) {
+  function openCustomEngineForm(editId) {
+    const triggerKey = editId || 'add';
+
+    // 重复点击同一触发器 → 关闭
+    if (ceOpenFor === triggerKey && customEngineForm.classList.contains('open')) {
+      closeCustomEngineForm();
+      return;
+    }
+
+    // 先关闭旧状态，归位
+    closeCustomEngineForm();
+
     ceEditingId = editId || null;
+    ceOpenFor = triggerKey;
+
     const saveBtn = document.getElementById('customEngineSave');
     const deleteBtn = document.getElementById('customEngineDelete');
-    const title = document.querySelector('.modal-title');
+    const title = document.getElementById('customEngineFormTitle');
     customEngineIconWhite.value = '';
     customEngineIconDefault.value = '';
     customEngineIconWhiteName.textContent = '';
@@ -728,27 +1083,56 @@ if (engineSelectorEl && engineListEl) {
       saveBtn.textContent = '添加';
       deleteBtn.style.display = 'none';
     }
-    customEngineModal.classList.add('show');
+
+    // 定位到触发项下方
+    let anchor;
+    if (ceEditingId) {
+      const cb = engineManager.querySelector(`input[type="checkbox"][data-engine="${ceEditingId}"]`);
+      anchor = cb ? cb.closest('.engine-toggle') : null;
+    } else {
+      anchor = engineManager.querySelector('.sidebar-action-btn');
+    }
+    if (anchor) {
+      anchor.insertAdjacentElement('afterend', customEngineForm);
+    }
+
+    // requestAnimationFrame 确保浏览器先渲染 max-height:0，再触发过渡
+    requestAnimationFrame(() => {
+      customEngineForm.classList.add('open');
+    });
   }
 
-  function closeCustomEngineModal() {
-    customEngineModal.classList.remove('show');
+  function closeCustomEngineForm() {
+    customEngineForm.classList.remove('open');
+    ceOpenFor = null;
+    // 表单归位到 engineManager 外部，防止 innerHTML='' 时被销毁
+    if (customEngineForm.parentNode === engineManager) {
+      const panel = document.getElementById('sidebarPanelEngines');
+      const lastLabel = panel && panel.querySelector('.sidebar-section-label:last-of-type');
+      if (lastLabel) {
+        panel.insertBefore(customEngineForm, lastLabel);
+      }
+    }
   }
 
-  customEngineCancel.addEventListener('click', closeCustomEngineModal);
-  customEngineModal.addEventListener('click', (e) => {
-    if (e.target === customEngineModal) closeCustomEngineModal();
+  customEngineCancel.addEventListener('click', closeCustomEngineForm);
+
+  // 点击表单外部区域 → 关闭
+  document.addEventListener('click', (e) => {
+    if (!customEngineForm.classList.contains('open')) return;
+    if (customEngineForm.contains(e.target)) return;
+    closeCustomEngineForm();
   });
 
   const customEngineDelete = document.getElementById('customEngineDelete');
   customEngineDelete.addEventListener('click', () => {
     if (!ceEditingId) return;
+    closeCustomEngineForm();
     let list = getCustomEngines();
     list = list.filter(e => e.id !== ceEditingId);
     saveCustomEngines(list);
     injectCustomEngines();
     if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
-    closeCustomEngineModal();
     showToast('删除成功');
   });
 
@@ -782,34 +1166,52 @@ if (engineSelectorEl && engineListEl) {
       list.push({ id: `custom_${maxNum}`, name, slug, url, iconWhite: ceWhiteData, iconDefault: ceDefaultData });
     }
 
+    closeCustomEngineForm();
     saveCustomEngines(list);
     injectCustomEngines();
     if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
-    closeCustomEngineModal();
     showToast(ceEditingId ? `更新成功「${name}」` : `添加成功「${name}」`, 2000, 'success');
   });
 
   // 重置设置按钮
-  const resetSettingsBtn = document.getElementById('resetSettingsBtn');
+  const resetSettingsBtn = document.getElementById('sidebarResetBtn');
   if (resetSettingsBtn) {
     resetSettingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!confirm('确定要恢复所有设置为默认值吗？\n此操作将清除壁纸、自定义引擎等所有更改。')) return;
       localStorage.removeItem(LS_BG);
-      localStorage.removeItem('wallpaperHistory');
-      localStorage.removeItem('disabledEngines');
-      localStorage.removeItem('preferredDefaultEngine');
-      localStorage.removeItem('searchHistoryEnabled');
-      localStorage.removeItem('searchHistory');
-      localStorage.removeItem('clockVisible');
-      localStorage.removeItem('customEngines');
+      localStorage.removeItem(LS_WH);
+      localStorage.removeItem(LS_WALLPAPER_ROTATE);
+      localStorage.removeItem(LS_DISABLED);
+      localStorage.removeItem(LS_DEFAULT_ENGINE);
+      localStorage.removeItem(LS_SEARCH_HISTORY_ENABLED);
+      localStorage.removeItem(LS_SEARCH_HISTORY);
+      localStorage.removeItem(LS_CLOCK_VISIBLE);
+      localStorage.removeItem(LS_CUSTOM_ENGINES);
       localStorage.removeItem('overlayOpacity');
-      localStorage.removeItem('nightMode');
+      localStorage.removeItem(LS_BLUR);
+      localStorage.removeItem(LS_ACCENT);
+      localStorage.removeItem(LS_THEME_MODE);
+      localStorage.removeItem(LS_SIDEBAR_OPACITY);
+      localStorage.removeItem(LS_SIDEBAR_BLUR);
 
       resetWallpaper();
-      overlaySlider.value = '0.3';
-      overlayVal.textContent = '0.30';
+      sidebarOverlaySlider.value = '0.3';
+      sidebarOverlayVal.textContent = '0.30';
       document.body.style.setProperty('--overlay-opacity', '0.3');
+      sidebarBlurSlider.value = '0';
+      sidebarBlurVal.textContent = '0';
+      document.body.style.setProperty('--blur-px', '0px');
+      sidebarOpacitySlider.value = '1';
+      applySidebarOpacity('1');
+      sidebarBlurSlider2.value = '0';
+      sidebarBlurVal2.textContent = '0';
+      document.body.style.setProperty('--sidebar-blur', '0');
+      updateWallpaperThumb();
+      applyAccent('#0066cc');
+      highlightSwatch('#0066cc');
+      customColorPanel.classList.remove('open');
+      colorPanelOpen = false;
 
       if (historyToggle) historyToggle.checked = true;
       hideHistoryDropdown();
@@ -817,7 +1219,7 @@ if (engineSelectorEl && engineListEl) {
       if (clockToggle) clockToggle.checked = true;
       showDigitalClock();
 
-      if (nightModeToggle) { nightModeToggle.checked = true; settingsWrap.classList.remove('light'); document.body.classList.remove('light-mode'); }
+      setThemeMode('system');
 
       if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
       injectCustomEngines();
@@ -831,19 +1233,11 @@ if (engineSelectorEl && engineListEl) {
         if (typeof updateEngineIcon === 'function') updateEngineIcon();
       }
 
+      selectRotation('off');
+      if (rotateTimer) { clearInterval(rotateTimer); rotateTimer = null; }
       showToast('设置已恢复默认');
     });
   }
-
-  // 点击设置面板外部关闭
-  document.addEventListener('click', (e) => {
-    if (!settingsWrap.contains(e.target)) {
-      settingsMenu.classList.remove('show');
-      engineManager.classList.remove('show');
-      defaultEngineManager.classList.remove('show');
-      moreSettingsManager.classList.remove('show');
-    }
-  });
 
   // 动态生成"搜索引擎"子菜单的复选框列表
   function populateEngineManager() {
@@ -864,6 +1258,7 @@ if (engineSelectorEl && engineListEl) {
 
       const cb = document.createElement('input');
       cb.type = 'checkbox';
+      cb.setAttribute('data-engine', key);
       cb.checked = !disabled.has(key);
       cb.addEventListener('click', (ev) => ev.stopPropagation());
       cb.addEventListener('change', () => {
@@ -885,7 +1280,7 @@ if (engineSelectorEl && engineListEl) {
         editBtn.addEventListener('click', (ev) => {
           ev.stopPropagation();
           ev.preventDefault();
-          openCustomEngineModal(key);
+          openCustomEngineForm(key);
         });
         row.appendChild(editBtn);
         row.appendChild(cb);
@@ -898,15 +1293,42 @@ if (engineSelectorEl && engineListEl) {
       engineManager.appendChild(row);
     });
     const addBtn = document.createElement('button');
-    addBtn.id = 'customEngineBtn';
-    addBtn.className = 'reset-settings-btn';
+    addBtn.className = 'sidebar-action-btn';
     addBtn.innerHTML = '手动添加<img class="add-icon" src="./icons/add-white.svg" alt="">';
     addBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      openCustomEngineModal();
+      openCustomEngineForm();
     });
     engineManager.appendChild(addBtn);
   }
+  // 增量同步：仅更新复选框选中态，不重建 DOM，保证 CSS transition 正常播放
+  function syncEngineManager() {
+    const items = Array.from(document.querySelectorAll('.engine-item'))
+      .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+    const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
+    const cbs = engineManager.querySelectorAll('input[type="checkbox"]');
+    if (cbs.length !== items.length) { populateEngineManager(); return; }
+    cbs.forEach(cb => {
+      const key = cb.getAttribute('data-engine');
+      if (key) cb.checked = !disabled.has(key);
+    });
+  }
+  window.syncEngineManager = syncEngineManager;
+
+  // 增量同步：仅更新单选框选中态，不重建 DOM
+  function syncDefaultEngineManager() {
+    const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
+    const radios = defaultEngineManager.querySelectorAll('input[type="radio"]');
+    const items = Array.from(document.querySelectorAll('.engine-item'))
+      .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+    const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
+    const enabledKeys = items.map(it => it.getAttribute('data-engine') || '').filter(k => !disabled.has(k));
+    if (radios.length !== enabledKeys.length) { populateDefaultEngineManager(); return; }
+    radios.forEach(radio => { radio.checked = (radio.value === def); });
+  }
+  window.syncDefaultEngineManager = syncDefaultEngineManager;
+
+  window.populateEngineManager = populateEngineManager;
 })();
 
 
@@ -968,9 +1390,12 @@ if (engineSelectorEl && engineListEl) {
         if (dIcon) dIcon.src = first.getAttribute('data-default') || first.getAttribute('data-white') || dIcon.src;
       }
     }
-    // 如果默认引擎菜单正打开则刷新内容
-    const dfltMgr = document.getElementById('defaultEngineManager');
-    if (dfltMgr && dfltMgr.classList.contains('show')) populateDefaultEngineManager();
+    // 侧边栏打开时增量同步，避免 innerHTML='' 打断 CSS transition
+    const sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl && sidebarEl.classList.contains('open')) {
+      if (typeof syncEngineManager === 'function') syncEngineManager();
+      if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();
+    }
   }
   applyEngineVisibility();
   window.applyEngineVisibility = applyEngineVisibility;
@@ -989,8 +1414,7 @@ document.addEventListener('click', (e) => {
   if (wrap && !wrap.contains(e.target)) hideHistoryDropdown();
 });
 
-const defaultEngineBtn = document.getElementById('defaultEngineBtn');
-const defaultEngineManager = document.getElementById('defaultEngineManager');
+const defaultEngineManager = document.getElementById('sidebarDefaultEngineList');
 
 // 动态生成"默认引擎"子菜单的radio列表（仅显示启用的引擎）
 function populateDefaultEngineManager() {
@@ -1030,26 +1454,6 @@ function populateDefaultEngineManager() {
   }
 }
 
-if (defaultEngineBtn && defaultEngineManager) {
-  defaultEngineBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    defaultEngineManager.classList.toggle('show');
-    document.getElementById('engineManager').classList.remove('show');
-    moreSettingsManager.classList.remove('show');
-    if (defaultEngineManager.classList.contains('show')) populateDefaultEngineManager();
-  });
-}
-
-// 点击默认引擎菜单外部关闭
-document.addEventListener('click', (e) => {
-  if (!defaultEngineBtn.contains(e.target) && !defaultEngineManager.contains(e.target)) {
-    defaultEngineManager.classList.remove('show');
-  }
-  if (!moreSettingsBtn.contains(e.target) && !moreSettingsManager.contains(e.target)) {
-    moreSettingsManager.classList.remove('show');
-  }
-});
-
 // 选择默认引擎 → 保存并切换
 defaultEngineManager.addEventListener('change', (e) => {
   const radio = e.target;
@@ -1063,5 +1467,5 @@ defaultEngineManager.addEventListener('change', (e) => {
     currentEngineIcons = { white: item.dataset.white, default: item.dataset.default };
     updateEngineIcon();
   }
-  defaultEngineManager.classList.remove('show');
+  if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();
 });
