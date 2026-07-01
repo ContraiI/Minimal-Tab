@@ -129,7 +129,7 @@
     <div class="sidebar-main">
       <nav class="sidebar-nav">
         <div class="sidebar-nav-item active" data-panel="theme">主题/壁纸</div>
-        <div class="sidebar-nav-item" data-panel="engines">搜索引擎</div>
+        <div class="sidebar-nav-item" data-panel="engines">搜索功能</div>
         <div class="sidebar-nav-item" data-panel="personalize">个性化</div>
 	        <div class="sidebar-nav-item" data-panel="moreSettings">更多设置</div>
       </nav>
@@ -160,11 +160,7 @@
           </div>
           <div class="custom-color-panel" id="customColorPanel">
             <input type="text" id="customColorHex" class="custom-color-hex" placeholder="#0066cc" maxlength="7" spellcheck="false">
-            <button id="customColorPickBtn" class="custom-color-pick-btn" title="取色器">
-              <svg viewBox="0 0 24 24"><path d="M19.35 11.72l-2.13 2.13-1.41-1.41-7.71 7.71L3.5 22 2 20.5l1.86-4.6 7.71-7.71-1.41-1.41 2.13-2.13c.78-.78 2.05-.78 2.83 0l1.41 1.41 1.41-1.41.71.71-1.41 1.41 1.41 1.41-.71.71-1.41-1.41-1.41 1.41c-.78.78-.78 2.05 0 2.83l1.41 1.41c.78.78 2.05.78 2.83 0l4.25-4.25c.78-.78.78-2.05 0-2.83z"/></svg>
-            </button>
             <span id="customColorPreview" class="custom-color-preview"></span>
-            <input type="color" id="themeColorPicker" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px">
           </div>
           <div class="sidebar-section-label">壁纸</div>
           <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
@@ -202,17 +198,70 @@
             <input type="range" id="sidebarBlurSlider2" min="0" max="10" step="0.5" value="0">
             <span id="sidebarBlurVal2">0</span>
           </div>
-          <label class="sidebar-toggle">
+          <label class="sidebar-toggle sidebar-divider">
             <span>数字时钟</span>
             <input type="checkbox" id="sidebarClockToggle" checked>
             <span class="toggle-switch"></span>
           </label>
+          <label id="clockFollowRow" class="sidebar-toggle clock-collapse hidden">
+            <span>跟随搜索框</span>
+            <input type="checkbox" id="clockFollowToggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <div id="clockPositionRow" class="sidebar-toggle clock-collapse hidden">
+            <span>时钟位置</span>
+            <div class="theme-mode-seg" id="clockPositionSeg">
+              <button class="theme-mode-opt active" data-pos="below">搜索框下方</button>
+              <button class="theme-mode-opt" data-pos="above">搜索框上方</button>
+            </div>
+          </div>
+          <div id="clockCustomRow" class="sidebar-toggle clock-collapse hidden">
+            <span>时钟位置</span>
+            <div class="theme-mode-seg" id="clockCustomSeg">
+              <button class="theme-mode-opt" data-pos="left-top">左上</button>
+              <button class="theme-mode-opt" data-pos="right-top">右上</button>
+              <button class="theme-mode-opt active" data-pos="center">居中</button>
+              <button class="theme-mode-opt" data-pos="left-bottom">左下</button>
+              <button class="theme-mode-opt" data-pos="right-bottom">右下</button>
+            </div>
+          </div>
         </div>
         <div class="sidebar-panel" id="sidebarPanelEngines">
-          <div class="sidebar-section-label">搜索引擎</div>
-          <div id="sidebarEngineList" class="sidebar-engine-list"></div>
-          <!-- 自定义搜索引擎表单（侧边栏内下拉展开） -->
-          <div id="customEngineForm" class="custom-engine-form">
+          <div class="sidebar-section-label">搜索框</div>
+          <label class="sidebar-toggle">
+            <span>启用搜索框</span>
+            <input type="checkbox" id="searchBoxToggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <div id="searchBoxControls">
+            <div class="sidebar-slider-group">
+              <span>上下移动</span>
+              <input type="range" id="searchOffsetYSlider" min="-300" max="300" step="1" value="0">
+              <span id="searchOffsetYVal">0</span>
+            </div>
+            <div class="sidebar-slider-group">
+              <span>左右移动</span>
+              <input type="range" id="searchOffsetXSlider" min="-300" max="300" step="1" value="0">
+              <span id="searchOffsetXVal">0</span>
+            </div>
+            <div class="sidebar-slider-group">
+              <span>搜索框长度</span>
+              <input type="range" id="searchWidthSlider" min="500" max="1200" step="1" value="800">
+              <span id="searchWidthVal">800</span>
+            </div>
+            <div class="sidebar-slider-group">
+              <span>搜索框圆角</span>
+              <input type="range" id="searchRadiusSlider" min="0" max="25" step="1" value="25">
+              <span id="searchRadiusVal">25</span>
+            </div>
+            <button id="searchBoxResetBtn" class="sidebar-action-btn" style="margin-top:8px;width:100%">重置搜索框</button>
+          </div>
+          <div class="section-collapse" id="engineListSection">
+            <div class="sidebar-section-label section-collapse-header">搜索引擎</div>
+            <div class="section-collapse-body">
+              <div id="sidebarEngineList" class="sidebar-engine-list"></div>
+              <!-- 自定义搜索引擎表单（侧边栏内下拉展开） -->
+              <div id="customEngineForm" class="custom-engine-form">
             <div class="sidebar-section-label" id="customEngineFormTitle">添加自定义搜索引擎</div>
             <div class="ce-field">
               <label>名称</label>
@@ -243,16 +292,22 @@
               <button id="customEngineCancel" class="modal-btn-cancel">取消</button>
               <button id="customEngineSave" class="modal-btn-save">添加</button>
             </div>
+            </div>
           </div>
-          <div class="sidebar-section-label">默认引擎</div>
-          <div id="sidebarDefaultEngineList" class="sidebar-engine-list"></div>
-        </div>
-        <div class="sidebar-panel" id="sidebarPanelMoreSettings">
-          <label class="sidebar-toggle">
+          </div>
+          <div class="section-collapse" id="defaultEngineSection">
+            <div class="sidebar-section-label section-collapse-header">默认引擎</div>
+            <div class="section-collapse-body">
+              <div id="sidebarDefaultEngineList" class="sidebar-engine-list"></div>
+            </div>
+          </div>
+          <label class="sidebar-toggle sidebar-divider">
             <span>搜索历史</span>
             <input type="checkbox" id="sidebarHistoryToggle" checked>
             <span class="toggle-switch"></span>
           </label>
+        </div>
+        <div class="sidebar-panel" id="sidebarPanelMoreSettings">
           <button id="sidebarResetBtn" class="sidebar-action-btn danger">恢复默认</button>
         </div>
       </div>

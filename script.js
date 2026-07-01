@@ -450,13 +450,116 @@ if (engineSelectorEl && engineListEl) {
   }
 
   const clockToggle = document.getElementById('sidebarClockToggle');
+  const clockFollowRow = document.getElementById('clockFollowRow');
+  const clockFollowToggle = document.getElementById('clockFollowToggle');
+  const clockPositionRow = document.getElementById('clockPositionRow');
+  const clockPositionSeg = document.getElementById('clockPositionSeg');
+  const clockCustomRow = document.getElementById('clockCustomRow');
+  const clockCustomSeg = document.getElementById('clockCustomSeg');
+  const clockEl = document.getElementById('digital-clock');
+  const LS_CLOCK_POS = 'clockPosition';
+  const LS_CLOCK_FOLLOW = 'clockFollow';
+  const LS_CLOCK_CUSTOM_POS = 'clockCustomPos';
+
+  function applyClockPosition(pos) {
+    if (clockEl) clockEl.style.order = pos === 'above' ? '-1' : '0';
+    if (clockPositionSeg) {
+      clockPositionSeg.querySelectorAll('.theme-mode-opt').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
+    }
+    localStorage.setItem(LS_CLOCK_POS, pos);
+  }
+
+  function updateClockCascade() {
+    const clockOn = isClockVisible();
+    if (clockFollowRow) clockFollowRow.classList.toggle('hidden', !clockOn);
+    if (!clockOn) {
+      if (clockPositionRow) clockPositionRow.classList.add('hidden');
+      if (clockCustomRow) clockCustomRow.classList.add('hidden');
+    } else {
+      const followOn = clockFollowToggle ? clockFollowToggle.checked : true;
+      if (clockPositionRow) clockPositionRow.classList.toggle('hidden', !followOn);
+      if (clockCustomRow) clockCustomRow.classList.toggle('hidden', followOn);
+    }
+  }
+
   if (clockToggle) {
     clockToggle.checked = isClockVisible();
     if (!isClockVisible()) hideDigitalClock();
+    updateClockCascade();
     clockToggle.addEventListener('change', () => {
       setClockVisible(clockToggle.checked);
       if (clockToggle.checked) showDigitalClock();
       else hideDigitalClock();
+      updateClockCascade();
+    });
+  }
+
+  if (clockPositionSeg) {
+    const savedPos = localStorage.getItem(LS_CLOCK_POS) || 'below';
+    applyClockPosition(savedPos);
+    clockPositionSeg.querySelectorAll('.theme-mode-opt').forEach(b => {
+      b.addEventListener('click', () => applyClockPosition(b.dataset.pos));
+    });
+  }
+
+  // 时钟自定义位置选择器（跟随关闭时使用）
+  const posMap = {
+    'left-top':     { top: '40px', left: '40px', right: '', bottom: '' },
+    'right-top':    { top: '40px', left: '', right: '40px', bottom: '' },
+    'center':       { top: '', left: '', right: '', bottom: '' },
+    'left-bottom':  { top: '', left: '40px', right: '', bottom: '40px' },
+    'right-bottom': { top: '', left: '', right: '40px', bottom: '40px' }
+  };
+  function applyClockCustomPos(pos) {
+    if (!clockEl || !posMap[pos]) return;
+    const p = posMap[pos];
+    if (pos === 'center') {
+      clockEl.style.position = '';
+      clockEl.style.top = ''; clockEl.style.left = '';
+      clockEl.style.right = ''; clockEl.style.bottom = '';
+    } else {
+      clockEl.style.position = 'fixed';
+      clockEl.style.top = p.top; clockEl.style.left = p.left;
+      clockEl.style.right = p.right; clockEl.style.bottom = p.bottom;
+    }
+    if (clockCustomSeg) {
+      clockCustomSeg.querySelectorAll('.theme-mode-opt').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
+    }
+    localStorage.setItem(LS_CLOCK_CUSTOM_POS, pos);
+  }
+  if (clockCustomSeg) {
+    const saved = localStorage.getItem(LS_CLOCK_CUSTOM_POS) || 'center';
+    applyClockCustomPos(saved);
+    clockCustomSeg.querySelectorAll('.theme-mode-opt').forEach(b => {
+      b.addEventListener('click', () => applyClockCustomPos(b.dataset.pos));
+    });
+  }
+
+  // 时钟跟随搜索框开关
+  function applyClockFollow(enabled) {
+    if (clockEl) {
+      if (enabled) {
+        clockEl.style.transform = 'translate(var(--search-offset-x, 0px), var(--search-offset-y, 0px))';
+        clockEl.style.position = '';
+        clockEl.style.top = ''; clockEl.style.left = '';
+        clockEl.style.right = ''; clockEl.style.bottom = '';
+        applyClockPosition(localStorage.getItem(LS_CLOCK_POS) || 'below');
+      } else {
+        clockEl.style.transform = '';
+        applyClockCustomPos(localStorage.getItem(LS_CLOCK_CUSTOM_POS) || 'center');
+      }
+    }
+  }
+  if (clockFollowToggle) {
+    const savedFollow = localStorage.getItem(LS_CLOCK_FOLLOW) !== 'false';
+    clockFollowToggle.checked = savedFollow;
+    applyClockFollow(savedFollow);
+    updateClockCascade();
+    clockFollowToggle.addEventListener('change', () => {
+      const on = clockFollowToggle.checked;
+      localStorage.setItem(LS_CLOCK_FOLLOW, on ? 'true' : 'false');
+      applyClockFollow(on);
+      updateClockCascade();
     });
   }
 
@@ -526,7 +629,6 @@ if (engineSelectorEl && engineListEl) {
 
   // 预设色块点击
   const themeColorRow = document.getElementById('themeColorRow');
-  const themeColorPicker = document.getElementById('themeColorPicker');
   const themeColorCustom = document.getElementById('themeColorCustomSwatch');
   const customColorPanel = document.getElementById('customColorPanel');
   const customColorHex = document.getElementById('customColorHex');
@@ -538,7 +640,6 @@ if (engineSelectorEl && engineListEl) {
     });
     const hasPreset = themeColorRow.querySelector('.theme-color-swatch.active');
     themeColorCustom.classList.toggle('active', !hasPreset);
-    themeColorPicker.value = hex;
     customColorHex.value = hex;
     customColorPreview.style.background = hex;
   }
@@ -582,14 +683,6 @@ if (engineSelectorEl && engineListEl) {
     if (e.key === 'Enter') { e.preventDefault(); applyHexInput(); }
   });
   customColorHex.addEventListener('blur', applyHexInput);
-
-  // 取色器按钮 → 打开原生色盘
-  document.getElementById('customColorPickBtn').addEventListener('click', () => themeColorPicker.click());
-  themeColorPicker.addEventListener('input', () => {
-    const hex = themeColorPicker.value;
-    applyAccent(hex);
-    highlightSwatch(hex);
-  });
 
   // 左侧导航点击切换右侧面板
   sidebar.querySelectorAll('.sidebar-nav-item').forEach(item => {
@@ -876,6 +969,20 @@ if (engineSelectorEl && engineListEl) {
   const savedRotation = localStorage.getItem(LS_WALLPAPER_ROTATE) || 'off';
   selectRotation(savedRotation);
 
+  // 搜索功能面板：分区折叠/展开（默认折叠）
+  document.querySelectorAll('.section-collapse-header').forEach(header => {
+    const section = header.parentElement;
+    const sectionId = section.id;
+    const saved = localStorage.getItem('collapse_' + sectionId);
+    if (saved !== 'expanded') {
+      section.classList.add('collapsed');
+    }
+    header.addEventListener('click', () => {
+      section.classList.toggle('collapsed');
+      localStorage.setItem('collapse_' + sectionId, section.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+    });
+  });
+
   // 侧边栏遮罩透明度滑块
   const sidebarOverlaySlider = document.getElementById('sidebarOverlaySlider');
   const sidebarOverlayVal = document.getElementById('sidebarOverlayVal');
@@ -986,6 +1093,172 @@ if (engineSelectorEl && engineListEl) {
     sidebarBlurSlider2.value = Math.max(0, Math.min(10, parseFloat(sidebarBlurSlider2.value) + delta));
     sidebarBlurSlider2.dispatchEvent(new Event('input'));
   });
+
+  // 搜索框：启用/禁用开关
+  (function() {
+    const toggle = document.getElementById('searchBoxToggle');
+    const controls = document.getElementById('searchBoxControls');
+    const searchContainer = document.querySelector('.search-container');
+    const key = 'searchBoxEnabled';
+
+    function apply(enabled) {
+      controls.classList.toggle('hidden', !enabled);
+      if (searchContainer) searchContainer.classList.toggle('hidden', !enabled);
+      toggle.checked = enabled;
+    }
+
+    toggle.addEventListener('change', () => {
+      apply(toggle.checked);
+      localStorage.setItem(key, toggle.checked ? 'true' : 'false');
+    });
+
+    // 初始化：默认启用
+    const saved = localStorage.getItem(key);
+    apply(saved !== 'false');
+  })();
+
+  // 搜索框：上下移动滑块
+  (function() {
+    const slider = document.getElementById('searchOffsetYSlider');
+    const label = document.getElementById('searchOffsetYVal');
+    const key = 'searchOffsetY';
+    const cssVar = '--search-offset-y';
+    const unit = 'px';
+
+    const saved = localStorage.getItem(key);
+    if (saved != null) {
+      slider.value = saved;
+      document.documentElement.style.setProperty(cssVar, saved + unit);
+    }
+    label.textContent = slider.value;
+
+    slider.addEventListener('input', () => {
+      const v = slider.value;
+      label.textContent = v;
+      document.documentElement.style.setProperty(cssVar, v + unit);
+      localStorage.setItem(key, v);
+    });
+
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = parseFloat(slider.step);
+      const delta = e.deltaY > 0 ? -step : step;
+      slider.value = Math.max(-300, Math.min(300, parseFloat(slider.value) + delta));
+      slider.dispatchEvent(new Event('input'));
+    });
+  })();
+
+  // 搜索框：左右移动滑块
+  (function() {
+    const slider = document.getElementById('searchOffsetXSlider');
+    const label = document.getElementById('searchOffsetXVal');
+    const key = 'searchOffsetX';
+    const cssVar = '--search-offset-x';
+    const unit = 'px';
+
+    const saved = localStorage.getItem(key);
+    if (saved != null) {
+      slider.value = saved;
+      document.documentElement.style.setProperty(cssVar, saved + unit);
+    }
+    label.textContent = slider.value;
+
+    slider.addEventListener('input', () => {
+      const v = slider.value;
+      label.textContent = v;
+      document.documentElement.style.setProperty(cssVar, v + unit);
+      localStorage.setItem(key, v);
+    });
+
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = parseFloat(slider.step);
+      const delta = e.deltaY > 0 ? -step : step;
+      slider.value = Math.max(-300, Math.min(300, parseFloat(slider.value) + delta));
+      slider.dispatchEvent(new Event('input'));
+    });
+  })();
+
+  // 搜索框：长度滑块
+  (function() {
+    const slider = document.getElementById('searchWidthSlider');
+    const label = document.getElementById('searchWidthVal');
+    const key = 'searchWidth';
+    const cssVar = '--search-width';
+    const unit = 'px';
+
+    const saved = localStorage.getItem(key);
+    if (saved != null) {
+      slider.value = saved;
+      document.documentElement.style.setProperty(cssVar, saved + unit);
+    }
+    label.textContent = slider.value;
+
+    slider.addEventListener('input', () => {
+      const v = slider.value;
+      label.textContent = v;
+      document.documentElement.style.setProperty(cssVar, v + unit);
+      localStorage.setItem(key, v);
+    });
+
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = parseFloat(slider.step);
+      const delta = e.deltaY > 0 ? -step : step;
+      slider.value = Math.max(100, Math.min(1200, parseFloat(slider.value) + delta));
+      slider.dispatchEvent(new Event('input'));
+    });
+  })();
+
+  // 搜索框：圆角滑块
+  (function() {
+    const slider = document.getElementById('searchRadiusSlider');
+    const label = document.getElementById('searchRadiusVal');
+    const key = 'searchRadius';
+    const cssVar = '--search-radius';
+    const unit = 'px';
+
+    const saved = localStorage.getItem(key);
+    if (saved != null) {
+      slider.value = saved;
+      document.documentElement.style.setProperty(cssVar, saved + unit);
+    }
+    label.textContent = slider.value;
+
+    slider.addEventListener('input', () => {
+      const v = slider.value;
+      label.textContent = v;
+      document.documentElement.style.setProperty(cssVar, v + unit);
+      localStorage.setItem(key, v);
+    });
+
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = parseFloat(slider.step);
+      const delta = e.deltaY > 0 ? -step : step;
+      slider.value = Math.max(0, Math.min(25, parseFloat(slider.value) + delta));
+      slider.dispatchEvent(new Event('input'));
+    });
+  })();
+
+  // 搜索框：重置按钮
+  (function() {
+    const btn = document.getElementById('searchBoxResetBtn');
+    btn.addEventListener('click', () => {
+      const defaults = [
+        { slider: 'searchOffsetYSlider', label: 'searchOffsetYVal', cssVar: '--search-offset-y', value: '0', key: 'searchOffsetY' },
+        { slider: 'searchOffsetXSlider', label: 'searchOffsetXVal', cssVar: '--search-offset-x', value: '0', key: 'searchOffsetX' },
+        { slider: 'searchWidthSlider',   label: 'searchWidthVal',   cssVar: '--search-width',   value: '800', key: 'searchWidth' },
+        { slider: 'searchRadiusSlider',  label: 'searchRadiusVal',  cssVar: '--search-radius',  value: '25', key: 'searchRadius' }
+      ];
+      defaults.forEach(d => {
+        document.getElementById(d.slider).value = d.value;
+        document.getElementById(d.label).textContent = d.value;
+        document.documentElement.style.setProperty(d.cssVar, d.value + 'px');
+        localStorage.removeItem(d.key);
+      });
+    });
+  })();
 
   // 自定义搜索引擎表单（侧边栏内下拉展开）
   const customEngineForm = document.getElementById('customEngineForm');
@@ -1187,6 +1460,9 @@ if (engineSelectorEl && engineListEl) {
       localStorage.removeItem(LS_SEARCH_HISTORY_ENABLED);
       localStorage.removeItem(LS_SEARCH_HISTORY);
       localStorage.removeItem(LS_CLOCK_VISIBLE);
+      localStorage.removeItem('clockPosition');
+      localStorage.removeItem('clockFollow');
+      localStorage.removeItem('clockCustomPos');
       localStorage.removeItem(LS_CUSTOM_ENGINES);
       localStorage.removeItem('overlayOpacity');
       localStorage.removeItem(LS_BLUR);
@@ -1194,6 +1470,11 @@ if (engineSelectorEl && engineListEl) {
       localStorage.removeItem(LS_THEME_MODE);
       localStorage.removeItem(LS_SIDEBAR_OPACITY);
       localStorage.removeItem(LS_SIDEBAR_BLUR);
+      localStorage.removeItem('searchOffsetY');
+      localStorage.removeItem('searchOffsetX');
+      localStorage.removeItem('searchWidth');
+      localStorage.removeItem('searchRadius');
+      localStorage.removeItem('searchBoxEnabled');
 
       resetWallpaper();
       sidebarOverlaySlider.value = '0.3';
@@ -1207,6 +1488,24 @@ if (engineSelectorEl && engineListEl) {
       sidebarBlurSlider2.value = '0';
       sidebarBlurVal2.textContent = '0';
       document.body.style.setProperty('--sidebar-blur', '0');
+      document.documentElement.style.setProperty('--search-offset-y', '0px');
+      document.documentElement.style.setProperty('--search-offset-x', '0px');
+      document.documentElement.style.setProperty('--search-width', '800px');
+      document.documentElement.style.setProperty('--search-radius', '25px');
+      const sySlider = document.getElementById('searchOffsetYSlider');
+      const sxSlider = document.getElementById('searchOffsetXSlider');
+      const swSlider = document.getElementById('searchWidthSlider');
+      const srSlider = document.getElementById('searchRadiusSlider');
+      if (sySlider) { sySlider.value = '0'; document.getElementById('searchOffsetYVal').textContent = '0'; }
+      if (sxSlider) { sxSlider.value = '0'; document.getElementById('searchOffsetXVal').textContent = '0'; }
+      if (swSlider) { swSlider.value = '800'; document.getElementById('searchWidthVal').textContent = '800'; }
+      if (srSlider) { srSlider.value = '25'; document.getElementById('searchRadiusVal').textContent = '25'; }
+      if (document.getElementById('searchBoxToggle')) {
+        document.getElementById('searchBoxToggle').checked = true;
+        document.getElementById('searchBoxControls').classList.remove('hidden');
+        const sc = document.querySelector('.search-container');
+        if (sc) sc.classList.remove('hidden');
+      }
       updateWallpaperThumb();
       applyAccent('#0066cc');
       highlightSwatch('#0066cc');
@@ -1218,6 +1517,10 @@ if (engineSelectorEl && engineListEl) {
 
       if (clockToggle) clockToggle.checked = true;
       showDigitalClock();
+      applyClockPosition('below');
+      if (clockFollowToggle) { clockFollowToggle.checked = true; applyClockFollow(true); }
+      applyClockCustomPos('center');
+      updateClockCascade();
 
       setThemeMode('system');
 
