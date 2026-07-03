@@ -27,6 +27,7 @@
 body {
   --accent: #0066cc;
   --accent-rgb: 0, 102, 204;
+  --slider-track: #555;
   height: 100vh;
   display: flex;
   justify-content: center;
@@ -759,6 +760,7 @@ body::before {
 
 /* 左侧导航列 */
 .sidebar-nav {
+  position: relative;
   width: 110px;
   flex-shrink: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -768,13 +770,15 @@ body::before {
 }
 
 .sidebar-nav-item {
+  position: relative;
+  z-index: 1;
   padding: 10px 16px;
   font-size: 13px;
   cursor: pointer;
   color: #9a9a9a;
-  transition: color 0.2s, background 0.2s;
-  border-radius: 0 4px 4px 0;
-  margin: 2px 8px 2px 0;
+  transition: color 0.2s;
+  border-radius: 4px;
+  margin: 8px;
 }
 
 .sidebar-nav-item:hover {
@@ -783,8 +787,40 @@ body::before {
 }
 
 .sidebar-nav-item.active {
-  color: #fff;
-  background: rgba(var(--accent-rgb), 0.3);
+  color: rgb(var(--accent-rgb));
+}
+
+/* 浮动高亮块：在 nav 内绝对定位，切换时平滑滑动 */
+.nav-highlight {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, calc(0.1 * var(--sidebar-opacity, 1)));
+  transition: top 0.12s cubic-bezier(0.4, 0, 0.2, 1), height 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+.nav-highlight::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 50%;
+  border-radius: 0 2px 2px 0;
+  background: rgb(var(--accent-rgb));
+}
+.sidebar.light .nav-highlight {
+  background: rgba(0, 0, 0, calc(0.06 * var(--sidebar-opacity, 1)));
+}
+
+.reset-desc {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 12px;
+  line-height: 1.6;
 }
 
 /* 右侧内容区 */
@@ -904,6 +940,7 @@ body::before {
   background: rgba(255, 255, 255, 0.05);
   position: relative;
   transition: background 0.35s ease;
+  cursor: pointer;
 }
 
 .sidebar-wallpaper-thumb img {
@@ -911,26 +948,6 @@ body::before {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-/* 缩略图底部按钮：默认隐藏，hover 显示 */
-.sidebar-thumb-btn {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 7px 0;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.sidebar-wallpaper-thumb:hover .sidebar-thumb-btn {
-  opacity: 1;
 }
 
 /* 主题色预设行 */
@@ -955,12 +972,6 @@ body::before {
 .theme-color-swatch:hover { transform: scale(1.15); }
 .theme-color-swatch.active { border-color: #fff; }
 
-/* 自定义取色器触发块：彩虹渐变 */
-.theme-color-swatch.custom {
-  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red) !important;
-  border-color: rgba(255,255,255,0.35);
-}
-
 /* 滑块行：标签 + range + 数值 */
 .sidebar-slider-group {
   display: flex;
@@ -972,7 +983,7 @@ body::before {
 
 .sidebar-slider-group > span:first-child {
   color: #aaa;
-  min-width: 32px;
+  width: 60px;
   flex-shrink: 0;
 }
 
@@ -985,7 +996,7 @@ body::before {
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  transition: background 0.35s ease;
+  transition: background 0.08s ease;
 }
 
 .sidebar-slider-group input[type="range"]::-webkit-slider-thumb {
@@ -993,14 +1004,24 @@ body::before {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--accent);
+  background: #fff;
+  border: 2px solid var(--accent);
+  cursor: pointer;
+}
+.sidebar-slider-group input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
   cursor: pointer;
 }
 
 .sidebar-slider-group > span:last-child {
   color: #888;
   font-size: 11px;
-  min-width: 28px;
+  width: 38px;
+  flex-shrink: 0;
   text-align: right;
 }
 
@@ -1011,6 +1032,13 @@ body::before {
   justify-content: space-between;
   padding: 6px 10px;
   font-size: 12px;
+}
+
+.rotate-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .sidebar-rotate-label {
@@ -1040,7 +1068,7 @@ body::before {
   padding: 0 14px;
 }
 
-.rotate-trigger {
+.rotate-trigger, .rotate-now-btn {
   display: block;
   background: rgba(50, 50, 50, var(--sidebar-opacity, 1));
   color: rgba(255, 255, 255, 0.8);
@@ -1053,23 +1081,30 @@ body::before {
   transition: background 0.2s, color 0.35s ease;
   user-select: none;
   white-space: nowrap;
-  width: 100%;
   box-sizing: border-box;
+}
+.rotate-now-btn {
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+.rotate-trigger {
+  width: 100%;
+}
   -webkit-backdrop-filter: blur(calc(var(--sidebar-blur, 0) * 1px));
   backdrop-filter: blur(calc(var(--sidebar-blur, 0) * 1px));
 }
 
-.rotate-trigger:hover {
+.rotate-trigger:hover, .rotate-now-btn:hover {
   background: rgba(70, 70, 70, var(--sidebar-opacity, 1));
   color: #fff;
 }
 
-.sidebar.light .rotate-trigger {
+.sidebar.light .rotate-trigger, .sidebar.light .rotate-now-btn {
   background: rgba(220, 220, 220, var(--sidebar-opacity, 1));
   color: rgba(0, 0, 0, 0.65);
 }
 
-.sidebar.light .rotate-trigger:hover {
+.sidebar.light .rotate-trigger:hover, .sidebar.light .rotate-now-btn:hover {
   background: rgba(200, 200, 200, var(--sidebar-opacity, 1));
   color: #000;
 }
@@ -1205,7 +1240,7 @@ body::before {
 .sidebar.light .sidebar-nav { border-right-color: rgba(0, 0, 0, 0.08); }
 .sidebar.light .sidebar-nav-item { color: rgb(var(--sidebar-nav-rgb, 122, 122, 122)); }
 .sidebar.light .sidebar-nav-item:hover { color: #333; background: rgba(0, 0, 0, 0.04); }
-.sidebar.light .sidebar-nav-item.active { color: #333; background: rgba(var(--accent-rgb), 0.12); }
+.sidebar.light .sidebar-nav-item.active { color: rgb(var(--accent-rgb)); }
 .sidebar.light .sidebar-action-btn { color: rgb(var(--sidebar-main-rgb, 51, 51, 51)); }
 .sidebar.light .sidebar-action-btn:hover { background: rgba(0, 0, 0, 0.05); }
 .sidebar.light .sidebar-action-btn.danger { color: #d32f2f; }
@@ -1250,61 +1285,19 @@ body::before {
   filter: invert(1);
 }
 .sidebar.light .sidebar-slider-group input[type="range"] {
-  background: #ccc;
+  --slider-track: #777;
+  background: #777;
+}
+.sidebar.light .sidebar-slider-group input[type="range"]::-webkit-slider-thumb {
+  background: #fff;
+}
+.sidebar.light .sidebar-slider-group input[type="range"]::-moz-range-thumb {
+  background: #fff;
 }
 .sidebar.light .sidebar-wallpaper-thumb {
   background: rgba(0, 0, 0, 0.05);
 }
-/* 自定义取色面板：展开/收起动画 */
-.custom-color-panel {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease, margin 0.3s ease;
-}
-
-.custom-color-panel.open {
-  max-height: 48px;
-  opacity: 1;
-  padding: 8px 4px 4px;
-}
-
-/* 十六进制输入框 */
-.custom-color-hex {
-  flex: 1;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 12px;
-  font-family: monospace;
-  outline: none;
-  transition: border-color 0.2s, background 0.35s ease, color 0.35s ease;
-  min-width: 0;
-}
-.custom-color-hex:focus { border-color: var(--accent); }
-
-/* 取色器按钮 */
-/* 颜色预览块 */
-.custom-color-preview {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  border: 1px solid #555;
-  flex-shrink: 0;
-  background: var(--accent);
-  transition: border-color 0.35s ease;
-}
-
 .sidebar.light .theme-mode-seg { background: rgba(0, 0, 0, 0.08); }
-.sidebar.light .custom-color-hex { background: #fff; border-color: #ccc; color: #333; }
-.sidebar.light .custom-color-preview { border-color: #ccc; }
 .sidebar.light .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
 .sidebar.light .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
 
@@ -1653,6 +1646,43 @@ body.light-mode .wallpaper-card .modal-btns {
 
 .wallpaper-item:hover .wallpaper-delete {
   opacity: 1;
+}
+
+/* 壁纸轮换编辑模式 */
+.wallpaper-rotate-check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.6);
+  background: rgba(0,0,0,0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.15s, border-color 0.15s;
+}
+.wallpaper-rotate-check.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.wallpaper-rotate-check.checked::after {
+  content: '✓';
+  font-size: 11px;
+  color: #fff;
+  line-height: 1;
+}
+.wallpaper-grid.edit-mode .wallpaper-rotate-check {
+  display: flex;
+}
+.wallpaper-grid.edit-mode .wallpaper-delete {
+  display: none;
+}
+.wallpaper-grid.edit-mode .wallpaper-item {
+  cursor: default;
 }
 
 .wallpaper-delete svg {

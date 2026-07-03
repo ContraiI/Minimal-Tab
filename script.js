@@ -629,69 +629,52 @@ if (engineSelectorEl && engineListEl) {
 
   // 预设色块点击
   const themeColorRow = document.getElementById('themeColorRow');
-  const themeColorCustom = document.getElementById('themeColorCustomSwatch');
-  const customColorPanel = document.getElementById('customColorPanel');
-  const customColorHex = document.getElementById('customColorHex');
-  const customColorPreview = document.getElementById('customColorPreview');
 
   function highlightSwatch(hex) {
     themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
       s.classList.toggle('active', s.dataset.color === hex);
     });
-    const hasPreset = themeColorRow.querySelector('.theme-color-swatch.active');
-    themeColorCustom.classList.toggle('active', !hasPreset);
-    customColorHex.value = hex;
-    customColorPreview.style.background = hex;
   }
   highlightSwatch(savedAccent);
 
-  themeColorRow.querySelectorAll('.theme-color-swatch:not(.custom)').forEach(s => {
+  themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
     s.addEventListener('click', () => {
       const hex = s.dataset.color;
       applyAccent(hex);
       highlightSwatch(hex);
-      customColorPanel.classList.remove('open');
-      colorPanelOpen = false;
     });
   });
 
-  // 自定义取色面板：展开/收起
-  let colorPanelOpen = false;
-  themeColorCustom.addEventListener('click', () => {
-    colorPanelOpen = !colorPanelOpen;
-    customColorPanel.classList.toggle('open', colorPanelOpen);
-    if (colorPanelOpen) {
-      customColorHex.value = localStorage.getItem(LS_ACCENT) || '#0066cc';
-      customColorPreview.style.background = customColorHex.value;
-      customColorHex.focus();
-    }
-  });
-
-  // 十六进制输入：回车或失焦时应用
-  function applyHexInput() {
-    let val = customColorHex.value.trim();
-    if (val.charAt(0) !== '#') val = '#' + val;
-    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-      const hex = val.toLowerCase();
-      applyAccent(hex);
-      highlightSwatch(hex);
-    } else {
-      customColorHex.value = localStorage.getItem(LS_ACCENT) || '#0066cc';
-    }
-  }
-  customColorHex.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); applyHexInput(); }
-  });
-  customColorHex.addEventListener('blur', applyHexInput);
-
   // 左侧导航点击切换右侧面板
-  sidebar.querySelectorAll('.sidebar-nav-item').forEach(item => {
+  const sidebarNav = sidebar.querySelector('.sidebar-nav');
+  const navItems = sidebar.querySelectorAll('.sidebar-nav-item');
+
+  // 浮动高亮块
+  const navHighlight = document.createElement('div');
+  navHighlight.className = 'nav-highlight';
+  sidebarNav.appendChild(navHighlight);
+
+  function moveHighlight(target) {
+    const navRect = sidebarNav.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    navHighlight.style.top = (targetRect.top - navRect.top) + 'px';
+    navHighlight.style.height = targetRect.height + 'px';
+  }
+
+  // 初始定位
+  const initActive = sidebar.querySelector('.sidebar-nav-item.active');
+  if (initActive) {
+    requestAnimationFrame(() => moveHighlight(initActive));
+  }
+
+  navItems.forEach(item => {
     item.addEventListener('click', () => {
       const panelId = item.dataset.panel;
       if (!panelId || item.classList.contains('active')) return;
       // 切换导航高亮
-      sidebar.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
+      navItems.forEach(n => n.classList.remove('active'));
       item.classList.add('active');
+      moveHighlight(item);
       // 切换内容面板
       sidebar.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
       const panel = document.getElementById('sidebarPanel' + panelId.charAt(0).toUpperCase() + panelId.slice(1));
@@ -703,9 +686,22 @@ if (engineSelectorEl && engineListEl) {
   const wallpaperModal = document.getElementById('wallpaperModal');
   const wallpaperGrid = document.getElementById('wallpaperGrid');
   const wallpaperImportBtn = document.getElementById('wallpaperImportBtn');
+  const wallpaperRotateEditBtn = document.getElementById('wallpaperRotateEditBtn');
   const wallpaperFileInput = document.getElementById('wallpaperFileInput');
   const wallpaperCancel = document.getElementById('wallpaperCancel');
   const LS_WH = 'wallpaperHistory';
+  const LS_WRP = 'wallpaperRotationPool';
+
+  function getRotationPool() {
+    try {
+      const p = JSON.parse(localStorage.getItem(LS_WRP) || '[]');
+      return Array.isArray(p) ? p : [];
+    } catch (e) { return []; }
+  }
+
+  function saveRotationPool(pool) {
+    localStorage.setItem(LS_WRP, JSON.stringify(pool));
+  }
 
   function getWallpaperHistory() {
     try {
@@ -772,12 +768,28 @@ if (engineSelectorEl && engineListEl) {
     let list = getWallpaperHistory().filter(item => item !== dataUrl);
     list.unshift(dataUrl);
     saveWallpaperHistory(list);
+    // 若已配置轮换池，新壁纸自动加入
+    const pool = getRotationPool();
+    if (pool.length && !pool.includes(dataUrl)) {
+      pool.push(dataUrl);
+      saveRotationPool(pool);
+    }
   }
+
+  let wallpaperEditMode = false;
+  let wallpaperEditChecked = new Set();
 
   function renderWallpaperGrid() {
     const history = getWallpaperHistory();
     const current = localStorage.getItem(LS_BG);
+    const pool = getRotationPool();
     wallpaperGrid.innerHTML = '';
+    if (wallpaperEditMode) {
+      wallpaperGrid.classList.add('edit-mode');
+      wallpaperEditChecked = new Set(pool.length ? pool : history);
+    } else {
+      wallpaperGrid.classList.remove('edit-mode');
+    }
     if (history.length === 0) {
       wallpaperGrid.innerHTML = '<div class="wallpaper-empty">暂无历史壁纸</div>';
       return;
@@ -786,15 +798,38 @@ if (engineSelectorEl && engineListEl) {
       const item = document.createElement('div');
       item.className = 'wallpaper-item';
       if (dataUrl === current) item.classList.add('active');
+
       const img = document.createElement('img');
       img.src = dataUrl;
       img.alt = '';
       item.appendChild(img);
+
+      // 编辑模式复选框
+      const check = document.createElement('span');
+      check.className = 'wallpaper-rotate-check';
+      if (wallpaperEditChecked.has(dataUrl)) check.classList.add('checked');
+      check.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (wallpaperEditChecked.has(dataUrl)) {
+          wallpaperEditChecked.delete(dataUrl);
+          check.classList.remove('checked');
+        } else {
+          wallpaperEditChecked.add(dataUrl);
+          check.classList.add('checked');
+        }
+      });
+      item.appendChild(check);
+
       item.addEventListener('click', () => {
+        if (wallpaperEditMode) {
+          check.click();
+          return;
+        }
         applyWallpaper(dataUrl);
         renderWallpaperGrid();
         showToast('切换成功', 2000, 'success');
       });
+
       const delBtn = document.createElement('button');
       delBtn.className = 'wallpaper-delete';
       delBtn.textContent = '删除';
@@ -806,12 +841,46 @@ if (engineSelectorEl && engineListEl) {
         }
         const list = getWallpaperHistory().filter(item => item !== dataUrl);
         saveWallpaperHistory(list);
+        // 同步从轮换池中移除
+        const p = getRotationPool().filter(u => u !== dataUrl);
+        saveRotationPool(p);
+        wallpaperEditChecked.delete(dataUrl);
         renderWallpaperGrid();
       });
       item.appendChild(delBtn);
       wallpaperGrid.appendChild(item);
     });
   }
+
+  wallpaperRotateEditBtn.addEventListener('click', () => {
+    if (wallpaperEditMode) {
+      // 确认：保存勾选的轮换池
+      const checked = Array.from(wallpaperEditChecked);
+      saveRotationPool(checked);
+      wallpaperEditMode = false;
+      wallpaperRotateEditBtn.textContent = '壁纸轮换';
+      renderWallpaperGrid();
+      showToast('轮换列表已更新', 2000, 'success');
+      // 若轮换已开启且当前壁纸不在新池中，立即切换
+      const rotation = localStorage.getItem(LS_WALLPAPER_ROTATE) || 'off';
+      if (rotation !== 'off' && checked.length > 0) {
+        const cur = localStorage.getItem(LS_BG);
+        if (cur && !checked.includes(cur)) doWallpaperRotate();
+      }
+    } else {
+      // 进入编辑模式
+      wallpaperEditMode = true;
+      wallpaperRotateEditBtn.textContent = '确认';
+      renderWallpaperGrid();
+    }
+  });
+
+  // 关闭弹窗时退出编辑模式
+  wallpaperCancel.addEventListener('click', () => {
+    wallpaperEditMode = false;
+    wallpaperRotateEditBtn.textContent = '壁纸轮换';
+    wallpaperModal.classList.remove('show');
+  });
 
   // 整个缩略图区域可点击打开壁纸管理（按钮点击冒泡至此）
   document.getElementById('sidebarWallpaperThumb').addEventListener('click', () => {
@@ -857,7 +926,6 @@ if (engineSelectorEl && engineListEl) {
     }
   });
 
-  wallpaperCancel.addEventListener('click', () => wallpaperModal.classList.remove('show'));
   wallpaperModal.addEventListener('click', (e) => {
     if (e.target === wallpaperModal) wallpaperModal.classList.remove('show');
   });
@@ -871,10 +939,11 @@ if (engineSelectorEl && engineListEl) {
   updateWallpaperThumb();
 
   document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
+    localStorage.removeItem(LS_WRP);
     resetWallpaper();
     renderWallpaperGrid();
     sidebarOverlaySlider.value = '0.3';
-    sidebarOverlayVal.textContent = '0.30';
+    sidebarOverlayVal.textContent = '30%';
     document.body.style.setProperty('--overlay-opacity', '0.3');
     localStorage.removeItem('overlayOpacity');
     updateWallpaperThumb();
@@ -933,29 +1002,58 @@ if (engineSelectorEl && engineListEl) {
     startWallpaperRotation(value);
   }
 
-  function getRotateIntervalMs(value) {
+  function getRotateIntervalHours(value) {
     switch (value) {
-      case '1h':  return 3600000;
-      case '6h':  return 21600000;
-      case '12h': return 43200000;
-      case '24h': return 86400000;
+      case '1h':  return 1;
+      case '6h':  return 6;
+      case '12h': return 12;
+      case '24h': return 24;
       default:    return 0;
     }
   }
 
-  function startWallpaperRotation(value) {
-    if (rotateTimer) { clearInterval(rotateTimer); rotateTimer = null; }
-    const ms = getRotateIntervalMs(value);
-    if (!ms) return;
-    rotateTimer = setInterval(() => {
-      const history = getWallpaperHistory();
-      if (history.length < 2) return;
-      const current = localStorage.getItem(LS_BG);
-      const others = history.filter(h => h !== current);
-      const pick = others[Math.floor(Math.random() * others.length)];
-      if (pick) applyWallpaper(pick);
-    }, ms);
+  function doWallpaperRotate() {
+    const history = getWallpaperHistory();
+    if (history.length < 2) return;
+    const pool = getRotationPool();
+    const candidates = pool.length ? pool.filter(u => history.includes(u)) : history;
+    if (candidates.length < 2) return;
+    const current = localStorage.getItem(LS_BG);
+    const others = candidates.filter(h => h !== current);
+    if (!others.length) return;
+    const pick = others[Math.floor(Math.random() * others.length)];
+    if (pick) applyWallpaper(pick);
   }
+
+  function startWallpaperRotation(value) {
+    if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
+    const hours = getRotateIntervalHours(value);
+    if (!hours) return;
+
+    function schedule() {
+      const now = new Date();
+      const h = now.getHours();
+      const nextHour = Math.ceil((h + 1e-6) / hours) * hours;
+      const next = new Date(now);
+      if (nextHour >= 24) {
+        next.setHours(0, 0, 0, 0);
+        next.setDate(next.getDate() + 1);
+      } else {
+        next.setHours(nextHour, 0, 0, 0);
+      }
+      rotateTimer = setTimeout(() => {
+        doWallpaperRotate();
+        schedule();
+      }, next.getTime() - now.getTime());
+    }
+
+    schedule();
+  }
+
+  document.getElementById('rotateNowBtn').addEventListener('click', () => {
+    doWallpaperRotate();
+    showToast('已轮换', 1500, 'success');
+  });
 
   rotateTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -983,6 +1081,38 @@ if (engineSelectorEl && engineListEl) {
     });
   });
 
+  function updateSliderTrack(slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const pct = ((slider.value - min) / (max - min)) * 100;
+    slider.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--slider-track, #555) ${pct}%)`;
+  }
+
+  function getNodeStep(slider) {
+    const ds = slider.dataset.step;
+    return ds ? parseFloat(ds) : ((parseFloat(slider.max) - parseFloat(slider.min)) / 100);
+  }
+
+  function roundToNode(value, step) { return Math.round(value / step) * step; }
+
+  function formatSliderVal(v, step, slider) {
+    const unit = slider.dataset.unit || '';
+    const scaled = unit === '%' ? v * 100 : v;
+    const decimals = step < 1 ? (step < 0.1 ? 2 : 1) : 0;
+    return parseFloat(scaled.toFixed(decimals)) + unit;
+  }
+
+  function snapToNode(slider) {
+    const step = getNodeStep(slider);
+    const snapped = roundToNode(parseFloat(slider.value), step);
+    slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), snapped));
+    slider.dispatchEvent(new Event('input'));
+  }
+
+  document.querySelectorAll('input[type="range"]').forEach(s => {
+    s.addEventListener('change', () => snapToNode(s));
+  });
+
   // 侧边栏遮罩透明度滑块
   const sidebarOverlaySlider = document.getElementById('sidebarOverlaySlider');
   const sidebarOverlayVal = document.getElementById('sidebarOverlayVal');
@@ -991,20 +1121,23 @@ if (engineSelectorEl && engineListEl) {
     sidebarOverlaySlider.value = savedOpacity;
     document.body.style.setProperty('--overlay-opacity', savedOpacity);
   }
-  sidebarOverlayVal.textContent = parseFloat(sidebarOverlaySlider.value).toFixed(2);
+  sidebarOverlayVal.textContent = Math.round(parseFloat(sidebarOverlaySlider.value) * 100) + '%';
+  updateSliderTrack(sidebarOverlaySlider);
 
   sidebarOverlaySlider.addEventListener('input', () => {
     const v = sidebarOverlaySlider.value;
-    sidebarOverlayVal.textContent = parseFloat(v).toFixed(2);
+    const step = getNodeStep(sidebarOverlaySlider);
+    sidebarOverlayVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarOverlaySlider);
     document.body.style.setProperty('--overlay-opacity', v);
     localStorage.setItem('overlayOpacity', v);
+    updateSliderTrack(sidebarOverlaySlider);
   });
 
   sidebarOverlaySlider.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const step = parseFloat(sidebarOverlaySlider.step);
+    const step = getNodeStep(sidebarOverlaySlider);
     const delta = e.deltaY > 0 ? -step : step;
-    sidebarOverlaySlider.value = Math.max(0, Math.min(0.5, parseFloat(sidebarOverlaySlider.value) + delta));
+    sidebarOverlaySlider.value = Math.max(parseFloat(sidebarOverlaySlider.min), Math.min(parseFloat(sidebarOverlaySlider.max), parseFloat(sidebarOverlaySlider.value) + delta));
     sidebarOverlaySlider.dispatchEvent(new Event('input'));
   });
 
@@ -1015,20 +1148,23 @@ if (engineSelectorEl && engineListEl) {
   const savedBlur = localStorage.getItem(LS_BLUR) || '0';
   sidebarBlurSlider.value = savedBlur;
   document.body.style.setProperty('--blur-px', savedBlur + 'px');
-  sidebarBlurVal.textContent = savedBlur;
+  sidebarBlurVal.textContent = savedBlur + 'px';
+  updateSliderTrack(sidebarBlurSlider);
 
   sidebarBlurSlider.addEventListener('input', () => {
     const v = sidebarBlurSlider.value;
-    sidebarBlurVal.textContent = v;
+    const step = getNodeStep(sidebarBlurSlider);
+    sidebarBlurVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarBlurSlider);
     document.body.style.setProperty('--blur-px', v + 'px');
     localStorage.setItem(LS_BLUR, v);
+    updateSliderTrack(sidebarBlurSlider);
   });
 
   sidebarBlurSlider.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const step = parseFloat(sidebarBlurSlider.step);
+    const step = getNodeStep(sidebarBlurSlider);
     const delta = e.deltaY > 0 ? -step : step;
-    sidebarBlurSlider.value = Math.max(0, Math.min(10, parseFloat(sidebarBlurSlider.value) + delta));
+    sidebarBlurSlider.value = Math.max(parseFloat(sidebarBlurSlider.min), Math.min(parseFloat(sidebarBlurSlider.max), parseFloat(sidebarBlurSlider.value) + delta));
     sidebarBlurSlider.dispatchEvent(new Event('input'));
   });
 
@@ -1041,7 +1177,6 @@ if (engineSelectorEl && engineListEl) {
   function applySidebarOpacity(v) {
     const opacity = parseFloat(v);
     document.body.style.setProperty('--sidebar-opacity', v);
-    sidebarOpacityVal.textContent = opacity.toFixed(2);
 
     // 浅色模式下透明度降低时加深文字，保证可读性
     const factor = (opacity - 0.2) / 0.8;                  // 0.2→0, 1→1
@@ -1055,18 +1190,23 @@ if (engineSelectorEl && engineListEl) {
 
   sidebarOpacitySlider.value = savedSidebarOpacity;
   applySidebarOpacity(savedSidebarOpacity);
+  sidebarOpacityVal.textContent = parseInt(parseFloat(savedSidebarOpacity) * 100) + '%';
+  updateSliderTrack(sidebarOpacitySlider);
 
   sidebarOpacitySlider.addEventListener('input', () => {
     const v = sidebarOpacitySlider.value;
+    const step = getNodeStep(sidebarOpacitySlider);
+    sidebarOpacityVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarOpacitySlider);
     applySidebarOpacity(v);
     localStorage.setItem(LS_SIDEBAR_OPACITY, v);
+    updateSliderTrack(sidebarOpacitySlider);
   });
 
   sidebarOpacitySlider.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const step = parseFloat(sidebarOpacitySlider.step);
+    const step = getNodeStep(sidebarOpacitySlider);
     const delta = e.deltaY > 0 ? -step : step;
-    sidebarOpacitySlider.value = Math.max(0.2, Math.min(1, parseFloat(sidebarOpacitySlider.value) + delta));
+    sidebarOpacitySlider.value = Math.max(parseFloat(sidebarOpacitySlider.min), Math.min(parseFloat(sidebarOpacitySlider.max), parseFloat(sidebarOpacitySlider.value) + delta));
     sidebarOpacitySlider.dispatchEvent(new Event('input'));
   });
 
@@ -1077,20 +1217,23 @@ if (engineSelectorEl && engineListEl) {
   const savedSidebarBlur = localStorage.getItem(LS_SIDEBAR_BLUR) || '0';
   sidebarBlurSlider2.value = savedSidebarBlur;
   document.body.style.setProperty('--sidebar-blur', savedSidebarBlur);
-  sidebarBlurVal2.textContent = savedSidebarBlur;
+  sidebarBlurVal2.textContent = savedSidebarBlur + 'px';
+  updateSliderTrack(sidebarBlurSlider2);
 
   sidebarBlurSlider2.addEventListener('input', () => {
     const v = sidebarBlurSlider2.value;
-    sidebarBlurVal2.textContent = v;
+    const step = getNodeStep(sidebarBlurSlider2);
+    sidebarBlurVal2.textContent = formatSliderVal(roundToNode(v, step), step,sidebarBlurSlider2);
     document.body.style.setProperty('--sidebar-blur', v);
     localStorage.setItem(LS_SIDEBAR_BLUR, v);
+    updateSliderTrack(sidebarBlurSlider2);
   });
 
   sidebarBlurSlider2.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const step = parseFloat(sidebarBlurSlider2.step);
+    const step = getNodeStep(sidebarBlurSlider2);
     const delta = e.deltaY > 0 ? -step : step;
-    sidebarBlurSlider2.value = Math.max(0, Math.min(10, parseFloat(sidebarBlurSlider2.value) + delta));
+    sidebarBlurSlider2.value = Math.max(parseFloat(sidebarBlurSlider2.min), Math.min(parseFloat(sidebarBlurSlider2.max), parseFloat(sidebarBlurSlider2.value) + delta));
     sidebarBlurSlider2.dispatchEvent(new Event('input'));
   });
 
@@ -1130,20 +1273,23 @@ if (engineSelectorEl && engineListEl) {
       slider.value = saved;
       document.documentElement.style.setProperty(cssVar, saved + unit);
     }
-    label.textContent = slider.value;
+    label.textContent = slider.value + 'px';
+    updateSliderTrack(slider);
 
     slider.addEventListener('input', () => {
       const v = slider.value;
-      label.textContent = v;
+      const step = getNodeStep(slider);
+      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
       document.documentElement.style.setProperty(cssVar, v + unit);
       localStorage.setItem(key, v);
+      updateSliderTrack(slider);
     });
 
     slider.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const step = parseFloat(slider.step);
+      const step = getNodeStep(slider);
       const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(-300, Math.min(300, parseFloat(slider.value) + delta));
+      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
       slider.dispatchEvent(new Event('input'));
     });
   })();
@@ -1161,20 +1307,23 @@ if (engineSelectorEl && engineListEl) {
       slider.value = saved;
       document.documentElement.style.setProperty(cssVar, saved + unit);
     }
-    label.textContent = slider.value;
+    label.textContent = slider.value + 'px';
+    updateSliderTrack(slider);
 
     slider.addEventListener('input', () => {
       const v = slider.value;
-      label.textContent = v;
+      const step = getNodeStep(slider);
+      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
       document.documentElement.style.setProperty(cssVar, v + unit);
       localStorage.setItem(key, v);
+      updateSliderTrack(slider);
     });
 
     slider.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const step = parseFloat(slider.step);
+      const step = getNodeStep(slider);
       const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(-300, Math.min(300, parseFloat(slider.value) + delta));
+      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
       slider.dispatchEvent(new Event('input'));
     });
   })();
@@ -1192,20 +1341,23 @@ if (engineSelectorEl && engineListEl) {
       slider.value = saved;
       document.documentElement.style.setProperty(cssVar, saved + unit);
     }
-    label.textContent = slider.value;
+    label.textContent = slider.value + 'px';
+    updateSliderTrack(slider);
 
     slider.addEventListener('input', () => {
       const v = slider.value;
-      label.textContent = v;
+      const step = getNodeStep(slider);
+      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
       document.documentElement.style.setProperty(cssVar, v + unit);
       localStorage.setItem(key, v);
+      updateSliderTrack(slider);
     });
 
     slider.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const step = parseFloat(slider.step);
+      const step = getNodeStep(slider);
       const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(100, Math.min(1200, parseFloat(slider.value) + delta));
+      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
       slider.dispatchEvent(new Event('input'));
     });
   })();
@@ -1223,20 +1375,23 @@ if (engineSelectorEl && engineListEl) {
       slider.value = saved;
       document.documentElement.style.setProperty(cssVar, saved + unit);
     }
-    label.textContent = slider.value;
+    label.textContent = slider.value + 'px';
+    updateSliderTrack(slider);
 
     slider.addEventListener('input', () => {
       const v = slider.value;
-      label.textContent = v;
+      const step = getNodeStep(slider);
+      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
       document.documentElement.style.setProperty(cssVar, v + unit);
       localStorage.setItem(key, v);
+      updateSliderTrack(slider);
     });
 
     slider.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const step = parseFloat(slider.step);
+      const step = getNodeStep(slider);
       const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(0, Math.min(25, parseFloat(slider.value) + delta));
+      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
       slider.dispatchEvent(new Event('input'));
     });
   })();
@@ -1253,7 +1408,7 @@ if (engineSelectorEl && engineListEl) {
       ];
       defaults.forEach(d => {
         document.getElementById(d.slider).value = d.value;
-        document.getElementById(d.label).textContent = d.value;
+        document.getElementById(d.label).textContent = d.value + 'px';
         document.documentElement.style.setProperty(d.cssVar, d.value + 'px');
         localStorage.removeItem(d.key);
       });
@@ -1454,6 +1609,7 @@ if (engineSelectorEl && engineListEl) {
       if (!confirm('确定要恢复所有设置为默认值吗？\n此操作将清除壁纸、自定义引擎等所有更改。')) return;
       localStorage.removeItem(LS_BG);
       localStorage.removeItem(LS_WH);
+      localStorage.removeItem(LS_WRP);
       localStorage.removeItem(LS_WALLPAPER_ROTATE);
       localStorage.removeItem(LS_DISABLED);
       localStorage.removeItem(LS_DEFAULT_ENGINE);
@@ -1478,16 +1634,21 @@ if (engineSelectorEl && engineListEl) {
 
       resetWallpaper();
       sidebarOverlaySlider.value = '0.3';
-      sidebarOverlayVal.textContent = '0.30';
+      sidebarOverlayVal.textContent = '30%';
       document.body.style.setProperty('--overlay-opacity', '0.3');
+      updateSliderTrack(sidebarOverlaySlider);
       sidebarBlurSlider.value = '0';
-      sidebarBlurVal.textContent = '0';
+      sidebarBlurVal.textContent = '0px';
       document.body.style.setProperty('--blur-px', '0px');
+      updateSliderTrack(sidebarBlurSlider);
       sidebarOpacitySlider.value = '1';
       applySidebarOpacity('1');
+      sidebarOpacityVal.textContent = '100%';
+      updateSliderTrack(sidebarOpacitySlider);
       sidebarBlurSlider2.value = '0';
-      sidebarBlurVal2.textContent = '0';
+      sidebarBlurVal2.textContent = '0px';
       document.body.style.setProperty('--sidebar-blur', '0');
+      updateSliderTrack(sidebarBlurSlider2);
       document.documentElement.style.setProperty('--search-offset-y', '0px');
       document.documentElement.style.setProperty('--search-offset-x', '0px');
       document.documentElement.style.setProperty('--search-width', '800px');
@@ -1496,10 +1657,10 @@ if (engineSelectorEl && engineListEl) {
       const sxSlider = document.getElementById('searchOffsetXSlider');
       const swSlider = document.getElementById('searchWidthSlider');
       const srSlider = document.getElementById('searchRadiusSlider');
-      if (sySlider) { sySlider.value = '0'; document.getElementById('searchOffsetYVal').textContent = '0'; }
-      if (sxSlider) { sxSlider.value = '0'; document.getElementById('searchOffsetXVal').textContent = '0'; }
-      if (swSlider) { swSlider.value = '800'; document.getElementById('searchWidthVal').textContent = '800'; }
-      if (srSlider) { srSlider.value = '25'; document.getElementById('searchRadiusVal').textContent = '25'; }
+      if (sySlider) { sySlider.value = '0'; document.getElementById('searchOffsetYVal').textContent = '0px'; updateSliderTrack(sySlider); }
+      if (sxSlider) { sxSlider.value = '0'; document.getElementById('searchOffsetXVal').textContent = '0px'; updateSliderTrack(sxSlider); }
+      if (swSlider) { swSlider.value = '800'; document.getElementById('searchWidthVal').textContent = '800px'; updateSliderTrack(swSlider); }
+      if (srSlider) { srSlider.value = '25'; document.getElementById('searchRadiusVal').textContent = '25px'; updateSliderTrack(srSlider); }
       if (document.getElementById('searchBoxToggle')) {
         document.getElementById('searchBoxToggle').checked = true;
         document.getElementById('searchBoxControls').classList.remove('hidden');
@@ -1509,8 +1670,6 @@ if (engineSelectorEl && engineListEl) {
       updateWallpaperThumb();
       applyAccent('#0066cc');
       highlightSwatch('#0066cc');
-      customColorPanel.classList.remove('open');
-      colorPanelOpen = false;
 
       if (historyToggle) historyToggle.checked = true;
       hideHistoryDropdown();
@@ -1537,7 +1696,7 @@ if (engineSelectorEl && engineListEl) {
       }
 
       selectRotation('off');
-      if (rotateTimer) { clearInterval(rotateTimer); rotateTimer = null; }
+      if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
       showToast('设置已恢复默认');
     });
   }
