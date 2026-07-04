@@ -27,6 +27,7 @@ updateDigitalClock();
 setInterval(updateDigitalClock, 1000);
 
 let toastTimer = null;
+let suggestionTimer = null;
 function showToast(message, duration = 2000, type = '') {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -56,6 +57,7 @@ const LS_DISABLED = 'disabledEngines';
 const LS_SEARCH_HISTORY = 'searchHistory';
 const LS_SEARCH_HISTORY_ENABLED = 'searchHistoryEnabled';
 const LS_CLOCK_VISIBLE = 'clockVisible';
+const LS_SUGGESTION_PROVIDER = 'suggestionProvider';
 const LS_CUSTOM_ENGINES = 'customEngines';
 const MAX_WALLPAPER_HISTORY = 12;
 const MAX_HISTORY_ITEMS = 20;
@@ -81,6 +83,18 @@ function isSearchHistoryEnabled() {
 
 function setSearchHistoryEnabled(enabled) {
   localStorage.setItem(LS_SEARCH_HISTORY_ENABLED, enabled.toString());
+}
+
+function isOpenInNewTab() {
+  return localStorage.getItem('openInNewTab') !== 'false';
+}
+
+function getSuggestionProvider() {
+  return localStorage.getItem(LS_SUGGESTION_PROVIDER) || 'off';
+}
+
+function isSuggestionEnabled() {
+  return getSuggestionProvider() !== 'off';
 }
 
 function isClockVisible() {
@@ -155,6 +169,108 @@ function clearSearchHistory() {
   renderHistoryList();
 }
 
+function cancelSuggestions() {
+  if (suggestionTimer) { clearTimeout(suggestionTimer); suggestionTimer = null; }
+}
+
+function fetchSuggestions(query) {
+  cancelSuggestions();
+  if (!query || !isSuggestionEnabled()) { renderHistoryList(query); return; }
+
+  var provider = getSuggestionProvider();
+  var url;
+
+  if (provider === 'baidu') {
+    url = 'https://suggestion.baidu.com/su?wd=' + encodeURIComponent(query) + '&p=3';
+  } else if (provider === 'google') {
+    url = 'https://suggestqueries.google.com/complete/search?client=chrome&q=' + encodeURIComponent(query);
+  } else if (provider === 'bing') {
+    url = 'https://api.bing.com/osjson.aspx?query=' + encodeURIComponent(query);
+  } else {
+    renderHistoryList(query);
+    return;
+  }
+
+  fetch(url, { signal: AbortSignal.timeout(5000) })
+    .then(function(response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      if (provider === 'baidu') return response.arrayBuffer();
+      return response.text();
+    })
+    .then(function(data) {
+      var text;
+      if (provider === 'baidu') {
+        var decoder = new TextDecoder('gbk');
+        text = decoder.decode(new Uint8Array(data));
+      } else {
+        text = data;
+      }
+      var suggestions = [];
+      if (provider === 'baidu') {
+        var m = text.match(/s\s*:\s*(\[[\s\S]*?\])/);
+        if (m) {
+          try { suggestions = JSON.parse(m[1]); } catch(e) {}
+        }
+      } else {
+        try {
+          var d = JSON.parse(text);
+          suggestions = (d && Array.isArray(d[1])) ? d[1] : [];
+        } catch(e) {}
+      }
+      renderSuggestionsList(suggestions);
+    })
+    .catch(function() {
+      renderSuggestionsList([]);
+    });
+}
+
+function renderSuggestionsList(suggestions) {
+  var dd = document.getElementById('history-dropdown');
+  var list = document.getElementById('history-list');
+  var title = document.getElementById('dropdown-title');
+  var clearBtn = document.getElementById('clear-history-btn');
+  if (!dd || !list) return;
+
+  if (!suggestions || suggestions.length === 0) {
+    if (isSearchHistoryEnabled()) {
+      renderHistoryList(searchInput.value.trim());
+    } else {
+      hideHistoryDropdown();
+    }
+    return;
+  }
+
+  if (title) { title.setAttribute('data-i18n', 'suggestionTitle'); title.textContent = t('suggestionTitle'); }
+  if (clearBtn) clearBtn.style.display = 'none';
+  dd.classList.add('suggestions');
+
+  list.innerHTML = '';
+  suggestions.forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'history-item';
+
+    var icon = document.createElement('img');
+    icon.className = 'history-icon';
+    icon.src = './icons/history-black.svg';
+    icon.alt = '';
+    row.appendChild(icon);
+
+    var text = document.createElement('span');
+    text.className = 'history-text';
+    text.textContent = item;
+    row.appendChild(text);
+
+    row.addEventListener('click', function() {
+      searchInput.value = item;
+      hideHistoryDropdown();
+      search();
+    });
+    list.appendChild(row);
+  });
+
+  showHistoryDropdown();
+}
+
 function showHistoryDropdown() {
   const dd = document.getElementById('history-dropdown');
   if (dd) { dd.classList.add('show'); searchInput.classList.add('expanded'); }
@@ -170,6 +286,12 @@ function renderHistoryList(filter = '') {
   const list = document.getElementById('history-list');
   const dd = document.getElementById('history-dropdown');
   if (!list || !dd) return;
+
+  var title = document.getElementById('dropdown-title');
+  var clearBtn = document.getElementById('clear-history-btn');
+  if (title) { title.setAttribute('data-i18n', 'historyTitle'); title.textContent = t('historyTitle'); }
+  if (clearBtn) clearBtn.style.display = '';
+  dd.classList.remove('suggestions');
 
   const history = getSearchHistory();
   let filtered = filter
@@ -280,33 +402,64 @@ function search() {
   const kw = searchInput.value.trim();
   if (!kw) return;
   saveSearchHistory(kw);
-  window.open(engines[currentEngine].url + encodeURIComponent(kw), '_blank');
+  const url = engines[currentEngine].url + encodeURIComponent(kw);
+  if (isOpenInNewTab()) {
+    window.open(url, '_blank');
+  } else {
+    window.location.href = url;
+  }
   searchInput.value = '';
   toggleBtns();
 }
 
-searchInput.addEventListener('input', () => {
+searchInput.addEventListener('input', function() {
   toggleBtns();
   updateEngineIcon();
-  if (!isSearchHistoryEnabled()) { hideHistoryDropdown(); return; }
-  const history = getSearchHistory();
-  if (history.length === 0) { hideHistoryDropdown(); return; }
-  const value = searchInput.value.trim();
-  renderHistoryList(value);
-  showHistoryDropdown();
+  var value = searchInput.value.trim();
+
+  if (suggestionTimer) clearTimeout(suggestionTimer);
+
+  if (!value) {
+    cancelSuggestions();
+    if (isSuggestionEnabled() && isSearchHistoryEnabled() && getSearchHistory().length > 0) {
+      renderHistoryList();
+    } else {
+      hideHistoryDropdown();
+    }
+    return;
+  }
+
+  suggestionTimer = setTimeout(function() {
+    suggestionTimer = null;
+    if (isSuggestionEnabled()) {
+      fetchSuggestions(value);
+    } else if (isSearchHistoryEnabled()) {
+      var history = getSearchHistory();
+      if (history.length === 0) { hideHistoryDropdown(); return; }
+      renderHistoryList(value);
+    } else {
+      hideHistoryDropdown();
+    }
+  }, 100);
 });
 
 searchInput.addEventListener('change', () => setTimeout(toggleBtns, 100));
 searchInput.addEventListener('webkitFillAvailable', toggleBtns);
 searchInput.addEventListener('autocomplete', toggleBtns);
 
-searchInput.addEventListener('focus', () => {
+searchInput.addEventListener('focus', function() {
   updateEngineIcon();
-  if (isSearchHistoryEnabled() && getSearchHistory().length > 0) renderHistoryList();
+  var value = searchInput.value.trim();
+  if (isSuggestionEnabled() && value) {
+    fetchSuggestions(value);
+  } else if (isSearchHistoryEnabled() && getSearchHistory().length > 0) {
+    renderHistoryList(value);
+  }
   hideDigitalClock();
 });
-searchInput.addEventListener('blur', () => {
+searchInput.addEventListener('blur', function() {
   updateEngineIcon();
+  cancelSuggestions();
   setTimeout(hideHistoryDropdown, 150);
   showDigitalClock();
 });
@@ -431,6 +584,67 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  const newTabToggle = document.getElementById('sidebarNewTabToggle');
+  if (newTabToggle) {
+    newTabToggle.checked = isOpenInNewTab();
+    newTabToggle.addEventListener('change', () => {
+      localStorage.setItem('openInNewTab', newTabToggle.checked.toString());
+    });
+  }
+
+  (function() {
+    var dropdown = document.getElementById('suggestionProviderDropdown');
+    var trigger = document.getElementById('suggestionProviderTrigger');
+    var list = document.getElementById('suggestionProviderList');
+    if (!dropdown || !trigger || !list) return;
+
+    var options = [
+      { value: 'off',    i18nKey: 'suggestionOff' },
+      { value: 'baidu',  i18nKey: 'suggestionBaidu' },
+      { value: 'google', i18nKey: 'suggestionGoogle' },
+      { value: 'bing',   i18nKey: 'suggestionBing' }
+    ];
+
+    options.forEach(function(opt) {
+      var el = document.createElement('div');
+      el.className = 'rotate-option';
+      el.setAttribute('data-value', opt.value);
+      el.setAttribute('data-i18n-key', opt.i18nKey);
+      el.textContent = t(opt.i18nKey);
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectProvider(opt.value);
+        dropdown.classList.remove('open');
+      });
+      list.appendChild(el);
+    });
+
+    function selectProvider(value) {
+      var opt = options.find(function(o) { return o.value === value; });
+      if (opt) trigger.textContent = t(opt.i18nKey);
+      list.querySelectorAll('.rotate-option').forEach(function(o) {
+        o.classList.toggle('active', o.getAttribute('data-value') === value);
+      });
+      localStorage.setItem(LS_SUGGESTION_PROVIDER, value);
+    }
+
+    trigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('open');
+    });
+
+    selectProvider(getSuggestionProvider());
+
+    window._sugOptions = options;
+    window._sugTrigger = trigger;
+    window._sugList = list;
+    window._selectSuggestionProvider = selectProvider;
+  })();
+
   const clockToggle = document.getElementById('sidebarClockToggle');
   const clockFollowRow = document.getElementById('clockFollowRow');
   const clockFollowToggle = document.getElementById('clockFollowToggle');
@@ -451,7 +665,12 @@ if (engineSelectorEl && engineListEl) {
   const LS_CLOCK_LOCKED = 'clockCustomLocked';
 
   function applyClockPosition(pos) {
-    if (clockEl) clockEl.style.order = pos === 'above' ? '-1' : '0';
+    if (clockEl) {
+      if (clockEl.classList.contains('follow-mode')) {
+        clockEl.style.top = pos === 'above' ? 'auto' : '100%';
+        clockEl.style.bottom = pos === 'above' ? '100%' : 'auto';
+      }
+    }
     if (clockPositionSeg) {
       clockPositionSeg.querySelectorAll('.theme-mode-opt').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
     }
@@ -769,13 +988,16 @@ if (engineSelectorEl && engineListEl) {
   function applyClockFollow(enabled) {
     if (clockEl) {
       if (enabled) {
-        clockEl.style.transform = 'translate(var(--search-offset-x, 0px), var(--search-offset-y, 0px))';
-        clockEl.style.position = '';
-        clockEl.style.top = ''; clockEl.style.left = '';
-        clockEl.style.right = ''; clockEl.style.bottom = '';
+        clockEl.style.position = 'absolute';
+        clockEl.style.left = '50%';
+        clockEl.style.transform = 'translateX(-50%) translate(var(--search-offset-x, 0px), var(--search-offset-y, 0px))';
+        clockEl.classList.add('follow-mode');
         applyClockPosition(localStorage.getItem(LS_CLOCK_POS) || 'below');
       } else {
+        clockEl.style.position = '';
+        clockEl.style.left = '';
         clockEl.style.transform = '';
+        clockEl.classList.remove('follow-mode');
         applyClockCustomPos(localStorage.getItem(LS_CLOCK_CUSTOM_POS) || 'center');
       }
     }
@@ -861,6 +1083,20 @@ if (engineSelectorEl && engineListEl) {
       const key = o.getAttribute('data-i18n-key');
       if (key) o.textContent = t(key);
     });
+    var savedSug = getSuggestionProvider();
+    var sugOpt = (window._sugOptions || []).find(function(o) { return o.value === savedSug; });
+    if (sugOpt && window._sugTrigger) window._sugTrigger.textContent = t(sugOpt.i18nKey);
+    if (window._sugList) {
+      window._sugList.querySelectorAll('.rotate-option').forEach(function(o) {
+        var key = o.getAttribute('data-i18n-key');
+        if (key) o.textContent = t(key);
+      });
+    }
+    var dd = document.getElementById('history-dropdown');
+    if (dd && dd.classList.contains('suggestions')) {
+      var dtitle = document.getElementById('dropdown-title');
+      if (dtitle) dtitle.textContent = t('suggestionTitle');
+    }
     const ceTitle = document.getElementById('customEngineFormTitle');
     const ceSave = document.getElementById('customEngineSave');
     if (ceTitle && ceSave) {
@@ -873,9 +1109,14 @@ if (engineSelectorEl && engineListEl) {
       }
     }
     const historyDD = document.getElementById('history-dropdown');
-    if (historyToggle && historyToggle.checked && historyDD && historyDD.classList.contains('show')) {
-      const filter = searchInput.value.trim();
-      renderHistoryList(filter);
+    if (historyDD && historyDD.classList.contains('show')) {
+      if (historyDD.classList.contains('suggestions')) {
+        var sfilter = searchInput.value.trim();
+        if (sfilter && isSuggestionEnabled()) fetchSuggestions(sfilter);
+      } else if (historyToggle && historyToggle.checked) {
+        const filter = searchInput.value.trim();
+        renderHistoryList(filter);
+      }
     }
   };
 
@@ -892,15 +1133,25 @@ if (engineSelectorEl && engineListEl) {
 
   const LS_ACCENT = 'accentColor';
   function applyAccent(hex) {
+    previewAccent(hex);
+    localStorage.setItem(LS_ACCENT, hex);
+  }
+
+  function previewAccent(hex) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
     document.body.style.setProperty('--accent', hex);
     document.body.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
-    localStorage.setItem(LS_ACCENT, hex);
+    // Auto-adjust accent text contrast
+    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    var textColor = lum > 0.55 ? '#1a1a1a' : '#ffffff';
+    document.body.style.setProperty('--accent-text', textColor);
+    var cb = document.getElementById('pickerConfirmBtn');
+    if (cb) cb.style.color = textColor;
   }
 
-  const savedAccent = localStorage.getItem(LS_ACCENT) || '#0066cc';
+  const savedAccent = localStorage.getItem(LS_ACCENT) || '#2563eb';
   applyAccent(savedAccent);
 
   const themeColorRow = document.getElementById('themeColorRow');
@@ -913,14 +1164,202 @@ if (engineSelectorEl && engineListEl) {
   highlightSwatch(savedAccent);
 
   themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
-    s.addEventListener('click', () => {
+    s.addEventListener('click', function() {
+      if (s.id === 'colorPickerTrigger') return;
       const hex = s.dataset.color;
       applyAccent(hex);
       highlightSwatch(hex);
+      if (pickerPanel && !pickerPanel.classList.contains('hidden')) {
+        pickerOrigAccent = hex;
+        var hsl = hslFromHex(hex);
+        pickerHue = hsl.h; pickerSat = hsl.s; pickerLum = hsl.l;
+        hexInput.value = hex.toLowerCase();
+        drawPalette();
+        drawHueBar();
+      }
     });
   });
 
-  const sidebarNav = sidebar.querySelector('.sidebar-nav');
+  // Color picker
+  var pickerPanel = document.getElementById('colorPickerPanel');
+  var pickerTrigger = document.getElementById('colorPickerTrigger');
+  var palette = document.getElementById('pickerPalette');
+  var hueBar = document.getElementById('pickerHueBar');
+  var hexInput = document.getElementById('pickerHexInput');
+  var confirmBtn = document.getElementById('pickerConfirmBtn');
+  var pickerHue = 0, pickerSat = 100, pickerLum = 50, pickerSize = 160;
+
+  if (pickerPanel && palette && hueBar) {
+    var pctx = palette.getContext('2d');
+    var hctx = hueBar.getContext('2d');
+
+    function _h2rgb(pp, qq, t) {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return pp + (qq - pp) * 6 * t;
+      if (t < 1/2) return qq;
+      if (t < 2/3) return pp + (qq - pp) * (2/3 - t) * 6;
+      return pp;
+    }
+
+    function hslToRgb(h, s, l) {
+      var ss = s / 100, ll = l / 100;
+      var qq = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
+      var pp = 2 * ll - qq;
+      var hh = h / 360;
+      var r = Math.round(_h2rgb(pp, qq, hh + 1/3) * 255);
+      var g = Math.round(_h2rgb(pp, qq, hh) * 255);
+      var b = Math.round(_h2rgb(pp, qq, hh - 1/3) * 255);
+      return {r: r, g: g, b: b};
+    }
+
+    function drawHueBar() {
+      for (var y = 0; y < pickerSize; y++) {
+        var rgb = hslToRgb(y / pickerSize * 360, 100, 50);
+        hctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+        hctx.fillRect(0, y, 20, 1);
+      }
+      var hy = Math.round(pickerHue / 360 * pickerSize);
+      var irgb = hslToRgb(pickerHue, 100, 50);
+      var lum = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
+      hctx.fillStyle = lum > 0.65 ? '#333' : '#fff';
+      hctx.fillRect(0, hy - 3, 20, 5);
+    }
+
+    function drawPalette() {
+      var prgb = hslToRgb(pickerHue, 100, 50);
+      pctx.clearRect(0, 0, pickerSize, pickerSize);
+      var gradW = pctx.createLinearGradient(0, 0, pickerSize, 0);
+      gradW.addColorStop(0, '#ffffff');
+      gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
+      pctx.fillStyle = gradW;
+      pctx.fillRect(0, 0, pickerSize, pickerSize);
+      var gradB = pctx.createLinearGradient(0, 0, 0, pickerSize);
+      gradB.addColorStop(0, 'transparent');
+      gradB.addColorStop(1, '#000000');
+      pctx.fillStyle = gradB;
+      pctx.fillRect(0, 0, pickerSize, pickerSize);
+      var px = Math.round(pickerSat / 100 * pickerSize);
+      var py = Math.round((100 - pickerLum) / 100 * pickerSize);
+      var crgb = hslToRgb(pickerHue, pickerSat, pickerLum);
+      var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
+      pctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
+      pctx.lineWidth = 2;
+      pctx.beginPath();
+      pctx.arc(px, py, 3.5, 0, Math.PI * 2);
+      pctx.stroke();
+    }
+
+    function updateFromPicker() {
+      var rgb = hslToRgb(pickerHue, pickerSat, pickerLum);
+      var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
+      hexInput.value = hex;
+      previewAccent(hex);
+    }
+
+    function hslFromHex(hex) {
+      var r = parseInt(hex.slice(1,3), 16) / 255;
+      var g = parseInt(hex.slice(3,5), 16) / 255;
+      var b = parseInt(hex.slice(5,7), 16) / 255;
+      var max = Math.max(r,g,b), min = Math.min(r,g,b);
+      var l = (max + min) / 2 * 100;
+      var d = max - min;
+      var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l / 100 - 1)) * 100;
+      var hue = 0;
+      if (d !== 0) {
+        if (max === r) hue = ((g - b) / d) % 6;
+        else if (max === g) hue = (b - r) / d + 2;
+        else hue = (r - g) / d + 4;
+      }
+      hue = (hue * 60 + 360) % 360;
+      return {h: hue, s: s, l: l};
+    }
+
+    function onPaletteMove(e) {
+      var rect = palette.getBoundingClientRect();
+      var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+      x = Math.max(0, Math.min(pickerSize, x));
+      y = Math.max(0, Math.min(pickerSize, y));
+      pickerSat = Math.round(x / pickerSize * 100);
+      pickerLum = Math.round(100 - y / pickerSize * 100);
+      drawPalette();
+      updateFromPicker();
+    }
+
+    function onHueMove(e) {
+      var rect = hueBar.getBoundingClientRect();
+      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+      y = Math.max(0, Math.min(pickerSize, y));
+      pickerHue = Math.round(y / pickerSize * 360);
+      drawPalette();
+      drawHueBar();
+      updateFromPicker();
+    }
+
+    palette.addEventListener('mousedown', function(e) {
+      onPaletteMove(e);
+      document.addEventListener('mousemove', onPaletteMove);
+      document.addEventListener('mouseup', function() {
+        document.removeEventListener('mousemove', onPaletteMove);
+      }, {once: true});
+    });
+
+    hueBar.addEventListener('mousedown', function(e) {
+      onHueMove(e);
+      document.addEventListener('mousemove', onHueMove);
+      document.addEventListener('mouseup', function() {
+        document.removeEventListener('mousemove', onHueMove);
+      }, {once: true});
+    });
+
+    hexInput.addEventListener('input', function() {
+      var hex = hexInput.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        var hsl = hslFromHex(hex);
+        pickerHue = hsl.h;
+        pickerSat = hsl.s;
+        pickerLum = hsl.l;
+        drawPalette();
+        drawHueBar();
+        previewAccent(hex.toLowerCase());
+      }
+    });
+
+    confirmBtn.addEventListener('click', function() {
+      var hex = hexInput.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        applyAccent(hex.toLowerCase());
+        highlightSwatch(hex.toLowerCase());
+        pickerPanel.classList.add('hidden');
+      }
+    });
+
+    var pickerOrigAccent = '';
+
+    pickerTrigger.addEventListener('click', function(e) {
+      e.stopPropagation();
+      pickerPanel.classList.toggle('hidden');
+      if (!pickerPanel.classList.contains('hidden')) {
+        pickerOrigAccent = localStorage.getItem(LS_ACCENT) || '#2563eb';
+        // Resize palette canvas to fill available space
+        var row = document.querySelector('.picker-row');
+        var available = row ? row.clientWidth - 26 : 160;
+        pickerSize = available;
+        palette.width = available; palette.height = available;
+        hueBar.height = available;
+        var hsl = hslFromHex(pickerOrigAccent);
+        pickerHue = hsl.h; pickerSat = hsl.s; pickerLum = hsl.l;
+        drawPalette();
+        drawHueBar();
+        updateFromPicker();
+      } else {
+        previewAccent(pickerOrigAccent);
+        highlightSwatch(pickerOrigAccent);
+      }
+    });
+  }
+
+  var sidebarNav = sidebar.querySelector('.sidebar-nav');
   const navItems = sidebar.querySelectorAll('.sidebar-nav-item');
 
   const navHighlight = document.createElement('div');
@@ -1886,6 +2325,7 @@ if (engineSelectorEl && engineListEl) {
       localStorage.removeItem('searchWidth');
       localStorage.removeItem('searchRadius');
       localStorage.removeItem('searchBoxEnabled');
+      localStorage.removeItem(LS_SUGGESTION_PROVIDER);
 
       resetWallpaper();
       sidebarOverlaySlider.value = '0.3';
@@ -1923,8 +2363,8 @@ if (engineSelectorEl && engineListEl) {
         if (sc) sc.classList.remove('hidden');
       }
       updateWallpaperThumb();
-      applyAccent('#0066cc');
-      highlightSwatch('#0066cc');
+      applyAccent('#2563eb');
+      highlightSwatch('#2563eb');
 
       if (historyToggle) historyToggle.checked = true;
       hideHistoryDropdown();
@@ -1952,6 +2392,7 @@ if (engineSelectorEl && engineListEl) {
 
       selectRotation('off');
       if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
+      if (window._selectSuggestionProvider) window._selectSuggestionProvider('off');
       showToast(t('toastSettingsReset'));
     });
   }
@@ -2229,3 +2670,10 @@ if (defaultEngineManager) defaultEngineManager.addEventListener('change', (e) =>
   }
   if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();
 });
+
+(function() {
+  var span = document.getElementById('aboutVersionSpan');
+  if (span && typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getManifest) {
+    try { span.textContent = 'v' + chrome.runtime.getManifest().version; } catch(e) {}
+  }
+})();

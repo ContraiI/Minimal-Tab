@@ -69,7 +69,7 @@
             
             <div id="history-dropdown" class="history-dropdown">
               <div class="history-header">
-                <span class="history-title" data-i18n="historyTitle">搜索历史</span>
+                <span id="dropdown-title" class="history-title" data-i18n="historyTitle">搜索历史</span>
                 <button id="clear-history-btn" class="clear-history-btn" data-i18n="clearHistory">清除历史记录</button>
               </div>
               <div id="history-list" class="history-list"></div>
@@ -132,8 +132,8 @@
         <div class="sidebar-nav-item active" data-panel="theme" data-i18n="navTheme">主题/壁纸</div>
         <div class="sidebar-nav-item" data-panel="engines" data-i18n="navEngines">搜索功能</div>
         <div class="sidebar-nav-item" data-panel="personalize" data-i18n="navPersonalize">个性化</div>
-	        <div class="sidebar-nav-item" data-panel="moreSettings" data-i18n="navMoreSettings">更多设置</div>
 	        <div class="sidebar-nav-item" data-panel="reset" data-i18n="navReset">重置设置</div>
+	        <div class="sidebar-nav-item" data-panel="about" data-i18n="navAbout">关于我们</div>
 	      </nav>
       <div class="sidebar-content">
         <div class="sidebar-panel active" id="sidebarPanelTheme">
@@ -148,16 +148,27 @@
           </div>
           <div class="sidebar-section-label" data-i18n="sectionAccentColor">主题色</div>
           <div class="theme-color-row" id="themeColorRow">
-            <span class="theme-color-swatch" data-color="#0066cc" style="background:#0066cc"></span>
+            <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
+            <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
+            <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
+            <span class="theme-color-swatch" data-color="#0f766e" style="background:#0f766e"></span>
             <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
-            <span class="theme-color-swatch" data-color="#059669" style="background:#059669"></span>
             <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
+            <span class="theme-color-swatch" data-color="#ca8a04" style="background:#ca8a04"></span>
             <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
-            <span class="theme-color-swatch" data-color="#0891b2" style="background:#0891b2"></span>
             <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
-            <span class="theme-color-swatch" data-color="#d97706" style="background:#d97706"></span>
-            <span class="theme-color-swatch" data-color="#65a30d" style="background:#65a30d"></span>
-            <span class="theme-color-swatch" data-color="#4f46e5" style="background:#4f46e5"></span>
+            <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
+            <span class="theme-color-swatch picker-trigger" id="colorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
+          </div>
+          <div id="colorPickerPanel" class="color-picker-panel hidden">
+            <div class="picker-row">
+              <canvas id="pickerPalette" class="picker-palette" width="160" height="160"></canvas>
+              <canvas id="pickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
+            </div>
+            <div class="picker-input-row">
+              <input type="text" id="pickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
+              <button id="pickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
+            </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
           <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
@@ -197,7 +208,8 @@
             <input type="range" id="sidebarBlurSlider2" min="0" max="10" step="any" data-step="0.5" data-unit="px" value="0">
             <span id="sidebarBlurVal2">0</span>
           </div>
-          <label class="sidebar-toggle sidebar-divider">
+          <div class="sidebar-section-label" data-i18n="sectionClock">时钟</div>
+          <label class="sidebar-toggle">
             <span data-i18n="digitalClock">数字时钟</span>
             <input type="checkbox" id="sidebarClockToggle" checked>
             <span class="toggle-switch"></span>
@@ -316,13 +328,33 @@
               <div id="sidebarDefaultEngineList" class="sidebar-engine-list"></div>
             </div>
           </div>
-          <label class="sidebar-toggle sidebar-divider">
+          <div class="sidebar-separator"></div>
+          <div class="sidebar-toggle" style="overflow:visible">
+            <span data-i18n="suggestionProvider">搜索建议接口</span>
+            <div class="rotate-dropdown" id="suggestionProviderDropdown">
+              <span class="rotate-trigger" id="suggestionProviderTrigger" data-i18n="suggestionOff">不使用</span>
+              <div class="rotate-list" id="suggestionProviderList"></div>
+            </div>
+          </div>
+          <label class="sidebar-toggle">
+            <span data-i18n="openInNewTab">在新标签页中打开搜索结果</span>
+            <input type="checkbox" id="sidebarNewTabToggle" checked>
+            <span class="toggle-switch"></span>
+          </label>
+          <label class="sidebar-toggle">
             <span data-i18n="searchHistory">搜索历史</span>
             <input type="checkbox" id="sidebarHistoryToggle" checked>
             <span class="toggle-switch"></span>
           </label>
         </div>
-        <div class="sidebar-panel" id="sidebarPanelMoreSettings">
+        <div class="sidebar-panel" id="sidebarPanelAbout">
+          <div style="padding:24px 12px">
+            <div style="font-size:16px;font-weight:600;margin-bottom:6px">ZE 新标签页</div>
+            <div style="font-size:11px;color:rgb(var(--sidebar-label-rgb, 136,136,136));margin-bottom:4px"><span data-i18n="aboutVersion">Version</span> <span id="aboutVersionSpan"></span></div>
+            <a href="https://github.com/ContraiI/Minimal-Tab.git" target="_blank" style="display:inline-block;margin-top:16px;font-size:13px;color:#4a9eff;text-decoration:underline" data-i18n="aboutProject">项目地址</a>
+            <br>
+            <a href="https://github.com/ContraiI/Minimal-Tab/issues" target="_blank" style="display:inline-block;margin-top:8px;font-size:13px;color:#4a9eff;text-decoration:underline" data-i18n="aboutFeedback">问题反馈</a>
+          </div>
         </div>
         <div class="sidebar-panel" id="sidebarPanelReset">
           <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%" data-i18n="btnResetAll">初始化设置</button>

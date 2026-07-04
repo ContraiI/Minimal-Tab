@@ -10,5 +10,11 @@
   "description": "替换 Edge 默认新标签页",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
-  }
+  },
+  "host_permissions": [
+    "https://suggestion.baidu.com/*",
+    "https://suggestqueries.google.com/*",
+    "https://api.bing.com/*",
+    "https://www.baidu.com/*"
+  ]
 }
