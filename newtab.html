@@ -2,44 +2,44 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>ZE 新标签页</title>
+  <title data-i18n="pageTitle">ZE 新标签页</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 页面顶部居中Toast提示 -->
+  
   <div id="toast" class="toast"></div>
 
-  <!-- 壁纸背景层（双图层交叉淡入淡出） -->
+  
   <div id="bgLayerA" class="bg-layer"></div>
   <div id="bgLayerB" class="bg-layer" style="opacity:0"></div>
 
   <div class="container">
-    <!-- ===== 右上角设置按钮（点击展开侧边栏） ===== -->
+    
     <div class="settings-wrap" id="settingsWrap" aria-hidden="false">
-      <div class="settings-btn" id="settingsBtn" title="设置">
+      <div class="settings-btn" id="settingsBtn" title="设置" data-i18n-title="settingsTitle">
         <img src="./icons/setting-white.svg" alt="设置" />
       </div>
     </div>
 
-    <!-- ===== 搜索块：搜索框 + 时钟 ===== -->
+    
     <div class="search-block">
       <div class="search-container hidden">
         <div class="search-wrapper">
 
-          <!-- 搜索引擎选择器：图标 + 下拉菜单 -->
+          
           <div class="engine-selector">
-            <!-- 双图标叠加（白色/彩色），通过opacity和.focused类切换 -->
+            
             <div class="engine-icon-wrap">
               <img id="currentEngineIconWhite" class="engine-icon engine-icon-white" src="./icons/bing-white.svg" alt="必应">
               <img id="currentEngineIconDefault" class="engine-icon engine-icon-default" src="./icons/bing-default.svg" alt="必应">
             </div>
 
-            <!-- 引擎下拉列表 -->
+            
             <div class="engine-list" id="engineList">
               <div class="engine-column">
                 <div class="engine-item active" data-engine="bing" data-white="./icons/bing-white.svg" data-default="./icons/bing-default.svg">
                   <img class="engine-icon sm" src="./icons/bing-white.svg">
-                  <span>必应</span>
+                  <span data-i18n="engineBing">必应</span>
                 </div>
 
                 <div class="engine-item" data-engine="google" data-white="./icons/google-white.svg" data-default="./icons/google-default.svg">
@@ -54,30 +54,30 @@
 
                 <div class="engine-item" data-engine="baidu" data-white="./icons/baidu-white.svg" data-default="./icons/baidu-default.svg">
                   <img class="engine-icon sm" src="./icons/baidu-white.svg">
-                  <span>百度</span>
+                  <span data-i18n="engineBaidu">百度</span>
               </div>
             </div>
           </div>
          </div>
 
-          <!-- 搜索输入框 + 历史下拉 -->
+          
           <div class="search-input-wrap">
-            <input type="text" id="search-input" placeholder="输入搜索内容..." class="search-input"
+            <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="输入搜索内容..." class="search-input"
                    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                    data-lpignore="true">
 
-            <!-- 搜索历史下拉列表 -->
+            
             <div id="history-dropdown" class="history-dropdown">
               <div class="history-header">
-                <span class="history-title">搜索历史</span>
-                <button id="clear-history-btn" class="clear-history-btn">清除历史记录</button>
+                <span class="history-title" data-i18n="historyTitle">搜索历史</span>
+                <button id="clear-history-btn" class="clear-history-btn" data-i18n="clearHistory">清除历史记录</button>
               </div>
               <div id="history-list" class="history-list"></div>
             </div>
 
-            <!-- 搜索框右侧：清除按钮 + 搜索按钮 -->
+            
             <div class="search-btns-wrap">
-              <!-- 清除按钮：白色X和黑色X叠加 -->
+              
               <button id="clear-btn" class="clear-btn" style="display: none;">
                 <svg class="clear-icon white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
@@ -98,55 +98,55 @@
         </div>
       </div>
 
-      <!-- 数码管数字时钟 -->
+      
       <div id="digital-clock" class="digital-clock"></div>
     </div>
   </div>
 
-  <!-- 壁纸管理弹窗 -->
+  
   <div id="wallpaperModal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card wallpaper-card">
-      <h3 class="modal-title">壁纸管理</h3>
+      <h3 class="modal-title" data-i18n="wallpaperManage">壁纸管理</h3>
       <div class="wallpaper-toolbar">
-        <button id="wallpaperImportBtn" class="modal-btn-save">导入本地壁纸</button>
-        <button id="wallpaperRotateEditBtn" class="modal-btn-cancel">壁纸轮换</button>
-        <button id="wallpaperResetBtn" class="modal-btn-cancel">恢复默认</button>
-        <button id="wallpaperClearBtn" class="modal-btn-cancel">清空</button>
+        <button id="wallpaperImportBtn" class="modal-btn-save" data-i18n="importWallpaper">导入本地壁纸</button>
+        <button id="wallpaperRotateEditBtn" class="modal-btn-cancel" data-i18n="wallpaperRotateEdit">壁纸轮换</button>
+        <button id="wallpaperResetBtn" class="modal-btn-cancel" data-i18n="restoreDefault">恢复默认</button>
+        <button id="wallpaperClearBtn" class="modal-btn-cancel" data-i18n="clearAll">清空</button>
       </div>
       <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none">
       <div id="wallpaperGrid" class="wallpaper-grid"></div>
       <div class="modal-btns">
-        <button id="wallpaperCancel" class="modal-btn-cancel">关闭</button>
+        <button id="wallpaperCancel" class="modal-btn-cancel" data-i18n="btnClose">关闭</button>
       </div>
     </div>
   </div>
 
-  <!-- 右侧边栏 -->
+  
   <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
   <div id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-header">
-      <span>设置</span>
+      <span data-i18n="settingsHeader">设置</span>
     </div>
     <div class="sidebar-main">
       <nav class="sidebar-nav">
-        <div class="sidebar-nav-item active" data-panel="theme">主题/壁纸</div>
-        <div class="sidebar-nav-item" data-panel="engines">搜索功能</div>
-        <div class="sidebar-nav-item" data-panel="personalize">个性化</div>
-	        <div class="sidebar-nav-item" data-panel="moreSettings">更多设置</div>
-	        <div class="sidebar-nav-item" data-panel="reset">重置设置</div>
+        <div class="sidebar-nav-item active" data-panel="theme" data-i18n="navTheme">主题/壁纸</div>
+        <div class="sidebar-nav-item" data-panel="engines" data-i18n="navEngines">搜索功能</div>
+        <div class="sidebar-nav-item" data-panel="personalize" data-i18n="navPersonalize">个性化</div>
+	        <div class="sidebar-nav-item" data-panel="moreSettings" data-i18n="navMoreSettings">更多设置</div>
+	        <div class="sidebar-nav-item" data-panel="reset" data-i18n="navReset">重置设置</div>
 	      </nav>
       <div class="sidebar-content">
         <div class="sidebar-panel active" id="sidebarPanelTheme">
-          <div class="sidebar-section-label">整体外观</div>
+          <div class="sidebar-section-label" data-i18n="sectionAppearance">整体外观</div>
           <div class="sidebar-toggle">
-            <span>整体外观</span>
+            <span data-i18n="sectionAppearance">整体外观</span>
             <div class="theme-mode-seg" id="themeModeSeg">
-              <button class="theme-mode-opt active" data-mode="system">系统</button>
-              <button class="theme-mode-opt" data-mode="light">浅色</button>
-              <button class="theme-mode-opt" data-mode="dark">深色</button>
+              <button class="theme-mode-opt active" data-mode="system" data-i18n="themeSystem">系统</button>
+              <button class="theme-mode-opt" data-mode="light" data-i18n="themeLight">浅色</button>
+              <button class="theme-mode-opt" data-mode="dark" data-i18n="themeDark">深色</button>
             </div>
           </div>
-          <div class="sidebar-section-label">主题色</div>
+          <div class="sidebar-section-label" data-i18n="sectionAccentColor">主题色</div>
           <div class="theme-color-row" id="themeColorRow">
             <span class="theme-color-swatch" data-color="#0066cc" style="background:#0066cc"></span>
             <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
@@ -159,26 +159,26 @@
             <span class="theme-color-swatch" data-color="#65a30d" style="background:#65a30d"></span>
             <span class="theme-color-swatch" data-color="#4f46e5" style="background:#4f46e5"></span>
           </div>
-          <div class="sidebar-section-label">壁纸</div>
+          <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
           <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
             <img id="sidebarWallpaperThumbImg" src="" alt="当前壁纸">
           </div>
           <div class="sidebar-slider-group">
-            <span>壁纸遮罩</span>
+            <span data-i18n="wallpaperOverlay">壁纸遮罩</span>
             <input type="range" id="sidebarOverlaySlider" min="0" max="0.5" step="any" data-step="0.01" data-unit="%" value="0.3">
             <span id="sidebarOverlayVal">0.30</span>
           </div>
           <div class="sidebar-slider-group">
-            <span>壁纸模糊</span>
+            <span data-i18n="wallpaperBlur">壁纸模糊</span>
             <input type="range" id="sidebarBlurSlider" min="0" max="10" step="any" data-step="0.5" data-unit="px" value="0">
             <span id="sidebarBlurVal">0</span>
           </div>
           <div class="sidebar-rotate-row">
-            <span class="sidebar-rotate-label">壁纸轮换</span>
+            <span class="sidebar-rotate-label" data-i18n="wallpaperRotate">壁纸轮换</span>
             <div class="rotate-actions">
-              <button id="rotateNowBtn" class="rotate-now-btn">立即轮换</button>
+              <button id="rotateNowBtn" class="rotate-now-btn" data-i18n="rotateNow">立即轮换</button>
               <div class="rotate-dropdown" id="wallpaperRotateDropdown">
-                <span class="rotate-trigger" id="rotateTrigger">不进行轮换</span>
+                <span class="rotate-trigger" id="rotateTrigger" data-i18n="rotateOff">不进行轮换</span>
                 <div class="rotate-sizer" id="rotateSizer" aria-hidden="true"></div>
                 <div class="rotate-list" id="rotateList"></div>
               </div>
@@ -186,91 +186,108 @@
           </div>
         </div>
         <div class="sidebar-panel" id="sidebarPanelPersonalize">
-          <div class="sidebar-section-label">侧边栏</div>
+          <div class="sidebar-section-label" data-i18n="sectionSidebar">侧边栏</div>
           <div class="sidebar-slider-group">
-            <span>透明度</span>
+            <span data-i18n="sidebarOpacity">透明度</span>
             <input type="range" id="sidebarOpacitySlider" min="0.2" max="1" step="any" data-step="0.01" data-unit="%" value="1">
             <span id="sidebarOpacityVal">1.00</span>
           </div>
           <div class="sidebar-slider-group">
-            <span>毛玻璃</span>
+            <span data-i18n="sidebarFrosted">毛玻璃</span>
             <input type="range" id="sidebarBlurSlider2" min="0" max="10" step="any" data-step="0.5" data-unit="px" value="0">
             <span id="sidebarBlurVal2">0</span>
           </div>
           <label class="sidebar-toggle sidebar-divider">
-            <span>数字时钟</span>
+            <span data-i18n="digitalClock">数字时钟</span>
             <input type="checkbox" id="sidebarClockToggle" checked>
             <span class="toggle-switch"></span>
           </label>
           <label id="clockFollowRow" class="sidebar-toggle clock-collapse hidden">
-            <span>跟随搜索框</span>
+            <span data-i18n="followSearch">跟随搜索框</span>
             <input type="checkbox" id="clockFollowToggle" checked>
             <span class="toggle-switch"></span>
           </label>
           <div id="clockPositionRow" class="sidebar-toggle clock-collapse hidden">
-            <span>时钟位置</span>
+            <span data-i18n="clockPosition">时钟位置</span>
             <div class="theme-mode-seg" id="clockPositionSeg">
-              <button class="theme-mode-opt active" data-pos="below">搜索框下方</button>
-              <button class="theme-mode-opt" data-pos="above">搜索框上方</button>
+              <button class="theme-mode-opt active" data-pos="below" data-i18n="clockBelow">搜索框下方</button>
+              <button class="theme-mode-opt" data-pos="above" data-i18n="clockAbove">搜索框上方</button>
             </div>
           </div>
           <div id="clockCustomRow" class="sidebar-toggle clock-collapse hidden">
-            <span>时钟位置</span>
-            <div class="theme-mode-seg" id="clockCustomSeg">
-              <button class="theme-mode-opt" data-pos="left-top">左上</button>
-              <button class="theme-mode-opt" data-pos="right-top">右上</button>
-              <button class="theme-mode-opt active" data-pos="center">居中</button>
-              <button class="theme-mode-opt" data-pos="left-bottom">左下</button>
-              <button class="theme-mode-opt" data-pos="right-bottom">右下</button>
+            <span data-i18n="clockPosition">时钟位置</span>
+            <div class="rotate-dropdown" id="clockPosDropdown">
+              <span class="rotate-trigger" id="clockPosTrigger">居中</span>
+              <div class="rotate-list" id="clockPosList"></div>
+            </div>
+          </div>
+          <div id="clockCustomPanel" class="clock-collapse hidden">
+            <div class="custom-pos-row">
+              <span class="custom-pos-label" data-i18n="clockCustomX">横坐标</span>
+              <input type="number" id="clockCustomXInput" class="custom-pos-input">
+              <span class="custom-pos-label" data-i18n="clockCustomY">纵坐标</span>
+              <input type="number" id="clockCustomYInput" class="custom-pos-input">
+              <button id="clockCustomLock" class="lock-btn" title="锁定">
+                <svg class="lock-icon unlocked" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                <svg class="lock-icon locked" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="sidebar-section-label" data-i18n="sectionLanguage">语言偏好</div>
+          <div class="sidebar-toggle">
+            <span data-i18n="sectionLanguage">语言偏好</span>
+            <div class="theme-mode-seg" id="languageSeg">
+              <button class="theme-mode-opt active" data-lang="zh-CN">中文</button>
+              <button class="theme-mode-opt" data-lang="en">English</button>
             </div>
           </div>
         </div>
         <div class="sidebar-panel" id="sidebarPanelEngines">
-          <div class="sidebar-section-label">搜索框</div>
+          <div class="sidebar-section-label" data-i18n="sectionSearchBox">搜索框</div>
           <label class="sidebar-toggle">
-            <span>启用搜索框</span>
+            <span data-i18n="enableSearchBox">启用搜索框</span>
             <input type="checkbox" id="searchBoxToggle" checked>
             <span class="toggle-switch"></span>
           </label>
           <div id="searchBoxControls">
             <div class="sidebar-slider-group">
-              <span>垂直偏移</span>
+              <span data-i18n="searchOffsetY">垂直偏移</span>
               <input type="range" id="searchOffsetYSlider" min="-300" max="300" step="any" data-step="1" data-unit="px" value="0">
               <span id="searchOffsetYVal">0</span>
             </div>
             <div class="sidebar-slider-group">
-              <span>水平偏移</span>
+              <span data-i18n="searchOffsetX">水平偏移</span>
               <input type="range" id="searchOffsetXSlider" min="-300" max="300" step="any" data-step="1" data-unit="px" value="0">
               <span id="searchOffsetXVal">0</span>
             </div>
             <div class="sidebar-slider-group">
-              <span>搜索框宽度</span>
+              <span data-i18n="searchWidth">搜索框宽度</span>
               <input type="range" id="searchWidthSlider" min="500" max="1200" step="any" data-step="1" data-unit="px" value="800">
               <span id="searchWidthVal">800</span>
             </div>
             <div class="sidebar-slider-group">
-              <span>搜索框圆角</span>
+              <span data-i18n="searchRadius">搜索框圆角</span>
               <input type="range" id="searchRadiusSlider" min="0" max="25" step="any" data-step="0.5" data-unit="px" value="25">
               <span id="searchRadiusVal">25</span>
             </div>
           </div>
           <div class="section-collapse" id="engineListSection">
-            <div class="sidebar-section-label section-collapse-header">搜索引擎</div>
+            <div class="sidebar-section-label section-collapse-header" data-i18n="sectionEngines">搜索引擎</div>
             <div class="section-collapse-body">
               <div id="sidebarEngineList" class="sidebar-engine-list"></div>
-              <!-- 自定义搜索引擎表单（侧边栏内下拉展开） -->
+              
               <div id="customEngineForm" class="custom-engine-form">
             <div class="sidebar-section-label" id="customEngineFormTitle">添加自定义搜索引擎</div>
             <div class="ce-field">
-              <label>名称</label>
-              <input type="text" id="customEngineName" placeholder="搜索引擎名称">
+              <label data-i18n="ceName">名称</label>
+              <input type="text" id="customEngineName" data-i18n-placeholder="ceNamePlaceholder" placeholder="搜索引擎名称">
             </div>
             <div class="ce-field">
-              <label>搜索 URL</label>
+              <label data-i18n="ceUrl">搜索 URL</label>
               <input type="text" id="customEngineUrl" placeholder="https://example.com/search?q=">
             </div>
             <div class="ce-field">
-              <label>白色图标 (SVG)</label>
+              <label data-i18n="ceIconWhite">白色图标 (SVG)</label>
               <div class="ce-file-wrap">
                 <input type="file" id="customEngineIconWhite" accept=".svg">
                 <span id="customEngineIconWhiteName"></span>
@@ -278,7 +295,7 @@
               </div>
             </div>
             <div class="ce-field">
-              <label>彩色图标 (SVG)</label>
+              <label data-i18n="ceIconDefault">彩色图标 (SVG)</label>
               <div class="ce-file-wrap">
                 <input type="file" id="customEngineIconDefault" accept=".svg">
                 <span id="customEngineIconDefaultName"></span>
@@ -286,21 +303,21 @@
               </div>
             </div>
             <div class="ce-btns">
-              <button id="customEngineDelete" class="modal-btn-delete" style="display:none">删除</button>
-              <button id="customEngineCancel" class="modal-btn-cancel">取消</button>
+              <button id="customEngineDelete" class="modal-btn-delete" style="display:none" data-i18n="btnDelete">删除</button>
+              <button id="customEngineCancel" class="modal-btn-cancel" data-i18n="btnCancel">取消</button>
               <button id="customEngineSave" class="modal-btn-save">添加</button>
             </div>
             </div>
           </div>
           </div>
           <div class="section-collapse" id="defaultEngineSection">
-            <div class="sidebar-section-label section-collapse-header">默认引擎</div>
+            <div class="sidebar-section-label section-collapse-header" data-i18n="sectionDefaultEngine">默认引擎</div>
             <div class="section-collapse-body">
               <div id="sidebarDefaultEngineList" class="sidebar-engine-list"></div>
             </div>
           </div>
           <label class="sidebar-toggle sidebar-divider">
-            <span>搜索历史</span>
+            <span data-i18n="searchHistory">搜索历史</span>
             <input type="checkbox" id="sidebarHistoryToggle" checked>
             <span class="toggle-switch"></span>
           </label>
@@ -308,23 +325,37 @@
         <div class="sidebar-panel" id="sidebarPanelMoreSettings">
         </div>
         <div class="sidebar-panel" id="sidebarPanelReset">
-          <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%">初始化设置</button>
-          <p class="reset-desc">将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎、搜索框等。</p>
-          <button id="searchBoxResetBtn" class="sidebar-action-btn danger" style="width:100%;margin-top:12px">搜索框重置</button>
-          <p class="reset-desc">仅将搜索框的垂直偏移、水平偏移、宽度和圆角恢复为默认值。</p>
+          <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%" data-i18n="btnResetAll">初始化设置</button>
+          <p class="reset-desc" data-i18n="resetDesc">将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎、搜索框等。</p>
+          <button id="searchBoxResetBtn" class="sidebar-action-btn danger" style="width:100%;margin-top:12px" data-i18n="btnResetSearch">搜索框重置</button>
+          <p class="reset-desc" data-i18n="resetSearchDesc">仅将搜索框的垂直偏移、水平偏移、宽度和圆角恢复为默认值。</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 自定义右键菜单 -->
-  <div id="contextMenu" class="context-menu">
-    <div class="context-menu-item" data-action="next-wallpaper">切换壁纸</div>
-    <div class="context-menu-item" data-action="settings">设置</div>
+  
+  <div id="clockContextMenu" class="clock-context-menu">
+    <div class="clock-menu-row">
+      <input type="number" id="clockMenuX" class="clock-menu-input" placeholder="X">
+      <input type="number" id="clockMenuY" class="clock-menu-input" placeholder="Y">
+      <button id="clockMenuApply" class="clock-menu-apply" data-i18n="btnConfirm">确认</button>
+    </div>
+    <button id="clockMenuLock" class="clock-menu-lock">
+      <svg class="lock-icon unlocked" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+      <svg class="lock-icon locked" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+    </button>
   </div>
 
-  <!-- 拼音数据集（须在业务逻辑前加载） -->
+  
+  <div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" data-action="next-wallpaper" data-i18n="switchWallpaper">切换壁纸</div>
+    <div class="context-menu-item" data-action="settings" data-i18n="contextSettings">设置</div>
+  </div>
+
+  
   <script src="pinyin-data.js"></script>
+  <script src="lang.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

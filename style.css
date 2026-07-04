@@ -1,4 +1,3 @@
-/* ===== 数码管字体 ===== */
 @font-face {
   font-family: 'DS-Digital';
   src: local('DS-Digital'),
@@ -15,7 +14,6 @@
   --search-radius: 25px;
 }
 
-/* ===== 全局重置 ===== */
 * {
   margin: 0;
   padding: 0;
@@ -23,7 +21,6 @@
   user-select: none;
 }
 
-/* ===== 页面背景：壁纸层 + 半透明遮罩 ===== */
 body {
   --accent: #0066cc;
   --accent-rgb: 0, 102, 204;
@@ -64,7 +61,6 @@ body::before {
   pointer-events: none;
 }
 
-/* ===== 主容器：居中，最大800px ===== */
 .container {
   text-align: center;
   color: white;
@@ -74,7 +70,6 @@ body::before {
   z-index: 1;
 }
 
-/* ===== 搜索框区域 ===== */
 .search-container {
   width: 100%;
   position: relative;
@@ -99,11 +94,10 @@ body::before {
   z-index: 1;
 }
 
-/* 搜索输入框：透明底白字，聚焦时白底蓝字 */
 .search-input {
   width: 100%;
   height: 100%;
-  padding: 0 90px 0 50px; /* 左留给引擎图标，右留给按钮 */
+  padding: 0 90px 0 50px; 
   border: 2px solid #ffffff;
   border-radius: var(--search-radius, 25px);
   background: transparent;
@@ -120,20 +114,17 @@ body::before {
   border-color: #ffffff;
 }
 
-/* 历史下拉展开时，输入框去掉下方圆角 */
 .search-input.expanded {
   border-radius: var(--search-radius, 25px) var(--search-radius, 25px) 0 0;
   transition: background 0.2s ease 0.1s, border-color 0.3s, color 0.3s, border-radius 0.1s ease 0.1s;
 }
 
-/* 有内容但未聚焦时保持透明（防止Edge自动填充改变背景） */
 .search-input:not(:focus):not(:placeholder-shown) {
   background: transparent;
   color: #ffffff;
   border-color: #ffffff;
 }
 
-/* 覆盖浏览器自动填充样式 */
 .search-input:-webkit-autofill {
   -webkit-text-fill-color: #ffffff !important;
   -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
@@ -145,7 +136,6 @@ body::before {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* ===== 引擎选择器：搜索框左侧图标 ===== */
 .engine-selector {
   position: absolute;
   left: 15px;
@@ -156,7 +146,6 @@ body::before {
   pointer-events: auto;
 }
 
-/* 双图标叠加容器，pointer-events穿透让点击落到engine-selector上 */
 .engine-icon-wrap {
   position: relative;
   width: 24px;
@@ -165,7 +154,6 @@ body::before {
   pointer-events: none;
 }
 
-/* 白色/彩色图标绝对定位叠加，opacity过渡与搜索框背景同步 */
 .engine-icon-white,
 .engine-icon-default {
   position: absolute;
@@ -177,13 +165,12 @@ body::before {
   transition: opacity 0.2s ease 0.1s;
 }
 
-.engine-icon-white { opacity: 1; }   /* 未聚焦：白色可见 */
-.engine-icon-default { opacity: 0; }  /* 未聚焦：彩色隐藏 */
+.engine-icon-white { opacity: 1; }   
+.engine-icon-default { opacity: 0; }  
 
-.engine-icon-wrap.focused .engine-icon-white { opacity: 0; }  /* 聚焦：白色隐藏 */
-.engine-icon-wrap.focused .engine-icon-default { opacity: 1; } /* 聚焦：彩色可见 */
+.engine-icon-wrap.focused .engine-icon-white { opacity: 0; }  
+.engine-icon-wrap.focused .engine-icon-default { opacity: 1; } 
 
-/* 引擎下拉菜单中的小图标 */
 .engine-icon {
   width: 24px;
   height: 24px;
@@ -197,7 +184,6 @@ body::before {
   object-fit: contain;
 }
 
-/* 引擎下拉列表：绝对定位在图标下方，visibility+opacity动画 */
 .engine-list {
   position: absolute;
   top: 30px;
@@ -248,7 +234,6 @@ body::before {
   color: #ffffff;
 }
 
-/* ===== 搜索框右侧按钮 ===== */
 .search-btns-wrap {
   position: absolute;
   right: 12px;
@@ -261,7 +246,6 @@ body::before {
   pointer-events: auto;
 }
 
-/* 清除按钮：白色X和黑色X叠加，聚焦时切换颜色 */
 .clear-btn {
   height: 38px;
   width: 38px;
@@ -287,14 +271,12 @@ body::before {
 .clear-icon.white { fill: #ffffff; opacity: 1; }
 .clear-icon.black { fill: #000000; opacity: 0; }
 
-/* 聚焦：黑色X可见，白色X隐藏 */
 .search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 0; }
 .search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 1; }
-/* 未聚焦：白色X可见 */
+
 .search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 1 !important; }
 .search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 0 !important; }
 
-/* 搜索按钮 */
 .search-btn {
   height: 32px;
   width: 32px;
@@ -319,15 +301,14 @@ body::before {
 }
 
 .search-input:focus ~ .search-btns-wrap .search-btn { background-color: var(--accent) !important; }
-/* 有内容但未聚焦：透明背景 */
+
 .search-input:not(:focus):not(:placeholder-shown) ~ .search-btns-wrap .search-btn { background-color: transparent !important; }
-/* 无内容：隐藏搜索按钮 */
+
 .search-input:not(:focus):placeholder-shown ~ .search-btns-wrap .search-btn { display: none; }
 
 .search-btn:hover { background-color: #0052a3 !important; }
 .search-btn:hover svg { fill: #e0e0e0 !important; }
 
-/* ===== 历史记录下拉 ===== */
 .history-dropdown {
   position: absolute;
   top: 100%;
@@ -341,7 +322,7 @@ body::before {
   max-height: 300px;
   overflow-y: auto;
   z-index: 10;
-  margin-top: -2px; /* 与输入框边框重叠 */
+  margin-top: -2px; 
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
@@ -450,7 +431,6 @@ body::before {
   fill: #666;
 }
 
-/* ===== 数字时钟 ===== */
 .digital-clock {
   font-family: 'DS-Digital', monospace;
   font-size: 80px;
@@ -464,12 +444,11 @@ body::before {
   z-index: 1;
 }
 
-/* ===== Toast提示（页面顶部居中弹出） ===== */
 .toast {
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(-120px); /* 默认隐藏在视口上方 */
+  transform: translateX(-50%) translateY(-120px); 
   background: rgba(211, 47, 47, 0.92);
   color: #fff;
   padding: 10px 24px;
@@ -492,7 +471,6 @@ body::before {
   opacity: 1;
 }
 
-/* ===== 搜索块（时钟+搜索框） ===== */
 .search-block {
   width: 100%;
   display: flex;
@@ -501,7 +479,6 @@ body::before {
   margin-top: -200px;
 }
 
-/* ===== 右上角设置面板 ===== */
 .settings-wrap {
   position: absolute;
   top: 8px;
@@ -512,7 +489,6 @@ body::before {
   pointer-events: auto;
 }
 
-/* ===== 设置按钮：悬停父容器时显示 ===== */
 .settings-btn {
   width: 100%;
   height: 100%;
@@ -532,7 +508,6 @@ body::before {
   cursor: pointer;
 }
 
-/* ===== 引擎列表项（侧边栏复用） ===== */
 .engine-toggle {
   display: flex;
   align-items: center;
@@ -550,7 +525,6 @@ body::before {
 .engine-toggle:hover { background: rgba(255,255,255,0.05); }
 .engine-toggle:active { background: rgba(var(--accent-rgb), 0.15); }
 
-/* 隐藏原生复选框/单选框 */
 .engine-toggle input[type="checkbox"],
 .engine-toggle input[type="radio"],
 .sidebar-toggle input[type="checkbox"] {
@@ -561,7 +535,6 @@ body::before {
   pointer-events: none;
 }
 
-/* 滑动开关 — 弹性缓动 + 点击反馈 */
 .toggle-switch {
   position: relative;
   width: 28px;
@@ -603,12 +576,10 @@ body::before {
   transform: translateX(12px);
 }
 
-/* 禁用态开关半透明 */
 .sidebar-toggle input:disabled ~ .toggle-switch {
   opacity: 0.4;
 }
 
-/* 三段外观模式选择器 */
 .theme-mode-seg {
   display: flex;
   gap: 1px;
@@ -638,21 +609,6 @@ body::before {
   color: #fff;
 }
 
-/* 自定义引擎开关标签（名称+开关联动） */
-.engine-toggle-label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  overflow: hidden;
-}
-
-.engine-toggle-label > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 自定义引擎编辑图标 */
 .engine-edit-btn {
   display: flex;
   align-items: center;
@@ -674,7 +630,6 @@ body::before {
   transition: fill 0.35s ease;
 }
 
-/* 自定义按钮加号图标 */
 .add-icon {
   margin-left: auto;
   width: 16px;
@@ -683,7 +638,6 @@ body::before {
   flex-shrink: 0;
 }
 
-/* 删除按钮 */
 .modal-btn-delete {
   background: transparent;
   color: #d32f2f;
@@ -700,7 +654,6 @@ body::before {
   color: #fff;
 }
 
-/* ===== 右侧边栏 ===== */
 .sidebar-overlay {
   position: fixed;
   top: 0;
@@ -754,14 +707,12 @@ body::before {
   transition: border-color 0.35s ease;
 }
 
-/* 双列主体：左侧导航 + 右侧内容 */
 .sidebar-main {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-/* 左侧导航列 */
 .sidebar-nav {
   position: relative;
   width: 110px;
@@ -793,7 +744,6 @@ body::before {
   color: rgb(var(--accent-rgb));
 }
 
-/* 浮动高亮块：在 nav 内绝对定位，切换时平滑滑动 */
 .nav-highlight {
   position: absolute;
   left: 8px;
@@ -826,7 +776,6 @@ body::before {
   line-height: 1.6;
 }
 
-/* 右侧内容区 */
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
@@ -834,7 +783,6 @@ body::before {
   position: relative;
 }
 
-/* 内容面板：淡入淡出切换，隐藏时脱离文档流 */
 .sidebar-panel {
   opacity: 0;
   visibility: hidden;
@@ -857,7 +805,6 @@ body::before {
   transition: opacity 0.18s ease, visibility 0s 0s;
 }
 
-/* 面板内分区标签 */
 .sidebar-section-label {
   font-size: 11px;
   color: #888;
@@ -933,7 +880,6 @@ body::before {
   pointer-events: none;
 }
 
-/* 当前壁纸缩略图 */
 .sidebar-wallpaper-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -953,7 +899,6 @@ body::before {
   display: block;
 }
 
-/* 主题色预设行 */
 .theme-color-row {
   display: flex;
   align-items: center;
@@ -975,7 +920,6 @@ body::before {
 .theme-color-swatch:hover { transform: scale(1.15); }
 .theme-color-swatch.active { border-color: #fff; }
 
-/* 滑块行：标签 + range + 数值 */
 .sidebar-slider-group {
   display: flex;
   align-items: center;
@@ -1028,7 +972,6 @@ body::before {
   text-align: right;
 }
 
-/* 壁纸轮换自定义下拉 */
 .sidebar-rotate-row {
   display: flex;
   align-items: center;
@@ -1059,7 +1002,6 @@ body::before {
   display: inline-block;
 }
 
-/* 壁纸轮换下拉 — 匹配外观模式三段选择器风格 */
 .rotate-sizer {
   height: 0;
   overflow: hidden;
@@ -1094,6 +1036,14 @@ body::before {
   width: 100%;
 }
 
+#clockPosTrigger {
+  width: auto;
+  padding: 4px 10px;
+}
+#clockPosList {
+  width: auto;
+  white-space: nowrap;
+}
 .rotate-trigger:hover, .rotate-now-btn:hover {
   background: rgba(70, 70, 70, var(--sidebar-opacity, 1));
   color: #fff;
@@ -1178,7 +1128,6 @@ body::before {
   margin-bottom: 8px;
 }
 
-/* 操作按钮 */
 .sidebar-action-btn {
   display: flex;
   align-items: center;
@@ -1207,7 +1156,6 @@ body::before {
   color: #fff;
 }
 
-/* 开关行 */
 .sidebar-toggle {
   display: flex;
   align-items: center;
@@ -1231,7 +1179,6 @@ body::before {
   background: rgba(var(--accent-rgb), 0.15);
 }
 
-/* ===== 侧边栏浅色模式 ===== */
 .sidebar.light {
   background: rgba(240, 240, 240, var(--sidebar-opacity, 1));
   color: rgb(var(--sidebar-main-rgb, 51, 51, 51));
@@ -1257,12 +1204,92 @@ body::before {
   border-top-color: rgba(0, 0, 0, 0.08);
 }
 
+#clockCustomRow {
+  overflow: visible;
+}
 .clock-collapse {
   max-height: 40px;
   opacity: 1;
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.2s ease, margin 0.3s ease, padding 0.3s ease;
 }
+.custom-pos-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px 6px 4px;
+  font-size: 12px;
+}
+.custom-pos-label {
+  color: #aaa;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.sidebar.light .custom-pos-label {
+  color: #666;
+}
+.custom-pos-input {
+  width: 60px;
+  padding: 3px 6px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+  transition: border-color 0.2s, background 0.35s ease, color 0.35s ease;
+}
+.custom-pos-input::-webkit-inner-spin-button,
+.custom-pos-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.custom-pos-input:focus {
+  border-color: var(--accent);
+}
+.custom-pos-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.sidebar.light .custom-pos-input {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+.lock-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.lock-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.sidebar.light .lock-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.lock-icon {
+  width: 16px;
+  height: 16px;
+  fill: #aaa;
+  transition: fill 0.2s;
+}
+.lock-icon.unlocked { display: block; }
+.lock-icon.locked { display: none; }
+.lock-btn.locked .lock-icon.unlocked,
+.clock-menu-lock.locked .lock-icon.unlocked { display: none; }
+.lock-btn.locked .lock-icon.locked,
+.clock-menu-lock.locked .lock-icon.locked { display: block; }
 .clock-collapse.hidden {
   max-height: 0;
   opacity: 0;
@@ -1301,7 +1328,6 @@ body::before {
 .sidebar.light .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
 .sidebar.light .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
 
-/* ===== 自定义引擎表单（侧边栏内下拉展开） ===== */
 .custom-engine-form {
   max-height: 0;
   overflow: hidden;
@@ -1394,7 +1420,6 @@ body::before {
   flex: 1;
 }
 
-
 .ce-btns {
   display: flex;
   justify-content: flex-end;
@@ -1402,7 +1427,6 @@ body::before {
   margin-top: 12px;
 }
 
-/* 浅色模式下表单适配 */
 .sidebar.light .custom-engine-form {
   background: rgba(0, 0, 0, 0.03);
 }
@@ -1440,7 +1464,6 @@ body::before {
   border-color: #d32f2f;
 }
 
-/* ===== 弹窗通用（壁纸管理复用） ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1533,7 +1556,6 @@ body::before {
   background: #0052a3;
 }
 
-/* ===== 弹窗浅色模式 ===== */
 body.light-mode .modal-card {
   background: #f0f0f0;
   color: #333;
@@ -1561,8 +1583,6 @@ body.light-mode .wallpaper-card .modal-btns {
   background: #f0f0f0;
 }
 
-
-/* ===== 壁纸管理弹窗 ===== */
 .wallpaper-card {
   width: 900px;
   min-height: 500px;
@@ -1654,7 +1674,6 @@ body.light-mode .wallpaper-card .modal-btns {
   opacity: 1;
 }
 
-/* 壁纸轮换编辑模式 */
 .wallpaper-rotate-check {
   position: absolute;
   top: 4px;
@@ -1691,12 +1710,6 @@ body.light-mode .wallpaper-card .modal-btns {
   cursor: default;
 }
 
-.wallpaper-delete svg {
-  width: 10px;
-  height: 10px;
-  fill: #fff;
-}
-
 .wallpaper-empty {
   grid-column: 1 / -1;
   text-align: center;
@@ -1705,7 +1718,6 @@ body.light-mode .wallpaper-card .modal-btns {
   padding: 24px 0;
 }
 
-/* ===== 响应式：平板 ===== */
 @media (max-width: 800px) {
   .digital-clock { font-size: 50px; letter-spacing: 5px; }
   .search-btns-wrap { right: 5px; gap: 3px; }
@@ -1716,7 +1728,6 @@ body.light-mode .wallpaper-card .modal-btns {
   .engine-icon.sm { width: 16px; height: 16px; }
 }
 
-/* ===== 响应式：手机 ===== */
 @media (max-width: 500px) {
   .search-wrapper { width: 100%; }
   .digital-clock { font-size: 40px; letter-spacing: 3px; }
@@ -1725,7 +1736,86 @@ body.light-mode .wallpaper-card .modal-btns {
   .sidebar-nav-item { padding: 10px 10px; font-size: 12px; margin-right: 4px; }
 }
 
-/* ===== 自定义右键菜单 ===== */
+.clock-context-menu {
+  position: fixed;
+  z-index: 99999;
+  background: rgba(20, 20, 20, 0.85);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: none;
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  flex-direction: column;
+  gap: 6px;
+}
+.clock-context-menu.show {
+  display: flex;
+}
+.clock-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.clock-menu-input {
+  width: 62px;
+  padding: 4px 6px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.clock-menu-input::-webkit-inner-spin-button,
+.clock-menu-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.clock-menu-input:focus {
+  border-color: var(--accent);
+}
+.clock-menu-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.clock-menu-apply {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+.clock-menu-apply:hover {
+  opacity: 0.85;
+}
+.clock-menu-lock {
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.clock-menu-lock:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.clock-menu-lock svg {
+  width: 16px;
+  height: 16px;
+  fill: #aaa;
+}
+
 .context-menu {
   position: fixed;
   z-index: 99999;
@@ -1758,7 +1848,6 @@ body.light-mode .wallpaper-card .modal-btns {
   color: #fff;
 }
 
-/* ===== 全局覆盖浏览器自动填充 ===== */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {

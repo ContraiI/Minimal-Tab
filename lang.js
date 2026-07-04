@@ -1,0 +1,298 @@
+window.I18N_DATA = {
+  'zh-CN': {
+    pageTitle: 'ZE 新标签页',
+    searchPlaceholder: '输入搜索内容...',
+    settingsTitle: '设置',
+    settingsHeader: '设置',
+
+    navTheme: '主题/壁纸',
+    navEngines: '搜索功能',
+    navPersonalize: '个性化',
+    navMoreSettings: '更多设置',
+    navReset: '重置设置',
+
+    sectionAppearance: '整体外观',
+    themeSystem: '系统',
+    themeLight: '浅色',
+    themeDark: '深色',
+    sectionAccentColor: '主题色',
+    sectionWallpaper: '壁纸',
+
+    wallpaperOverlay: '壁纸遮罩',
+    wallpaperBlur: '壁纸模糊',
+    wallpaperRotate: '壁纸轮换',
+    rotateNow: '立即轮换',
+    rotateOff: '不进行轮换',
+    rotate1h: '每 1 小时轮换',
+    rotate6h: '每 6 小时轮换',
+    rotate12h: '每 12 小时轮换',
+    rotate24h: '每 24 小时轮换',
+
+    sectionSidebar: '侧边栏',
+    sidebarOpacity: '透明度',
+    sidebarFrosted: '毛玻璃',
+    digitalClock: '数字时钟',
+    followSearch: '跟随搜索框',
+    clockPosition: '时钟位置',
+    clockBelow: '搜索框下方',
+    clockAbove: '搜索框上方',
+    clockLeftTop: '左上',
+    clockRightTop: '右上',
+    clockCenter: '居中',
+    clockLeftBottom: '左下',
+    clockRightBottom: '右下',
+    clockCustom: '自定义',
+    clockCustomX: 'X',
+    clockCustomY: 'Y',
+    sectionLanguage: '语言偏好',
+
+    sectionSearchBox: '搜索框',
+    enableSearchBox: '启用搜索框',
+    searchOffsetY: '垂直偏移',
+    searchOffsetX: '水平偏移',
+    searchWidth: '搜索框宽度',
+    searchRadius: '搜索框圆角',
+    sectionEngines: '搜索引擎',
+    sectionDefaultEngine: '默认引擎',
+    searchHistory: '搜索历史',
+
+    addCustomEngine: '添加自定义搜索引擎',
+    editCustomEngine: '编辑自定义搜索引擎',
+    ceName: '名称',
+    ceNamePlaceholder: '搜索引擎名称',
+    ceUrl: '搜索 URL',
+    ceIconWhite: '白色图标 (SVG)',
+    ceIconDefault: '彩色图标 (SVG)',
+    btnCancel: '取消',
+    btnAdd: '添加',
+    btnUpdate: '更新',
+    btnDelete: '删除',
+    btnManualAdd: '手动添加',
+
+    btnResetAll: '初始化设置',
+    resetDesc: '将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎、搜索框等。',
+    btnResetSearch: '搜索框重置',
+    resetSearchDesc: '仅将搜索框的垂直偏移、水平偏移、宽度和圆角恢复为默认值。',
+
+    historyTitle: '搜索历史',
+    clearHistory: '清除历史记录',
+
+    wallpaperManage: '壁纸管理',
+    importWallpaper: '导入本地壁纸',
+    wallpaperRotateEdit: '壁纸轮换',
+    restoreDefault: '恢复默认',
+    clearAll: '清空',
+    btnClose: '关闭',
+    noHistoryWallpaper: '暂无历史壁纸',
+
+    switchWallpaper: '切换壁纸',
+    contextSettings: '设置',
+
+    engineBing: '必应',
+    engineBaidu: '百度',
+
+    toastSwitchSuccess: '切换成功',
+    toastWallpaperInUse: '该壁纸正在使用',
+    toastRotateUpdated: '轮换列表已更新',
+    toastImportSuccess: '导入成功',
+    toastStorageFull: '存储空间不足',
+    toastFileReadError: '文件读取异常',
+    toastCannotReadFile: '无法读取文件',
+    toastSelectImage: '请选择图片文件',
+    toastRestored: '已恢复',
+    toastCleared: '已清空',
+    toastConfigPoolFirst: '请先配置轮换池',
+    toastRotated: '已轮换',
+    toastFillNameUrl: '请填写名称和搜索 URL',
+    toastSelectIcons: '请选择白色和彩色图标',
+    toastNameExists: '该名称已存在',
+    toastUrlDuplicate: '该 URL 已被「{name}」使用',
+    toastDeleteSuccess: '删除成功',
+    toastUpdateSuccess: '更新成功「{name}」',
+    toastAddSuccess: '添加成功「{name}」',
+    toastDefaultEngineLocked: '当前默认引擎无法关闭',
+    toastSettingsReset: '设置已恢复默认',
+    toastSearchReset: '搜索框已重置',
+    toastNeedTwoWallpapers: '至少需要两张壁纸才能切换',
+    toastWallpaperSwitched: '已切换壁纸',
+    toastSelectSvg: '请选择 SVG 格式图标',
+    toastIconTooLarge: '图标文件过大，请选择小于 512KB 的文件',
+    toastIconReadFailed: '图标读取失败',
+
+    confirmReset: '确定将所有设置恢复为默认值吗？\n此操作将清除壁纸、主题色、自定义引擎等所有更改，且不可撤销。',
+    btnConfirm: '确认',
+  },
+
+  'en': {
+    pageTitle: 'ZE New Tab',
+    searchPlaceholder: 'Type to search...',
+    settingsTitle: 'Settings',
+    settingsHeader: 'Settings',
+
+    navTheme: 'Theme',
+    navEngines: 'Search',
+    navPersonalize: 'Personalize',
+    navMoreSettings: 'More',
+    navReset: 'Reset',
+
+    sectionAppearance: 'Appearance',
+    themeSystem: 'System',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    sectionAccentColor: 'Accent Color',
+    sectionWallpaper: 'Wallpaper',
+
+    wallpaperOverlay: 'Overlay',
+    wallpaperBlur: 'Blur',
+    wallpaperRotate: 'Rotation',
+    rotateNow: 'Rotate Now',
+    rotateOff: 'No Rotation',
+    rotate1h: 'Every 1 Hour',
+    rotate6h: 'Every 6 Hours',
+    rotate12h: 'Every 12 Hours',
+    rotate24h: 'Every 24 Hours',
+
+    sectionSidebar: 'Sidebar',
+    sidebarOpacity: 'Opacity',
+    sidebarFrosted: 'Frosted Glass',
+    digitalClock: 'Digital Clock',
+    followSearch: 'Follow Search Box',
+    clockPosition: 'Clock Position',
+    clockBelow: 'Below Search',
+    clockAbove: 'Above Search',
+    clockLeftTop: 'Top Left',
+    clockRightTop: 'Top Right',
+    clockCenter: 'Center',
+    clockLeftBottom: 'Bottom Left',
+    clockRightBottom: 'Bottom Right',
+    clockCustom: 'Custom',
+    clockCustomX: 'X',
+    clockCustomY: 'Y',
+    sectionLanguage: 'Language',
+
+    sectionSearchBox: 'Search Box',
+    enableSearchBox: 'Enable Search Box',
+    searchOffsetY: 'Vertical Offset',
+    searchOffsetX: 'Horizontal Offset',
+    searchWidth: 'Width',
+    searchRadius: 'Border Radius',
+    sectionEngines: 'Search Engines',
+    sectionDefaultEngine: 'Default Engine',
+    searchHistory: 'Search History',
+
+    addCustomEngine: 'Add Custom Engine',
+    editCustomEngine: 'Edit Custom Engine',
+    ceName: 'Name',
+    ceNamePlaceholder: 'Engine name',
+    ceUrl: 'Search URL',
+    ceIconWhite: 'White Icon (SVG)',
+    ceIconDefault: 'Color Icon (SVG)',
+    btnCancel: 'Cancel',
+    btnAdd: 'Add',
+    btnUpdate: 'Update',
+    btnDelete: 'Delete',
+    btnManualAdd: 'Add Manually',
+
+    btnResetAll: 'Reset All Settings',
+    resetDesc: 'Restore all settings to their defaults, including wallpaper, accent color, custom engines, search box, etc.',
+    btnResetSearch: 'Reset Search Box',
+    resetSearchDesc: 'Restore only the search box vertical offset, horizontal offset, width, and border radius to their defaults.',
+
+    historyTitle: 'Search History',
+    clearHistory: 'Clear History',
+
+    wallpaperManage: 'Wallpaper Manager',
+    importWallpaper: 'Import Local Wallpaper',
+    wallpaperRotateEdit: 'Rotation',
+    restoreDefault: 'Restore Default',
+    clearAll: 'Clear All',
+    btnClose: 'Close',
+    noHistoryWallpaper: 'No wallpaper history',
+
+    switchWallpaper: 'Switch Wallpaper',
+    contextSettings: 'Settings',
+
+    engineBing: 'Bing',
+    engineBaidu: 'Baidu',
+
+    toastSwitchSuccess: 'Switched successfully',
+    toastWallpaperInUse: 'This wallpaper is currently in use',
+    toastRotateUpdated: 'Rotation list updated',
+    toastImportSuccess: 'Import successful',
+    toastStorageFull: 'Insufficient storage space',
+    toastFileReadError: 'File read error',
+    toastCannotReadFile: 'Cannot read file',
+    toastSelectImage: 'Please select an image file',
+    toastRestored: 'Restored',
+    toastCleared: 'Cleared',
+    toastConfigPoolFirst: 'Please configure the rotation pool first',
+    toastRotated: 'Rotated',
+    toastFillNameUrl: 'Please fill in name and search URL',
+    toastSelectIcons: 'Please select both white and color icons',
+    toastNameExists: 'This name already exists',
+    toastUrlDuplicate: 'This URL is already used by "{name}"',
+    toastDeleteSuccess: 'Deleted successfully',
+    toastUpdateSuccess: 'Updated "{name}"',
+    toastAddSuccess: 'Added "{name}"',
+    toastDefaultEngineLocked: 'Cannot disable the current default engine',
+    toastSettingsReset: 'Settings restored to defaults',
+    toastSearchReset: 'Search box reset',
+    toastNeedTwoWallpapers: 'At least two wallpapers needed to switch',
+    toastWallpaperSwitched: 'Wallpaper switched',
+    toastSelectSvg: 'Please select an SVG icon',
+    toastIconTooLarge: 'Icon file too large, please select a file under 512KB',
+    toastIconReadFailed: 'Failed to read icon',
+
+    confirmReset: 'Are you sure you want to reset all settings to defaults?\nThis will clear wallpaper, accent color, custom engines, and all other changes. This action cannot be undone.',
+    btnConfirm: 'Confirm',
+  }
+};
+
+window.I18N_CURRENT = localStorage.getItem('language') || 'zh-CN';
+
+function t(key, vars) {
+  const map = window.I18N_DATA[window.I18N_CURRENT] || window.I18N_DATA['zh-CN'];
+  let text = map[key];
+  if (text === undefined) return key;
+  if (vars) {
+    Object.keys(vars).forEach(k => {
+      text = text.replace('{' + k + '}', vars[k]);
+    });
+  }
+  return text;
+}
+
+function setLanguage(lang) {
+  window.I18N_CURRENT = lang;
+  localStorage.setItem('language', lang);
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key) el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (key) el.placeholder = t(key);
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    if (key) el.title = t(key);
+  });
+
+  const seg = document.getElementById('languageSeg');
+  if (seg) {
+    seg.querySelectorAll('.theme-mode-opt').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === lang);
+    });
+  }
+
+  if (window.refreshI18n) window.refreshI18n();
+}
+
+function initLanguage() {
+  const saved = localStorage.getItem('language') || 'zh-CN';
+  setLanguage(saved);
+}
+
+document.addEventListener('DOMContentLoaded', initLanguage);
