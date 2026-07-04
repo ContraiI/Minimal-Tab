@@ -484,7 +484,8 @@ if (engineSelectorEl && engineListEl) {
 
   if (clockToggle) {
     clockToggle.checked = isClockVisible();
-    if (!isClockVisible()) hideDigitalClock();
+    if (isClockVisible()) showDigitalClock();
+    else hideDigitalClock();
     updateClockCascade();
     clockToggle.addEventListener('change', () => {
       setClockVisible(clockToggle.checked);
@@ -768,12 +769,6 @@ if (engineSelectorEl && engineListEl) {
     let list = getWallpaperHistory().filter(item => item !== dataUrl);
     list.unshift(dataUrl);
     saveWallpaperHistory(list);
-    // 若已配置轮换池，新壁纸自动加入
-    const pool = getRotationPool();
-    if (pool.length && !pool.includes(dataUrl)) {
-      pool.push(dataUrl);
-      saveRotationPool(pool);
-    }
   }
 
   let wallpaperEditMode = false;
@@ -786,7 +781,7 @@ if (engineSelectorEl && engineListEl) {
     wallpaperGrid.innerHTML = '';
     if (wallpaperEditMode) {
       wallpaperGrid.classList.add('edit-mode');
-      wallpaperEditChecked = new Set(pool.length ? pool : history);
+      wallpaperEditChecked = new Set(pool);
     } else {
       wallpaperGrid.classList.remove('edit-mode');
     }
@@ -845,6 +840,7 @@ if (engineSelectorEl && engineListEl) {
         const p = getRotationPool().filter(u => u !== dataUrl);
         saveRotationPool(p);
         wallpaperEditChecked.delete(dataUrl);
+        if (p.length < 2) selectRotation('off');
         renderWallpaperGrid();
       });
       item.appendChild(delBtn);
@@ -861,9 +857,14 @@ if (engineSelectorEl && engineListEl) {
       wallpaperRotateEditBtn.textContent = '壁纸轮换';
       renderWallpaperGrid();
       showToast('轮换列表已更新', 2000, 'success');
+      // 池不足2张时强制关闭轮换
+      if (checked.length < 2) {
+        selectRotation('off');
+        return;
+      }
       // 若轮换已开启且当前壁纸不在新池中，立即切换
       const rotation = localStorage.getItem(LS_WALLPAPER_ROTATE) || 'off';
-      if (rotation !== 'off' && checked.length > 0) {
+      if (rotation !== 'off') {
         const cur = localStorage.getItem(LS_BG);
         if (cur && !checked.includes(cur)) doWallpaperRotate();
       }
@@ -940,6 +941,7 @@ if (engineSelectorEl && engineListEl) {
 
   document.getElementById('wallpaperResetBtn').addEventListener('click', () => {
     localStorage.removeItem(LS_WRP);
+    selectRotation('off');
     resetWallpaper();
     renderWallpaperGrid();
     sidebarOverlaySlider.value = '0.3';
@@ -995,6 +997,11 @@ if (engineSelectorEl && engineListEl) {
   });
 
   function selectRotation(value) {
+    // 轮换池不足2张时，强制不轮换
+    if (value !== 'off' && getRotationPool().length < 2) {
+      showToast('请先配置轮换池', 2000);
+      return;
+    }
     const opt = rotateOptions.find(o => o.value === value);
     if (opt) rotateTrigger.textContent = opt.label;
     rotateList.querySelectorAll('.rotate-option').forEach(o => o.classList.toggle('active', o.getAttribute('data-value') === value));
@@ -1013,10 +1020,10 @@ if (engineSelectorEl && engineListEl) {
   }
 
   function doWallpaperRotate() {
-    const history = getWallpaperHistory();
-    if (history.length < 2) return;
     const pool = getRotationPool();
-    const candidates = pool.length ? pool.filter(u => history.includes(u)) : history;
+    if (pool.length < 2) return;
+    const history = getWallpaperHistory();
+    const candidates = pool.filter(u => history.includes(u));
     if (candidates.length < 2) return;
     const current = localStorage.getItem(LS_BG);
     const others = candidates.filter(h => h !== current);
@@ -1051,6 +1058,10 @@ if (engineSelectorEl && engineListEl) {
   }
 
   document.getElementById('rotateNowBtn').addEventListener('click', () => {
+    if (getRotationPool().length < 2) {
+      showToast('请先配置轮换池', 2000);
+      return;
+    }
     doWallpaperRotate();
     showToast('已轮换', 1500, 'success');
   });
@@ -1065,7 +1076,13 @@ if (engineSelectorEl && engineListEl) {
   });
 
   const savedRotation = localStorage.getItem(LS_WALLPAPER_ROTATE) || 'off';
-  selectRotation(savedRotation);
+  // 池不足2张时静默重置为不轮换
+  if (savedRotation !== 'off' && getRotationPool().length < 2) {
+    localStorage.setItem(LS_WALLPAPER_ROTATE, 'off');
+    selectRotation('off');
+  } else {
+    selectRotation(savedRotation);
+  }
 
   // 搜索功能面板：分区折叠/展开（默认折叠）
   document.querySelectorAll('.section-collapse-header').forEach(header => {
@@ -1396,24 +1413,23 @@ if (engineSelectorEl && engineListEl) {
     });
   })();
 
-  // 搜索框：重置按钮
-  (function() {
-    const btn = document.getElementById('searchBoxResetBtn');
-    btn.addEventListener('click', () => {
-      const defaults = [
-        { slider: 'searchOffsetYSlider', label: 'searchOffsetYVal', cssVar: '--search-offset-y', value: '0', key: 'searchOffsetY' },
-        { slider: 'searchOffsetXSlider', label: 'searchOffsetXVal', cssVar: '--search-offset-x', value: '0', key: 'searchOffsetX' },
-        { slider: 'searchWidthSlider',   label: 'searchWidthVal',   cssVar: '--search-width',   value: '800', key: 'searchWidth' },
-        { slider: 'searchRadiusSlider',  label: 'searchRadiusVal',  cssVar: '--search-radius',  value: '25', key: 'searchRadius' }
-      ];
-      defaults.forEach(d => {
-        document.getElementById(d.slider).value = d.value;
-        document.getElementById(d.label).textContent = d.value + 'px';
-        document.documentElement.style.setProperty(d.cssVar, d.value + 'px');
-        localStorage.removeItem(d.key);
-      });
+  // 搜索框：重置按钮（已移至重置设置面板）
+  document.getElementById('searchBoxResetBtn').addEventListener('click', () => {
+    const defaults = [
+      { slider: 'searchOffsetYSlider', label: 'searchOffsetYVal', cssVar: '--search-offset-y', value: '0', key: 'searchOffsetY' },
+      { slider: 'searchOffsetXSlider', label: 'searchOffsetXVal', cssVar: '--search-offset-x', value: '0', key: 'searchOffsetX' },
+      { slider: 'searchWidthSlider',   label: 'searchWidthVal',   cssVar: '--search-width',   value: '800', key: 'searchWidth' },
+      { slider: 'searchRadiusSlider',  label: 'searchRadiusVal',  cssVar: '--search-radius',  value: '25', key: 'searchRadius' }
+    ];
+    defaults.forEach(d => {
+      document.getElementById(d.slider).value = d.value;
+      document.getElementById(d.label).textContent = d.value + 'px';
+      document.documentElement.style.setProperty(d.cssVar, d.value + 'px');
+      localStorage.removeItem(d.key);
+      updateSliderTrack(document.getElementById(d.slider));
     });
-  })();
+    showToast('搜索框已重置', 1500, 'success');
+  });
 
   // 自定义搜索引擎表单（侧边栏内下拉展开）
   const customEngineForm = document.getElementById('customEngineForm');
@@ -1606,7 +1622,7 @@ if (engineSelectorEl && engineListEl) {
   if (resetSettingsBtn) {
     resetSettingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!confirm('确定要恢复所有设置为默认值吗？\n此操作将清除壁纸、自定义引擎等所有更改。')) return;
+      if (!confirm('确定将所有设置恢复为默认值吗？\n此操作将清除壁纸、主题色、自定义引擎等所有更改，且不可撤销。')) return;
       localStorage.removeItem(LS_BG);
       localStorage.removeItem(LS_WH);
       localStorage.removeItem(LS_WRP);
@@ -1791,6 +1807,57 @@ if (engineSelectorEl && engineListEl) {
   window.syncDefaultEngineManager = syncDefaultEngineManager;
 
   window.populateEngineManager = populateEngineManager;
+
+  // 自定义右键菜单
+  const contextMenu = document.getElementById('contextMenu');
+
+  function nextWallpaperSequential() {
+    const pool = getRotationPool();
+    const history = getWallpaperHistory();
+    const candidates = pool.length >= 2 ? pool.filter(u => history.includes(u)) : history;
+    if (candidates.length < 2) {
+      showToast('至少需要两张壁纸才能切换', 2000);
+      return;
+    }
+    const current = localStorage.getItem(LS_BG);
+    const curIdx = candidates.indexOf(current);
+    const nextIdx = curIdx < 0 ? 0 : (curIdx + 1) % candidates.length;
+    applyWallpaper(candidates[nextIdx]);
+    showToast('已切换壁纸', 1500, 'success');
+  }
+
+  document.addEventListener('contextmenu', (e) => {
+    // 交互元素保留浏览器默认右键菜单
+    if (e.target.closest('.sidebar, .sidebar-overlay, .search-input, .search-wrapper, .modal-overlay, .settings-wrap, input, button, a')) return;
+    e.preventDefault();
+    let x = e.clientX;
+    let y = e.clientY;
+    const mw = 160;
+    const mh = 80;
+    if (x + mw > window.innerWidth) x = window.innerWidth - mw - 4;
+    if (y + mh > window.innerHeight) y = window.innerHeight - mh - 4;
+    if (x < 4) x = 4;
+    if (y < 4) y = 4;
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+    contextMenu.classList.add('show');
+  });
+
+  contextMenu.addEventListener('click', (e) => {
+    const item = e.target.closest('.context-menu-item');
+    if (!item) return;
+    const action = item.dataset.action;
+    contextMenu.classList.remove('show');
+    if (action === 'settings') {
+      openSidebar();
+    } else if (action === 'next-wallpaper') {
+      nextWallpaperSequential();
+    }
+  });
+
+  document.addEventListener('click', () => {
+    contextMenu.classList.remove('show');
+  });
 })();
 
 
@@ -1917,7 +1984,7 @@ function populateDefaultEngineManager() {
 }
 
 // 选择默认引擎 → 保存并切换
-defaultEngineManager.addEventListener('change', (e) => {
+if (defaultEngineManager) defaultEngineManager.addEventListener('change', (e) => {
   const radio = e.target;
   if (!radio || radio.name !== 'defaultEngine') return;
   localStorage.setItem(LS_DEFAULT_ENGINE, radio.value);

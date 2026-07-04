@@ -23,7 +23,7 @@
 
     <!-- ===== 搜索块：搜索框 + 时钟 ===== -->
     <div class="search-block">
-      <div class="search-container">
+      <div class="search-container hidden">
         <div class="search-wrapper">
 
           <!-- 搜索引擎选择器：图标 + 下拉菜单 -->
@@ -253,7 +253,6 @@
               <input type="range" id="searchRadiusSlider" min="0" max="25" step="any" data-step="0.5" data-unit="px" value="25">
               <span id="searchRadiusVal">25</span>
             </div>
-            <button id="searchBoxResetBtn" class="sidebar-action-btn" style="margin-top:8px;width:100%">重置搜索框</button>
           </div>
           <div class="section-collapse" id="engineListSection">
             <div class="sidebar-section-label section-collapse-header">搜索引擎</div>
@@ -309,12 +308,19 @@
         <div class="sidebar-panel" id="sidebarPanelMoreSettings">
         </div>
         <div class="sidebar-panel" id="sidebarPanelReset">
-          <div class="sidebar-section-label">重置</div>
-          <p class="reset-desc">将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎等。</p>
-          <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%">恢复默认设置</button>
+          <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%">初始化设置</button>
+          <p class="reset-desc">将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎、搜索框等。</p>
+          <button id="searchBoxResetBtn" class="sidebar-action-btn danger" style="width:100%;margin-top:12px">搜索框重置</button>
+          <p class="reset-desc">仅将搜索框的垂直偏移、水平偏移、宽度和圆角恢复为默认值。</p>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- 自定义右键菜单 -->
+  <div id="contextMenu" class="context-menu">
+    <div class="context-menu-item" data-action="next-wallpaper">切换壁纸</div>
+    <div class="context-menu-item" data-action="settings">设置</div>
   </div>
 
   <!-- 拼音数据集（须在业务逻辑前加载） -->
