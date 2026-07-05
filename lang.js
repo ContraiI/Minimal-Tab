@@ -13,6 +13,7 @@ window.I18N_DATA = {
     aboutVersion: 'Version',
     aboutProject: '项目地址',
     aboutFeedback: '问题反馈',
+    aboutLicense: '遵循 MIT 开源协议',
     colorPicker: '取色器',
 
     sectionAppearance: '整体外观',
@@ -159,6 +160,7 @@ window.I18N_DATA = {
     aboutVersion: 'Version',
     aboutProject: 'Project',
     aboutFeedback: 'Feedback',
+    aboutLicense: 'Licensed under MIT',
     colorPicker: 'Color Picker',
 
     sectionAppearance: 'Appearance',
