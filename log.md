@@ -1,5 +1,56 @@
 # 更新日志
 
+## 2026-07-05 (v0.9.1)
+
+### 修复
+- 壁纸来源选择器初始化时多处 const TDZ 错误，改用 `document.getElementById` 内联 + 字面量字符串
+- 本地壁纸与 Bing 壁纸轮换频率相互独立存储（`wallpaperRotation` / `bingRotation`），切换来源时 UI 同步更新
+- Bing 壁纸每日午夜强制刷新（独立定时器），不受轮换控件"不进行轮换"影响
+- "恢复默认"后壁纸遮罩滑块轨道填充色同步更新
+- Bing 缩略图列表高亮改用索引匹配
+- 壁纸来源快速切换竞态条件修复（fetch 回调校验 source）
+
+## 2026-07-05 (v0.9.0)
+
+### 新增
+- 壁纸来源选择器（无 / 本地壁纸 / Bing壁纸三段式），默认"无"（纯黑背景，遮罩/模糊/轮换隐藏）；Bing壁纸每日获取图片列表（横向滚动+滚轮），自动应用首张，支持壁纸轮换；切回本地壁纸时恢复上次壁纸（无则默认 bg.webp）；新增 localStorage 键 `wallpaperSource`、`bingWallpaperUrl`、`bingWallpaperDate`、`bingWallpaperList`
+
+### 修改
+- 侧边栏透明度滑块可调节范围从 20%-100% 扩展为 0%-100%
+- 自定义搜索引擎编辑按钮移至右侧与开关同组（`.engine-toggle-right` 容器），避免 `justify-content: space-between` 下被挤到中间
+- 侧边栏滚动条改为 5px 细条半透明样式，`scrollbar-gutter: stable` 预留空间防止内容跳动
+- 预设主题色调整：删除藏青色 `#0f766e`，黄色改为 `#eab308`，保留深灰 `#374151`（9 预设 + 取色器）
+- 搜索框 `border-color` 移除过渡动画，取色器拖拽时边框颜色即时响应
+
+### 新增
+- 搜索框下拉列表（历史记录/搜索建议）支持键盘 ↑↓ 键选择，Enter 确认选中项，Esc 关闭下拉；新增 `.history-item.active` 样式和 `dropdownSelectedIndex` 状态变量
+- 壁纸管理页面工具栏右侧实时显示 localStorage 空间占用（KB/MB），随壁纸增删自动更新
+- 侧边栏浅色模式滚动条颜色适配（半透明黑色替代白色）
+- 时钟分区新增独立颜色控制（9 预设 + 取色器），时钟颜色通过 `--clock-color` CSS 变量与主题色解耦；新增 localStorage 键 `clockColor`
+- 搜索框新增独立颜色控制（9 预设 + 取色器，位于启用搜索框开关下方随折叠），影响搜索框边框和 placeholder 文字；通过 `--search-color` / `--search-color-rgb` CSS 变量控制；新增 localStorage 键 `searchColor`
+- 时钟与搜索框颜色联动按钮（链接图标，默认开启），拖拽取色器时双方实时同步预览；中间横杠显隐表示联动状态；浅色模式自动适配深色图标；新增 localStorage 键 `clockSearchLink`
+- 搜索框聚焦时 placeholder 自动淡出隐藏（`opacity 0.2s` 过渡动画）
+- 取色器面板未确认直接关闭设置或切换面板时，自动回退到打开前的颜色
+
+### 修复
+- 壁纸导入始终转为 JPEG 并限制体积 ≤400KB（质量从 0.85 自动递降至 0.3），避免原图已是高压缩 JPEG 时重新编码膨胀数倍或 PNG 等格式占用过大导致 localStorage 配额溢出
+- `applyWallpaper` 保存 `customBg` 时增加 try-catch 保护，避免 setItem 异常导致未捕获错误
+- 存储空间显示在历史清空为空时不再跳过更新，并增加 `localStorage.getItem` 空值保护
+- 自定义搜索引擎删除/保存后侧边栏开关列表未刷新导致看似无法删除；`openCustomEngineForm` 编辑已删除引擎时重置为添加模式
+- 默认引擎的自定义搜索引擎禁止删除（编辑表单隐藏删除按钮 + 删除处理器守卫提示）
+- 重置设置后时钟位置异常（`applyClockCustomPos` 覆盖了 `applyClockFollow` 的定位样式，调换为先 custom pos 再 follow 的顺序）
+- 链接按钮固定白色不受主题色影响，浅色模式自动切换深色 `#333`/`#111`
+
+### 美化
+- 壁纸管理弹窗全面重构美化：
+  - 工具栏分组（导入 | 轮换/恢复/清空）+ SVG 图标 + 存储空间磁盘图标，新按钮类体系（primary/secondary/danger）
+  - 标题加粗 + 主题色下划线和左竖条装饰
+  - 缩略图卡片阴影 + 圆角 8px + hover 浮起效果（translateY(-3px)）+ 当前壁纸双圈光晕
+  - 当前壁纸徽章（主题色标签 + 对号 + "当前"文字，右上角）
+  - 删除按钮改为右上角圆形 X（毛玻璃效果 + hover 变红）+ 确认对话框
+  - 编辑模式勾选框弹簧动画弹出 + 未勾选项缩略图变暗
+  - 空状态大图标居中显示
+
 ## 2026-07-04 (v0.8.5)
 
 ### 新增

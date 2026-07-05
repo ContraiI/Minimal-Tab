@@ -108,10 +108,31 @@
     <div class="modal-card wallpaper-card">
       <h3 class="modal-title" data-i18n="wallpaperManage">壁纸管理</h3>
       <div class="wallpaper-toolbar">
-        <button id="wallpaperImportBtn" class="modal-btn-save" data-i18n="importWallpaper">导入本地壁纸</button>
-        <button id="wallpaperRotateEditBtn" class="modal-btn-cancel" data-i18n="wallpaperRotateEdit">壁纸轮换</button>
-        <button id="wallpaperResetBtn" class="modal-btn-cancel" data-i18n="restoreDefault">恢复默认</button>
-        <button id="wallpaperClearBtn" class="modal-btn-cancel" data-i18n="clearAll">清空</button>
+        <div class="toolbar-group">
+          <button id="wallpaperImportBtn" class="btn-wallpaper btn-wallpaper-primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v11M5 10l7 7 7-7"/><path d="M3 18h18"/></svg>
+            <span data-i18n="importWallpaper">导入本地壁纸</span>
+          </button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+          <button id="wallpaperRotateEditBtn" class="btn-wallpaper btn-wallpaper-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+            <span data-i18n="wallpaperRotateEdit">壁纸轮换</span>
+          </button>
+          <button id="wallpaperResetBtn" class="btn-wallpaper btn-wallpaper-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.5 15.5A9 9 0 1 0 2 12"/></svg>
+            <span data-i18n="restoreDefault">恢复默认</span>
+          </button>
+          <button id="wallpaperClearBtn" class="btn-wallpaper btn-wallpaper-danger">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+            <span data-i18n="clearAll">清空</span>
+          </button>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <span class="storage-info" id="wallpaperStorageInfo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>
+        </span>
       </div>
       <input type="file" id="wallpaperFileInput" accept="image/*" style="display:none">
       <div id="wallpaperGrid" class="wallpaper-grid"></div>
@@ -132,7 +153,7 @@
         <div class="sidebar-nav-item active" data-panel="theme" data-i18n="navTheme">主题/壁纸</div>
         <div class="sidebar-nav-item" data-panel="engines" data-i18n="navEngines">搜索功能</div>
         <div class="sidebar-nav-item" data-panel="personalize" data-i18n="navPersonalize">个性化</div>
-	        <div class="sidebar-nav-item" data-panel="reset" data-i18n="navReset">重置设置</div>
+	        <div class="sidebar-nav-item" data-panel="more" data-i18n="navMore">更多设置</div>
 	        <div class="sidebar-nav-item" data-panel="about" data-i18n="navAbout">关于我们</div>
 	      </nav>
       <div class="sidebar-content">
@@ -151,10 +172,9 @@
             <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
             <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
             <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
-            <span class="theme-color-swatch" data-color="#0f766e" style="background:#0f766e"></span>
             <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
             <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
-            <span class="theme-color-swatch" data-color="#ca8a04" style="background:#ca8a04"></span>
+            <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
             <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
             <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
             <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
@@ -171,28 +191,40 @@
             </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
-          <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
-            <img id="sidebarWallpaperThumbImg" src="" alt="当前壁纸">
+          <div class="theme-mode-seg" id="wallpaperSourceSeg" style="margin-bottom:10px">
+            <button class="theme-mode-opt active" data-source="none" data-i18n="wpSourceNone">无</button>
+            <button class="theme-mode-opt" data-source="local" data-i18n="wpSourceLocal">本地壁纸</button>
+            <button class="theme-mode-opt" data-source="bing" data-i18n="wpSourceBing">Bing壁纸</button>
           </div>
-          <div class="sidebar-slider-group">
-            <span data-i18n="wallpaperOverlay">壁纸遮罩</span>
-            <input type="range" id="sidebarOverlaySlider" min="0" max="0.5" step="any" data-step="0.01" data-unit="%" value="0.3">
-            <span id="sidebarOverlayVal">0.30</span>
+          <div id="wallpaperLocalGroup">
+            <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
+              <img id="sidebarWallpaperThumbImg" src="" alt="">
+            </div>
           </div>
-          <div class="sidebar-slider-group">
-            <span data-i18n="wallpaperBlur">壁纸模糊</span>
-            <input type="range" id="sidebarBlurSlider" min="0" max="10" step="any" data-step="0.5" data-unit="px" value="0">
-            <span id="sidebarBlurVal">0</span>
-          </div>
-          <div class="sidebar-rotate-row">
-            <span class="sidebar-rotate-label" data-i18n="wallpaperRotate">壁纸轮换</span>
-            <div class="rotate-actions">
-              <button id="rotateNowBtn" class="rotate-now-btn" data-i18n="rotateNow">立即轮换</button>
-              <div class="rotate-dropdown" id="wallpaperRotateDropdown">
-                <span class="rotate-trigger" id="rotateTrigger" data-i18n="rotateOff">不进行轮换</span>
-                <div class="rotate-sizer" id="rotateSizer" aria-hidden="true"></div>
-                <div class="rotate-list" id="rotateList"></div>
+          <div id="bingWallpaperList" class="bing-wallpaper-list hidden"></div>
+          <div id="wallpaperRotateGroup">
+            <div class="sidebar-rotate-row">
+              <span class="sidebar-rotate-label" data-i18n="wallpaperRotate">壁纸轮换</span>
+              <div class="rotate-actions">
+                <button id="rotateNowBtn" class="rotate-now-btn" data-i18n="rotateNow">立即轮换</button>
+                <div class="rotate-dropdown" id="wallpaperRotateDropdown">
+                  <span class="rotate-trigger" id="rotateTrigger" data-i18n="rotateOff">不进行轮换</span>
+                  <div class="rotate-sizer" id="rotateSizer" aria-hidden="true"></div>
+                  <div class="rotate-list" id="rotateList"></div>
+                </div>
               </div>
+            </div>
+          </div>
+          <div id="wallpaperOverlayGroup">
+            <div class="sidebar-slider-group">
+              <span data-i18n="wallpaperOverlay">壁纸遮罩</span>
+              <input type="range" id="sidebarOverlaySlider" min="0" max="0.5" step="any" data-step="0.01" data-unit="%" value="0.3">
+              <span id="sidebarOverlayVal">0.30</span>
+            </div>
+            <div class="sidebar-slider-group">
+              <span data-i18n="wallpaperBlur">壁纸模糊</span>
+              <input type="range" id="sidebarBlurSlider" min="0" max="10" step="any" data-step="0.5" data-unit="px" value="0">
+              <span id="sidebarBlurVal">0</span>
             </div>
           </div>
         </div>
@@ -200,7 +232,7 @@
           <div class="sidebar-section-label" data-i18n="sectionSidebar">侧边栏</div>
           <div class="sidebar-slider-group">
             <span data-i18n="sidebarOpacity">透明度</span>
-            <input type="range" id="sidebarOpacitySlider" min="0.2" max="1" step="any" data-step="0.01" data-unit="%" value="1">
+            <input type="range" id="sidebarOpacitySlider" min="0" max="1" step="any" data-step="0.01" data-unit="%" value="1">
             <span id="sidebarOpacityVal">1.00</span>
           </div>
           <div class="sidebar-slider-group">
@@ -209,6 +241,34 @@
             <span id="sidebarBlurVal2">0</span>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionClock">时钟</div>
+          <div class="theme-color-row" id="clockColorRow" style="padding:0 4px 8px;">
+            <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
+            <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
+            <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
+            <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
+            <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
+            <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
+            <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
+            <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
+            <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
+            <span class="theme-color-swatch picker-trigger" id="clockColorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
+            <span class="color-link-btn active" id="clockLinkBtn" title="联动时钟与搜索框颜色">
+              <svg viewBox="0 0 24 24">
+                <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                <path class="link-bar" d="M8 13h8v-2H8v2z"/>
+              </svg>
+            </span>
+          </div>
+          <div id="clockColorPickerPanel" class="color-picker-panel hidden">
+            <div class="picker-row">
+              <canvas id="clockPickerPalette" class="picker-palette" width="160" height="160"></canvas>
+              <canvas id="clockPickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
+            </div>
+            <div class="picker-input-row">
+              <input type="text" id="clockPickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
+              <button id="clockPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
+            </div>
+          </div>
           <label class="sidebar-toggle">
             <span data-i18n="digitalClock">数字时钟</span>
             <input type="checkbox" id="sidebarClockToggle" checked>
@@ -262,6 +322,34 @@
             <span class="toggle-switch"></span>
           </label>
           <div id="searchBoxControls">
+            <div class="theme-color-row" id="searchColorRow" style="padding:0 4px 8px;">
+              <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
+              <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
+              <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
+              <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
+              <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
+              <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
+              <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
+              <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
+              <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
+              <span class="theme-color-swatch picker-trigger" id="searchColorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
+              <span class="color-link-btn active" id="searchLinkBtn" title="联动时钟与搜索框颜色">
+                <svg viewBox="0 0 24 24">
+                  <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                  <path class="link-bar" d="M8 13h8v-2H8v2z"/>
+                </svg>
+              </span>
+            </div>
+            <div id="searchColorPickerPanel" class="color-picker-panel hidden">
+              <div class="picker-row">
+                <canvas id="searchPickerPalette" class="picker-palette" width="160" height="160"></canvas>
+                <canvas id="searchPickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
+              </div>
+              <div class="picker-input-row">
+                <input type="text" id="searchPickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
+                <button id="searchPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
+              </div>
+            </div>
             <div class="sidebar-slider-group">
               <span data-i18n="searchOffsetY">垂直偏移</span>
               <input type="range" id="searchOffsetYSlider" min="-300" max="300" step="any" data-step="1" data-unit="px" value="0">
@@ -356,11 +444,21 @@
             <a href="https://github.com/ContraiI/Minimal-Tab/issues" target="_blank" style="display:inline-block;margin-top:8px;font-size:13px;color:#4a9eff;text-decoration:underline" data-i18n="aboutFeedback">问题反馈</a>
           </div>
         </div>
-        <div class="sidebar-panel" id="sidebarPanelReset">
+        <div class="sidebar-panel" id="sidebarPanelMore">
+          <div class="sidebar-section-label" data-i18n="moreBackup">备份与恢复</div>
+          <div class="backup-row">
+            <button id="exportConfigBtn" class="sidebar-action-btn" style="flex:1">
+              <svg class="btn-icon" viewBox="0 0 16 16"><path d="M8 3 L8 11 M4 7 L8 3 L12 7 M3 13 H13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="btnExportConfig">导出配置</span>
+            </button>
+            <button id="importConfigBtn" class="sidebar-action-btn" style="flex:1">
+              <svg class="btn-icon" viewBox="0 0 16 16"><path d="M8 3 L8 11 M4 7 L8 11 L12 7 M3 13 H13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span data-i18n="btnImportConfig">导入配置</span>
+            </button>
+            <input type="file" id="importConfigInput" accept=".json" style="display:none">
+          </div>
+          <div class="sidebar-section-label" style="margin-top:12px" data-i18n="moreReset">重置</div>
           <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%" data-i18n="btnResetAll">初始化设置</button>
-          <p class="reset-desc" data-i18n="resetDesc">将所有设置恢复为默认值，包括壁纸、主题色、自定义引擎、搜索框等。</p>
-          <button id="searchBoxResetBtn" class="sidebar-action-btn danger" style="width:100%;margin-top:12px" data-i18n="btnResetSearch">搜索框重置</button>
-          <p class="reset-desc" data-i18n="resetSearchDesc">仅将搜索框的垂直偏移、水平偏移、宽度和圆角恢复为默认值。</p>
         </div>
       </div>
     </div>
