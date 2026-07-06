@@ -1,6 +1,6 @@
 window.I18N_DATA = {
   'zh-CN': {
-    pageTitle: 'ZE 新标签页',
+    pageTitle: 'Minimal Tab',
     searchPlaceholder: '输入搜索内容...',
     settingsTitle: '设置',
     settingsHeader: '设置',
@@ -13,6 +13,7 @@ window.I18N_DATA = {
     aboutVersion: 'Version',
     aboutProject: '项目地址',
     aboutFeedback: '问题反馈',
+    aboutPrivacy: '隐私政策',
     aboutLicense: '遵循 MIT 开源协议',
     colorPicker: '取色器',
 
@@ -147,7 +148,7 @@ window.I18N_DATA = {
   },
 
   'en': {
-    pageTitle: 'ZE New Tab',
+    pageTitle: 'Minimal Tab',
     searchPlaceholder: 'Type to search...',
     settingsTitle: 'Settings',
     settingsHeader: 'Settings',
@@ -160,6 +161,7 @@ window.I18N_DATA = {
     aboutVersion: 'Version',
     aboutProject: 'Project',
     aboutFeedback: 'Feedback',
+    aboutPrivacy: 'Privacy Policy',
     aboutLicense: 'Licensed under MIT',
     colorPicker: 'Color Picker',
 
