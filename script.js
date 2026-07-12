@@ -387,14 +387,16 @@ function initEngineFromDOM() {
 initEngineFromDOM();
 
 if (engineIconWhite && engineIconDefault) {
-  engineIconWhite.src = currentEngineIcons.white;
+  engineIconWhite.style.maskImage = 'url(' + currentEngineIcons.white + ')';
+  engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcons.white + ')';
   engineIconDefault.src = currentEngineIcons.default;
 }
 
 function updateEngineIcon() {
   if (!engineIconWrap || !searchInput) return;
-  if (engineIconWhite && engineIconWhite.src !== currentEngineIcons.white) {
-    engineIconWhite.src = currentEngineIcons.white;
+  if (engineIconWhite) {
+    engineIconWhite.style.maskImage = 'url(' + currentEngineIcons.white + ')';
+    engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcons.white + ')';
   }
   if (engineIconDefault && engineIconDefault.src !== currentEngineIcons.default) {
     engineIconDefault.src = currentEngineIcons.default;
@@ -651,9 +653,14 @@ if (engineSelectorEl && engineListEl) {
     ])
       .then(function(results) {
         var list = [];
+        var seen = {};
         results.forEach(function(data) {
           (data.images || []).forEach(function(img) {
-            list.push({ url: 'https://www.bing.com' + img.url, copyright: img.copyright || '' });
+            var url = 'https://www.bing.com' + img.url;
+            if (!seen[url]) {
+              seen[url] = true;
+              list.push({ url: url, copyright: img.copyright || '' });
+            }
           });
         });
         bingWallpaperCache = list;
@@ -2987,9 +2994,27 @@ if (engineSelectorEl && engineListEl) {
     const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
     if (ceEditingId === def) { showToast(t('toastDefaultEngineLocked')); return; }
     closeCustomEngineForm();
+    var deletedId = ceEditingId;
+    ceEditingId = null;
+    ceWhiteData = null;
+    ceDefaultData = null;
+    var staleEl = document.querySelector('.engine-item[data-engine="' + deletedId + '"]');
+    if (staleEl) staleEl.remove();
+    var disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
+    if (disabled.has(deletedId)) {
+      disabled.delete(deletedId);
+      localStorage.setItem(LS_DISABLED, JSON.stringify(Array.from(disabled)));
+    }
     let list = getCustomEngines();
-    list = list.filter(e => e.id !== ceEditingId);
+    list = list.filter(e => e.id !== deletedId);
     saveCustomEngines(list);
+    if (currentEngine === deletedId) {
+      currentEngine = def;
+      var defEl = document.querySelector('.engine-item[data-engine="' + def + '"]');
+      if (defEl) {
+        currentEngineIcons = { white: defEl.getAttribute('data-white'), default: defEl.getAttribute('data-default') };
+      }
+    }
     injectCustomEngines();
     populateEngineManager();
     if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
@@ -3391,14 +3416,17 @@ if (engineSelectorEl && engineListEl) {
 
     const active = el.querySelector('.engine-item.active');
     if (!active || disabled.has(active.getAttribute('data-engine'))) {
-      const first = el.querySelector('.engine-item');
-      if (first) {
+      var defEngine = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
+      var fallback = el.querySelector('.engine-item[data-engine="' + defEngine + '"]') || el.querySelector('.engine-item');
+      if (fallback) {
         document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
-        first.classList.add('active');
+        fallback.classList.add('active');
+        currentEngine = fallback.getAttribute('data-engine');
+        currentEngineIcons = { white: fallback.getAttribute('data-white'), default: fallback.getAttribute('data-default') };
         const wIcon = document.getElementById('currentEngineIconWhite');
         const dIcon = document.getElementById('currentEngineIconDefault');
-        if (wIcon) wIcon.src = first.getAttribute('data-white') || first.getAttribute('data-default') || wIcon.src;
-        if (dIcon) dIcon.src = first.getAttribute('data-default') || first.getAttribute('data-white') || dIcon.src;
+        if (wIcon) { var wUrl = fallback.getAttribute('data-white') || fallback.getAttribute('data-default'); if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
+        if (dIcon) dIcon.src = fallback.getAttribute('data-default') || fallback.getAttribute('data-white') || dIcon.src;
       }
     }
 

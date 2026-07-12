@@ -1,5 +1,18 @@
 # 更新日志
 
+## 2026-07-12 (v1.0.1)
+
+### 修复
+- Bing 壁纸列表按 URL 去重，避免同一壁纸在多日期重复出现
+- 删除当前选中的自定义引擎后 `currentEngine` 未更新，导致搜索时 `engines[currentEngine]` 为 `undefined`
+- 删除已禁用的自定义引擎时，僵尸 DOM 元素残留于 `#engineArchive` 且 `LS_DISABLED` 未清理，导致侧边栏出现无效引擎条目
+- 删除自定义引擎后 `ceEditingId` 未重置，状态残留
+
+### 修改
+- 搜索框展开菜单（`.history-dropdown`）边框跟随 `--search-color` 设置，不再硬编码白色
+- 搜索框未聚焦时左侧搜索引擎图标跟随 `--search-color` 颜色（`<img>` 改为 `<div>` + mask-image + background-color 方案）
+- 自定义引擎被删除时若为当前选中引擎，自动切换到默认引擎（`LS_DEFAULT_ENGINE`），`applyEngineVisibility()` 回退逻辑统一优先默认引擎
+
 ## 2026-07-05 (v0.9.1)
 
 ### 修复

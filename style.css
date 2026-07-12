@@ -169,14 +169,22 @@ body::before {
   left: 0;
   width: 24px;
   height: 24px;
-  object-fit: contain;
   transition: opacity 0.2s ease 0.1s;
 }
 
-.engine-icon-white { opacity: 1; }   
-.engine-icon-default { opacity: 0; }  
+.engine-icon-white {
+  opacity: 1;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  background-color: var(--search-color, #ffffff);
+}
+.engine-icon-default { opacity: 0; object-fit: contain; }
 
-.engine-icon-wrap.focused .engine-icon-white { opacity: 0; }  
+.engine-icon-wrap.focused .engine-icon-white { opacity: 0; }
 .engine-icon-wrap.focused .engine-icon-default { opacity: 1; } 
 
 .engine-icon {
@@ -324,17 +332,18 @@ body::before {
   right: 0;
   background: transparent;
   border-radius: 0 0 25px 25px;
-  border: 2px solid #ffffff;
+  border: 2px solid;
+  border-color: var(--search-color, #ffffff);
   border-top: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-height: 300px;
   overflow-y: auto;
   z-index: 10;
-  margin-top: -2px; 
+  margin-top: -2px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
-  transition: opacity 0.2s ease 0s, visibility 0.2s ease 0s, transform 0.2s ease 0s, background 0.3s ease 0s;
+  transition: opacity 0.2s ease 0s, visibility 0.2s ease 0s, transform 0.2s ease 0s, background 0.3s ease 0s, border-color 0.3s ease 0s;
 }
 
 .history-dropdown.show {
@@ -342,7 +351,7 @@ body::before {
   visibility: visible;
   transform: translateY(0);
   background: #ffffff;
-  transition: opacity 0.2s ease 0.1s, visibility 0.2s ease 0.1s, transform 0.2s ease 0.1s, background 0.3s ease 0s;
+  transition: opacity 0.2s ease 0.1s, visibility 0.2s ease 0.1s, transform 0.2s ease 0.1s, background 0.3s ease 0s, border-color 0.3s ease 0s;
 }
 
 .history-header {
