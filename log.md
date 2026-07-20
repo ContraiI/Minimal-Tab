@@ -12,6 +12,7 @@
 - 搜索框展开菜单（`.history-dropdown`）边框跟随 `--search-color` 设置，不再硬编码白色
 - 搜索框未聚焦时左侧搜索引擎图标跟随 `--search-color` 颜色（`<img>` 改为 `<div>` + mask-image + background-color 方案）
 - 自定义引擎被删除时若为当前选中引擎，自动切换到默认引擎（`LS_DEFAULT_ENGINE`），`applyEngineVisibility()` 回退逻辑统一优先默认引擎
+- **搜索引擎图标体系统一**：废弃双图标（`-white.svg` + `-default.svg`）方案，统一使用 `-default.svg`；搜索框未聚焦处通过 mask-image + background-color 呈现纯色，下拉菜单图标通过 CSS `filter: brightness(0) invert(1)` 呈现白色；`currentEngineIcons` 简化为 `currentEngineIcon` 单字符串；自定义引擎表单仅需上传一个图标；数据结构移除 `iconWhite` 字段
 
 ## 2026-07-05 (v0.9.1)
 

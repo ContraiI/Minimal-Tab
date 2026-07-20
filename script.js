@@ -51,7 +51,7 @@ const engines = {
 };
 
 let currentEngine = 'bing';
-let currentEngineIcons = { white: './icons/bing-white.svg', default: './icons/bing-default.svg' };
+let currentEngineIcon = './icons/bing-default.svg';
 
 const LS_DEFAULT_ENGINE = 'preferredDefaultEngine';
 const LS_DISABLED = 'disabledEngines';
@@ -149,12 +149,11 @@ function injectCustomEngines() {
     const item = document.createElement('div');
     item.className = 'engine-item custom';
     item.setAttribute('data-engine', ce.id);
-    item.setAttribute('data-white', ce.iconWhite);
     item.setAttribute('data-default', ce.iconDefault);
     item.setAttribute('data-index', 100 + i);
     const icon = document.createElement('img');
     icon.className = 'engine-icon sm';
-    icon.src = ce.iconWhite;
+    icon.src = ce.iconDefault;
     const span = document.createElement('span');
     span.textContent = ce.name;
     item.appendChild(icon);
@@ -374,39 +373,39 @@ function initEngineFromDOM() {
       engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
       el.classList.add('active');
       currentEngine = saved;
-      currentEngineIcons = { white: el.dataset.white, default: el.dataset.default };
+      currentEngineIcon = el.dataset.default;
       return;
     }
   }
   const active = engineListEl.querySelector('.engine-item.active');
   if (active) {
     currentEngine = active.dataset.engine;
-    currentEngineIcons = { white: active.dataset.white, default: active.dataset.default };
+    currentEngineIcon = active.dataset.default;
   }
 }
 initEngineFromDOM();
 
 if (engineIconWhite && engineIconDefault) {
-  engineIconWhite.style.maskImage = 'url(' + currentEngineIcons.white + ')';
-  engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcons.white + ')';
-  engineIconDefault.src = currentEngineIcons.default;
+  engineIconWhite.style.maskImage = 'url(' + currentEngineIcon + ')';
+  engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcon + ')';
+  engineIconDefault.src = currentEngineIcon;
 }
 
 function updateEngineIcon() {
   if (!engineIconWrap || !searchInput) return;
   if (engineIconWhite) {
-    engineIconWhite.style.maskImage = 'url(' + currentEngineIcons.white + ')';
-    engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcons.white + ')';
+    engineIconWhite.style.maskImage = 'url(' + currentEngineIcon + ')';
+    engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcon + ')';
   }
-  if (engineIconDefault && engineIconDefault.src !== currentEngineIcons.default) {
-    engineIconDefault.src = currentEngineIcons.default;
+  if (engineIconDefault && engineIconDefault.src !== currentEngineIcon) {
+    engineIconDefault.src = currentEngineIcon;
   }
   const focused = document.activeElement === searchInput || searchInput.matches(':focus');
   engineIconWrap.classList.toggle('focused', focused);
   engineListEl.querySelectorAll('.engine-item').forEach(item => {
     const icon = item.querySelector('.engine-icon');
     if (!icon) return;
-    const target = item.dataset.engine === currentEngine && focused ? item.dataset.default : item.dataset.white;
+    const target = item.dataset.default;
     if (icon.src !== target) icon.src = target;
   });
 }
@@ -554,7 +553,7 @@ if (engineSelectorEl && engineListEl) {
     engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
     currentEngine = item.dataset.engine;
-    currentEngineIcons = { white: item.dataset.white, default: item.dataset.default };
+    currentEngineIcon = item.dataset.default;
     updateEngineIcon();
     engineSelectorEl.classList.remove('open');
     preventReopenUntil = Date.now() + 300;
@@ -2856,18 +2855,14 @@ if (engineSelectorEl && engineListEl) {
   const customEngineForm = document.getElementById('customEngineForm');
   const customEngineName = document.getElementById('customEngineName');
   const customEngineUrl = document.getElementById('customEngineUrl');
-  const customEngineIconWhite = document.getElementById('customEngineIconWhite');
   const customEngineIconDefault = document.getElementById('customEngineIconDefault');
-  const customEngineIconWhiteName = document.getElementById('customEngineIconWhiteName');
   const customEngineIconDefaultName = document.getElementById('customEngineIconDefaultName');
   const customEngineSave = document.getElementById('customEngineSave');
   const customEngineCancel = document.getElementById('customEngineCancel');
-  let ceWhiteData = null;
   let ceDefaultData = null;
   let ceEditingId = null;
   let ceOpenFor = null;
 
-  const ceIconWhitePreview = document.getElementById('customEngineIconWhitePreview');
   const ceIconDefaultPreview = document.getElementById('customEngineIconDefaultPreview');
 
   function readIconFile(file, inputEl, nameEl, previewEl, onDone) {
@@ -2887,12 +2882,6 @@ if (engineSelectorEl && engineListEl) {
     reader.onerror = () => { showToast(t('toastIconReadFailed'), 3000); inputEl.value = ''; };
     reader.readAsDataURL(file);
   }
-
-  customEngineIconWhite.addEventListener('change', () => {
-    const file = customEngineIconWhite.files[0];
-    if (!file) return;
-    readIconFile(file, customEngineIconWhite, customEngineIconWhiteName, ceIconWhitePreview, (data) => { ceWhiteData = data; });
-  });
 
   customEngineIconDefault.addEventListener('change', () => {
     const file = customEngineIconDefault.files[0];
@@ -2916,13 +2905,9 @@ if (engineSelectorEl && engineListEl) {
     const saveBtn = document.getElementById('customEngineSave');
     const deleteBtn = document.getElementById('customEngineDelete');
     const title = document.getElementById('customEngineFormTitle');
-    customEngineIconWhite.value = '';
     customEngineIconDefault.value = '';
-    customEngineIconWhiteName.textContent = '';
     customEngineIconDefaultName.textContent = '';
-    ceIconWhitePreview.src = '';
     ceIconDefaultPreview.src = '';
-    ceWhiteData = null;
     ceDefaultData = null;
 
     if (ceEditingId) {
@@ -2931,9 +2916,7 @@ if (engineSelectorEl && engineListEl) {
       if (ce) {
         customEngineName.value = ce.name;
         customEngineUrl.value = ce.url;
-        ceIconWhitePreview.src = ce.iconWhite;
         ceIconDefaultPreview.src = ce.iconDefault;
-        ceWhiteData = ce.iconWhite;
         ceDefaultData = ce.iconDefault;
         title.textContent = t('editCustomEngine');
         saveBtn.textContent = t('btnUpdate');
@@ -2996,7 +2979,6 @@ if (engineSelectorEl && engineListEl) {
     closeCustomEngineForm();
     var deletedId = ceEditingId;
     ceEditingId = null;
-    ceWhiteData = null;
     ceDefaultData = null;
     var staleEl = document.querySelector('.engine-item[data-engine="' + deletedId + '"]');
     if (staleEl) staleEl.remove();
@@ -3012,7 +2994,7 @@ if (engineSelectorEl && engineListEl) {
       currentEngine = def;
       var defEl = document.querySelector('.engine-item[data-engine="' + def + '"]');
       if (defEl) {
-        currentEngineIcons = { white: defEl.getAttribute('data-white'), default: defEl.getAttribute('data-default') };
+        currentEngineIcon = defEl.getAttribute('data-default');
       }
     }
     injectCustomEngines();
@@ -3025,7 +3007,7 @@ if (engineSelectorEl && engineListEl) {
     const name = customEngineName.value.trim();
     const url = customEngineUrl.value.trim();
     if (!name || !url) { showToast(t('toastFillNameUrl')); return; }
-    if (!ceWhiteData || !ceDefaultData) { showToast(t('toastSelectIcons')); return; }
+    if (!ceDefaultData) { showToast(t('toastSelectIcon')); return; }
     const slug = nameToSlug(name);
     let list = getCustomEngines();
 
@@ -3039,14 +3021,14 @@ if (engineSelectorEl && engineListEl) {
     if (ceEditingId) {
       const idx = list.findIndex(e => e.id === ceEditingId);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], name, slug, url, iconWhite: ceWhiteData, iconDefault: ceDefaultData };
+        list[idx] = { ...list[idx], name, slug, url, iconDefault: ceDefaultData };
       }
     } else {
       const maxNum = list.reduce((max, ce) => {
         const n = parseInt(ce.id.replace('custom_', ''), 10);
         return n >= max ? n + 1 : max;
       }, 0);
-      list.push({ id: `custom_${maxNum}`, name, slug, url, iconWhite: ceWhiteData, iconDefault: ceDefaultData });
+      list.push({ id: `custom_${maxNum}`, name, slug, url, iconDefault: ceDefaultData });
     }
 
     closeCustomEngineForm();
@@ -3215,7 +3197,7 @@ if (engineSelectorEl && engineListEl) {
         document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
         bingItem.classList.add('active');
         currentEngine = 'bing';
-        currentEngineIcons = { white: bingItem.dataset.white, default: bingItem.dataset.default };
+        currentEngineIcon = bingItem.dataset.default;
         if (typeof updateEngineIcon === 'function') updateEngineIcon();
       }
 
@@ -3422,11 +3404,11 @@ if (engineSelectorEl && engineListEl) {
         document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
         fallback.classList.add('active');
         currentEngine = fallback.getAttribute('data-engine');
-        currentEngineIcons = { white: fallback.getAttribute('data-white'), default: fallback.getAttribute('data-default') };
+        currentEngineIcon = fallback.getAttribute('data-default');
         const wIcon = document.getElementById('currentEngineIconWhite');
         const dIcon = document.getElementById('currentEngineIconDefault');
-        if (wIcon) { var wUrl = fallback.getAttribute('data-white') || fallback.getAttribute('data-default'); if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
-        if (dIcon) dIcon.src = fallback.getAttribute('data-default') || fallback.getAttribute('data-white') || dIcon.src;
+        if (wIcon) { var wUrl = fallback.getAttribute('data-default'); if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
+        if (dIcon) dIcon.src = fallback.getAttribute('data-default') || dIcon.src;
       }
     }
 
@@ -3500,7 +3482,7 @@ if (defaultEngineManager) defaultEngineManager.addEventListener('change', (e) =>
     engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
     currentEngine = radio.value;
-    currentEngineIcons = { white: item.dataset.white, default: item.dataset.default };
+    currentEngineIcon = item.dataset.default;
     updateEngineIcon();
   }
   if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();

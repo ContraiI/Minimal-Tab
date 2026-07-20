@@ -198,6 +198,7 @@ body::before {
   height: 18px;
   margin-right: 8px;
   object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .engine-list {
