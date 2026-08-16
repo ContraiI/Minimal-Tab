@@ -3,6 +3,6 @@
     "message": "Minimal Tab"
   },
   "extDesc": {
-    "message": "A lightweight and clean new tab replacement extension"
+    "message": "A lightweight and clean new tab replacement extension with a built-in browser-level translator sidebar, supporting multiple engines and custom LLM translation"
   }
 }

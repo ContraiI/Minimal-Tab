@@ -3096,42 +3096,15 @@ if (engineSelectorEl && engineListEl) {
     resetSettingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!confirm(t('confirmReset'))) return;
-      localStorage.removeItem(LS_BG);
-      localStorage.removeItem(LS_WALLPAPER_SOURCE);
-      localStorage.removeItem(LS_BING_URL);
-      localStorage.removeItem(LS_BING_DATE);
-      localStorage.removeItem(LS_BING_LIST);
-      localStorage.removeItem(LS_WH);
-      localStorage.removeItem(LS_WRP);
-      localStorage.removeItem(LS_WALLPAPER_ROTATE);
-      localStorage.removeItem(LS_BING_ROTATION);
-      localStorage.removeItem(LS_DISABLED);
-      localStorage.removeItem(LS_DEFAULT_ENGINE);
-      localStorage.removeItem(LS_SEARCH_HISTORY_ENABLED);
-      localStorage.removeItem(LS_SEARCH_HISTORY);
-      localStorage.removeItem(LS_CLOCK_VISIBLE);
-      localStorage.removeItem('clockPosition');
-      localStorage.removeItem('clockFollow');
-      localStorage.removeItem('clockCustomPos');
-      localStorage.removeItem('clockCustomX');
-      localStorage.removeItem('clockCustomY');
-      localStorage.removeItem('clockCustomLocked');
-      localStorage.removeItem(LS_CUSTOM_ENGINES);
-      localStorage.removeItem('overlayOpacity');
-      localStorage.removeItem(LS_BLUR);
-      localStorage.removeItem(LS_ACCENT);
-      localStorage.removeItem(LS_CLOCK_COLOR);
-      localStorage.removeItem(LS_SEARCH_COLOR);
-      localStorage.removeItem(LS_CLOCK_SEARCH_LINK);
-      localStorage.removeItem(LS_THEME_MODE);
-      localStorage.removeItem(LS_SIDEBAR_OPACITY);
-      localStorage.removeItem(LS_SIDEBAR_BLUR);
-      localStorage.removeItem('searchOffsetY');
-      localStorage.removeItem('searchOffsetX');
-      localStorage.removeItem('searchWidth');
-      localStorage.removeItem('searchRadius');
-      localStorage.removeItem('searchBoxEnabled');
-      localStorage.removeItem(LS_SUGGESTION_PROVIDER);
+      // 恢复默认：遍历清除本扩展全部配置键，新增配置自动覆盖、不会被遗漏。
+      // 需跨重置存活的键（如语言偏好）加入保留列表即可。
+      const PRESERVE_ON_RESET = new Set(['language']);
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!PRESERVE_ON_RESET.has(key)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
 
       setWallpaperSource('none');
       sidebarOverlaySlider.value = '0.3';
@@ -3178,6 +3151,7 @@ if (engineSelectorEl && engineListEl) {
       setLinkState(true);
 
       if (historyToggle) historyToggle.checked = true;
+      if (newTabToggle) newTabToggle.checked = true;
       hideHistoryDropdown();
 
       if (clockToggle) clockToggle.checked = true;

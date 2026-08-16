@@ -1246,6 +1246,7 @@ body.light-mode .sidebar-content {
   border: none;
   padding: 4px 0;
   font-size: 11px;
+  line-height: 1.4;
   cursor: pointer;
   border-radius: 4px;
   text-align: center;
@@ -1329,6 +1330,7 @@ body.light-mode .sidebar-content {
 .rotate-option {
   padding: 6px 14px;
   font-size: 11px;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   white-space: nowrap;
@@ -2217,6 +2219,25 @@ body.light-mode .wallpaper-item.active {
   width: 16px;
   height: 16px;
   fill: #aaa;
+}
+
+body.light-mode .clock-context-menu {
+  background: rgba(248, 248, 248, 0.9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+body.light-mode .clock-menu-input {
+  border-color: #ccc;
+  background: rgba(0, 0, 0, 0.04);
+  color: #333;
+}
+body.light-mode .clock-menu-lock {
+  background: rgba(0, 0, 0, 0.05);
+}
+body.light-mode .clock-menu-lock:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+body.light-mode .clock-menu-lock svg {
+  fill: #666;
 }
 
 .context-menu {

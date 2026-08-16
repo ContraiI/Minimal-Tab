@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title data-i18n="transTitle">翻译</title>
+  <link rel="stylesheet" href="translation.css">
+</head>
+<body>
+
+  <header class="trans-header">
+    <h1 class="trans-title" data-i18n="transTitle">翻译</h1>
+    <button type="button" class="settings-btn" id="settingsBtn" data-i18n-title="transSettingsTitle" title="翻译设置">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.484.484 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.61 3.61 0 0 1 8.4 12c0-1.98 1.62-3.6 3.6-3.6s3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    </button>
+  </header>
+
+  <div class="lang-bar">
+    <div class="lang-select" id="sourceLangSelect">
+      <button type="button" class="lang-trigger" id="sourceLangTrigger">
+        <span class="lang-trigger-label" data-i18n="transDetect">自动检测</span>
+      </button>
+      <div class="lang-list" id="sourceLangList" role="listbox"></div>
+    </div>
+
+    <button type="button" class="swap-btn" id="swapBtn" data-i18n-title="transSwapTitle" title="调换源语言与目标语言">
+      <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+    </button>
+
+    <div class="lang-select" id="targetLangSelect">
+      <button type="button" class="lang-trigger" id="targetLangTrigger">
+        <span class="lang-trigger-label">中文</span>
+      </button>
+      <div class="lang-list" id="targetLangList" role="listbox"></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="transInput" data-i18n-placeholder="transInputPlaceholder" placeholder="输入要翻译的文本..." spellcheck="false"></textarea>
+    <button type="button" class="clear-btn" id="clearBtn" data-i18n-title="transClearTitle" title="清空输入">
+      <svg viewBox="0 0 24 24"><path d="M18.3 5.71L12 12l-6.3-6.29-1.41 1.42L10.59 13.41 4.29 19.7l1.41 1.42 6.3-6.29 6.3 6.29 1.41-1.42-6.3-6.29 6.3-6.29z"/></svg>
+    </button>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <div class="result-header" data-i18n="transResultLabel">翻译结果</div>
+    <div class="result-status hidden" id="resultStatus"></div>
+    <div class="result-text" id="resultText"></div>
+  </div>
+
+  <div id="settingsOverlay" class="settings-overlay hidden">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <span data-i18n="transSettingsTitle">翻译设置</span>
+        <button type="button" class="settings-close-btn" id="settingsCloseBtn" data-i18n-title="transSettingsClose" title="关闭设置">
+          <svg viewBox="0 0 24 24"><path d="M18.3 5.71L12 12l-6.3-6.29-1.41 1.42L10.59 13.41 4.29 19.7l1.41 1.42 6.3-6.29 6.3 6.29 1.41-1.42-6.3-6.29 6.3-6.29z"/></svg>
+        </button>
+      </div>
+      <div class="settings-body">
+        <div class="setting-row">
+          <label class="setting-label" data-i18n="transSettingsEngine">翻译引擎</label>
+          <div class="lang-select" id="engineSelect">
+            <button type="button" class="lang-trigger" id="engineTrigger">
+              <span class="lang-trigger-label">Google</span>
+            </button>
+            <div class="lang-list" id="engineList" role="listbox"></div>
+          </div>
+        </div>
+        <div id="engineFields"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="lang.js"></script>
+  <script src="translation.js"></script>
+</body>
+</html>
