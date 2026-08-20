@@ -67,10 +67,3 @@ body.light {
 
 .open-btn:hover { filter: brightness(1.08); }
 .open-btn:active { transform: scale(0.98); }
-
-.popup-hint {
-  margin-top: 12px;
-  font-size: 11px;
-  color: var(--p-muted);
-  line-height: 1.6;
-}

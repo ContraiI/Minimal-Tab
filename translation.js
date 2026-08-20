@@ -482,6 +482,25 @@
     });
 
     // ---- 输入交互 ----
+    var justFocused = false;
+
+    inputEl.addEventListener('focus', function () {
+      inputEl.select();
+      justFocused = true;
+    });
+
+    // 仅拦截触发全选那一次点击，避免浏览器把光标定位到点击处覆盖全选；之后再点击仍可取消全选做局部编辑
+    inputEl.addEventListener('mouseup', function (e) {
+      if (justFocused) {
+        e.preventDefault();
+        justFocused = false;
+      }
+    });
+
+    inputEl.addEventListener('blur', function () {
+      justFocused = false;
+    });
+
     inputEl.addEventListener('input', function () {
       scheduleTranslate();
       clearBtn.style.display = inputEl.value ? 'flex' : 'none';

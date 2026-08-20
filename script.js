@@ -3276,19 +3276,51 @@ if (engineSelectorEl && engineListEl) {
 
   const contextMenu = document.getElementById('contextMenu');
 
+  // 各来源的"切换下一张壁纸"处理函数，键与 wallpaperSource 取值对应；新增来源时在此注册。
+  const nextWallpaperHandlers = {
+    local: function() {
+      const pool = getRotationPool();
+      const history = getWallpaperHistory();
+      const candidates = pool.length >= 2 ? pool.filter(u => history.includes(u)) : history;
+      if (candidates.length < 2) {
+        showToast(t('toastNeedTwoWallpapers'), 2000);
+        return;
+      }
+      const current = localStorage.getItem(LS_BG);
+      const curIdx = candidates.indexOf(current);
+      const nextIdx = curIdx < 0 ? 0 : (curIdx + 1) % candidates.length;
+      applyWallpaper(candidates[nextIdx]);
+      showToast(t('toastWallpaperSwitched'), 1500, 'success');
+    },
+    bing: function() {
+      fetchBingWallpapers(function(list) {
+        if (!list || list.length < 2) {
+          showToast(t('toastNeedTwoWallpapers'), 2000);
+          return;
+        }
+        bingRotateIdx = (bingRotateIdx + 1) % list.length;
+        const pick = list[bingRotateIdx];
+        applyBingWallpaper(pick.url);
+        localStorage.setItem(LS_BING_URL, pick.url);
+        var container = document.getElementById('bingWallpaperList');
+        if (container) {
+          container.querySelectorAll('.bing-wallpaper-item').forEach(function(el, i) {
+            el.classList.toggle('active', i === bingRotateIdx);
+          });
+        }
+        showToast(t('toastWallpaperSwitched'), 1500, 'success');
+      });
+    }
+  };
+
   function nextWallpaperSequential() {
-    const pool = getRotationPool();
-    const history = getWallpaperHistory();
-    const candidates = pool.length >= 2 ? pool.filter(u => history.includes(u)) : history;
-    if (candidates.length < 2) {
-      showToast(t('toastNeedTwoWallpapers'), 2000);
+    const source = localStorage.getItem(LS_WALLPAPER_SOURCE) || 'none';
+    const handler = nextWallpaperHandlers[source];
+    if (!handler) {
+      showToast(t('toastWallpaperNotEnabled'), 2000);
       return;
     }
-    const current = localStorage.getItem(LS_BG);
-    const curIdx = candidates.indexOf(current);
-    const nextIdx = curIdx < 0 ? 0 : (curIdx + 1) % candidates.length;
-    applyWallpaper(candidates[nextIdx]);
-    showToast(t('toastWallpaperSwitched'), 1500, 'success');
+    handler();
   }
 
   document.addEventListener('contextmenu', (e) => {

@@ -138,6 +138,7 @@ window.I18N_DATA = {
     toastSearchReset: '搜索框已重置',
     toastNeedTwoWallpapers: '至少需要两张壁纸才能切换',
     toastWallpaperSwitched: '已切换壁纸',
+    toastWallpaperNotEnabled: '当前未启用壁纸，无法切换',
     toastSelectSvg: '请选择 SVG 格式图标',
     toastIconTooLarge: '图标文件过大，请选择小于 512KB 的文件',
     toastIconReadFailed: '图标读取失败',
@@ -177,7 +178,6 @@ window.I18N_DATA = {
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: '打开翻译边栏',
-    popupHint: '翻译边栏将在浏览器右侧打开，跨标签页保持。',
 
     langZhCn: '中文',
     langZhTw: '繁体中文',
@@ -361,6 +361,7 @@ window.I18N_DATA = {
     toastSearchReset: 'Search box reset',
     toastNeedTwoWallpapers: 'At least two wallpapers needed to switch',
     toastWallpaperSwitched: 'Wallpaper switched',
+    toastWallpaperNotEnabled: 'No wallpaper enabled',
     toastSelectSvg: 'Please select an SVG icon',
     toastIconTooLarge: 'Icon file too large, please select a file under 512KB',
     toastIconReadFailed: 'Failed to read icon',
@@ -400,7 +401,6 @@ window.I18N_DATA = {
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: 'Open Translator',
-    popupHint: 'The translator sidebar opens on the right and stays across tabs.',
 
     langZhCn: 'Chinese',
     langZhTw: 'Traditional Chinese',
