@@ -1,9 +1,11 @@
+/* 全局重置 */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* 翻译面板配色变量(深色主题) */
 :root {
   --trans-bg: #17181c;
   --trans-panel: #1e2026;
@@ -14,6 +16,7 @@
   --trans-hover: rgba(255, 255, 255, 0.08);
 }
 
+/* 侧边栏页面基础:纵向 flex 布局 */
 body {
   --accent: #2563eb;
   --accent-rgb: 37, 99, 235;
@@ -28,6 +31,7 @@ body {
   color: var(--trans-text);
 }
 
+/* 浅色模式配色 */
 body.light {
   --trans-bg: #f6f6f8;
   --trans-panel: #ffffff;
@@ -40,7 +44,7 @@ body.light {
 
 .hidden { display: none !important; }
 
-/* 头部 */
+/* 顶部标题栏 */
 .trans-header {
   flex: none;
   display: flex;
@@ -72,7 +76,8 @@ body.light {
 .settings-btn svg { width: 16px; height: 16px; fill: currentColor; }
 .settings-btn:hover { color: var(--accent); background: var(--trans-hover); }
 
-/* 语言选择栏 */
+
+/* 语言栏与源/目标语言下拉 */
 .lang-bar {
   flex: none;
   display: flex;
@@ -142,7 +147,7 @@ body.light {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-/* 右侧（目标语言）下拉向左扩展，避免超出面板右缘 */
+
 .lang-bar > .lang-select:last-child .lang-list {
   left: auto;
   right: 0;
@@ -169,7 +174,7 @@ body.light {
 .lang-option:hover { background: rgba(var(--accent-rgb), 0.14); }
 .lang-option.active { color: rgb(var(--accent-rgb)); font-weight: 600; }
 
-/* 调换按钮 */
+/* 源/目标语言调换按钮 */
 .swap-btn {
   flex: none;
   width: 30px;
@@ -189,7 +194,7 @@ body.light {
 .swap-btn:hover { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.6); }
 .swap-btn:active { transform: rotate(180deg); }
 
-/* 输入区 */
+/* 翻译输入区 */
 .input-area {
   flex: none;
   position: relative;
@@ -240,7 +245,7 @@ body.light {
 .clear-btn:hover { background: var(--trans-hover); color: var(--trans-text); }
 .clear-btn svg { width: 12px; height: 12px; fill: currentColor; }
 
-/* 结果区 */
+/* 翻译结果区 */
 .result-area {
   flex: 1;
   min-height: 0;
@@ -270,7 +275,7 @@ body.light {
   word-break: break-word;
 }
 
-/* 设置页（完全覆盖翻译模块） */
+/* 设置覆盖层:整屏盖住翻译界面 */
 .settings-overlay {
   position: fixed;
   inset: 0;
@@ -321,7 +326,140 @@ body.light {
   padding: 4px 16px 20px;
 }
 
-.setting-row { margin-bottom: 16px; }
+/* 设置行:标签 + 控件同行 */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.setting-row .setting-label {
+  margin-bottom: 0;
+  flex: none;
+  width: 64px;
+}
+
+
+
+
+/* 设置分区小标题 */
+.settings-section-label {
+  font-size: 11px;
+  color: var(--trans-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 18px 0 8px 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--trans-border);
+}
+
+/* 设置开关(滑动切换) */
+.setting-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--trans-text);
+}
+
+.setting-toggle input[type="checkbox"],
+.setting-toggle input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.setting-toggle .toggle-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  background: var(--trans-muted);
+  border-radius: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.15s ease;
+}
+
+.setting-toggle .toggle-switch:active { transform: scale(0.92); }
+
+.setting-toggle .toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.2s ease;
+}
+
+.setting-toggle .toggle-switch:active::after { width: 14px; }
+
+.setting-toggle input:checked ~ .toggle-switch { background: var(--accent); }
+.setting-toggle input:checked ~ .toggle-switch::after { transform: translateX(12px); }
+
+/* 设置区内下拉(引擎选择/目标语言等)的紧凑样式 */
+.settings-body .lang-trigger {
+  justify-content: center;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 4px 10px;
+}
+
+.settings-body .lang-trigger::after { display: none; }
+.settings-body .lang-trigger-label { flex: none; }
+.settings-body .lang-trigger:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.settings-body .lang-select.open .lang-trigger { background: rgba(var(--accent-rgb), 0.16); }
+
+.settings-body .lang-list {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  left: auto;
+  right: 0;
+  background: var(--trans-panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.settings-body .lang-option {
+  padding: 6px 14px;
+  font-size: 11px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-body .lang-option:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.settings-body .lang-option.active {
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+body.light .settings-body .lang-trigger {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+body.light .settings-body .lang-trigger:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
+body.light .settings-body .lang-select.open .lang-trigger { background: rgba(var(--accent-rgb), 0.12); }
+
+body.light .settings-body .lang-option { color: rgba(0, 0, 0, 0.5); }
+body.light .settings-body .lang-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+body.light .settings-body .lang-option.active { color: #333; }
 
 .setting-label {
   display: block;
@@ -345,7 +483,7 @@ body.light {
 
 .setting-input:focus { border-color: rgba(var(--accent-rgb), 0.8); }
 
-/* 模型名：输入 + 获取模型按钮 + 下拉 */
+/* 模型字段:输入框 + 拉取模型按钮 + 模型列表 */
 .setting-model-wrap {
   position: relative;
   display: flex;
@@ -407,5 +545,105 @@ body.light {
   padding: 8px 10px;
   font-size: 12px;
   color: var(--trans-muted);
+}
+
+/* 设置区内控件统一紧凑样式(半透明底、细字) */
+.settings-body .setting-label {
+  color: var(--trans-text);
+  font-size: 13px;
+}
+
+
+.settings-body .setting-row > .setting-input,
+.settings-body .setting-row > .setting-model-wrap,
+.settings-body .setting-row > .lang-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;
+}
+
+.settings-body .setting-input {
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.settings-body .setting-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.settings-body .setting-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+.settings-body .setting-fetch-btn {
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.6);
+  width: 32px;
+}
+
+.settings-body .setting-fetch-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+.settings-body .model-list {
+  border: none;
+  border-radius: 6px;
+  background: var(--trans-panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.settings-body .model-option {
+  padding: 6px 14px;
+  font-size: 11px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-body .model-option:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.settings-body .model-option.active {
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.settings-body .model-hint { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+
+body.light .settings-body .setting-input {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.light .settings-body .setting-input:focus { background: rgba(0, 0, 0, 0.08); }
+body.light .settings-body .setting-input::placeholder { color: rgba(0, 0, 0, 0.3); }
+
+body.light .settings-body .setting-fetch-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+body.light .settings-body .setting-fetch-btn:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
+
+body.light .settings-body .model-option { color: rgba(0, 0, 0, 0.5); }
+body.light .settings-body .model-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+body.light .settings-body .model-option.active { color: #333; }
+body.light .settings-body .model-hint { color: rgba(0, 0, 0, 0.5); }
+
+/* 堆叠设置行:标签在上、控件拉满 */
+.settings-body .setting-row-stacked {
+  display: block;
+}
+
+.settings-body .setting-row-stacked .setting-label {
+  width: auto;
+  max-width: none;
+  margin-bottom: 6px;
+}
+
+.settings-body .setting-row-stacked .setting-input {
+  width: 100%;
+  flex: none;
+  max-width: none;
 }
 

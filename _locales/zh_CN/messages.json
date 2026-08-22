@@ -4,5 +4,11 @@
   },
   "extDesc": {
     "message": "一款轻量简洁的标签页替换插件，内置浏览器级翻译边栏，支持多引擎与自定义大模型翻译"
+  },
+  "ballTranslate": {
+    "message": "翻译此页"
+  },
+  "ballCancel": {
+    "message": "取消翻译"
   }
 }

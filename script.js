@@ -1,9 +1,11 @@
+// 页面加载后禁用搜索框的浏览器自动补全
 window.addEventListener('load', () => {
   const input = document.getElementById('search-input');
   input.setAttribute('autocomplete', 'off');
   setTimeout(() => input.setAttribute('autocomplete', 'off'), 100);
 });
 
+// 数字时钟:每秒刷新时间显示
 function updateDigitalClock() {
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
@@ -12,6 +14,7 @@ function updateDigitalClock() {
   document.getElementById('digital-clock').textContent = `${h}:${m}:${s}`;
 }
 
+// 隐藏/显示数字时钟
 function hideDigitalClock() {
   const clock = document.getElementById('digital-clock');
   if (clock) { clock.style.opacity = '0'; clock.style.visibility = 'hidden'; }
@@ -29,6 +32,7 @@ setInterval(updateDigitalClock, 1000);
 let toastTimer = null;
 let suggestionTimer = null;
 let dropdownSelectedIndex = -1;
+// 底部提示气泡,自动消失,可指定成功/错误样式
 function showToast(message, duration = 2000, type = '') {
   const toast = document.getElementById('toast');
   if (!toast) return;
@@ -43,6 +47,7 @@ function showToast(message, duration = 2000, type = '') {
   }, duration);
 }
 
+// 内置搜索引擎及搜索 URL
 const engines = {
   bing:  { url: 'https://cn.bing.com/search?q=' },
   google: { url: 'https://www.google.com/search?q=' },
@@ -50,9 +55,11 @@ const engines = {
   baidu:  { url: 'https://www.baidu.com/s?wd=' }
 };
 
+// 当前选中引擎及其图标
 let currentEngine = 'bing';
 let currentEngineIcon = './icons/bing-default.svg';
 
+// localStorage 存储键常量
 const LS_DEFAULT_ENGINE = 'preferredDefaultEngine';
 const LS_DISABLED = 'disabledEngines';
 const LS_SEARCH_HISTORY = 'searchHistory';
@@ -66,6 +73,7 @@ const LS_CUSTOM_ENGINES = 'customEngines';
 const MAX_WALLPAPER_HISTORY = 12;
 const MAX_HISTORY_ITEMS = 20;
 
+// 搜索历史:保存、读取、开关控制(最多 20 条,去重)
 function saveSearchHistory(keyword) {
   if (!isSearchHistoryEnabled() || !keyword.trim()) return;
   let history = getSearchHistory().filter(item => item !== keyword);
@@ -74,11 +82,25 @@ function saveSearchHistory(keyword) {
   localStorage.setItem(LS_SEARCH_HISTORY, JSON.stringify(history));
 }
 
-function getSearchHistory() {
+// 读取 localStorage 中的 JSON 数组,缺失/非法时返回空数组
+function readJsonArray(key) {
   try {
-    const h = JSON.parse(localStorage.getItem(LS_SEARCH_HISTORY) || '[]');
-    return Array.isArray(h) ? h : [];
+    const d = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(d) ? d : [];
   } catch (e) { return []; }
+}
+
+// hex 颜色(#rrggbb)转 {r,g,b}(0-255)
+function hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16)
+  };
+}
+
+function getSearchHistory() {
+  return readJsonArray(LS_SEARCH_HISTORY);
 }
 
 function isSearchHistoryEnabled() {
@@ -89,6 +111,7 @@ function setSearchHistoryEnabled(enabled) {
   localStorage.setItem(LS_SEARCH_HISTORY_ENABLED, enabled.toString());
 }
 
+// 搜索结果是否在新标签页打开
 function isOpenInNewTab() {
   return localStorage.getItem('openInNewTab') !== 'false';
 }
@@ -101,6 +124,7 @@ function isSuggestionEnabled() {
   return getSuggestionProvider() !== 'off';
 }
 
+// 时钟显示开关的读写
 function isClockVisible() {
   return localStorage.getItem(LS_CLOCK_VISIBLE) !== 'false';
 }
@@ -109,6 +133,7 @@ function setClockVisible(visible) {
   localStorage.setItem(LS_CLOCK_VISIBLE, visible.toString());
 }
 
+// 名称转 slug:中文逐字转拼音,其余按小写字母/数字
 function nameToSlug(name) {
   if (/[一-鿿]/.test(name)) {
     let slug = '';
@@ -125,17 +150,16 @@ function nameToSlug(name) {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
 
+// 自定义搜索引擎的读写
 function getCustomEngines() {
-  try {
-    const data = JSON.parse(localStorage.getItem(LS_CUSTOM_ENGINES) || '[]');
-    return Array.isArray(data) ? data : [];
-  } catch (e) { return []; }
+  return readJsonArray(LS_CUSTOM_ENGINES);
 }
 
 function saveCustomEngines(list) {
   localStorage.setItem(LS_CUSTOM_ENGINES, JSON.stringify(list));
 }
 
+// 把自定义引擎渲染进引擎列表
 function injectCustomEngines() {
   const column = document.querySelector('.engine-column');
   if (!column) return;
@@ -176,6 +200,7 @@ function cancelSuggestions() {
   if (suggestionTimer) { clearTimeout(suggestionTimer); suggestionTimer = null; }
 }
 
+// 按提供商拉取搜索建议(百度/谷歌/必应)
 function fetchSuggestions(query) {
   cancelSuggestions();
   if (!query || !isSuggestionEnabled()) { renderHistoryList(query); return; }
@@ -227,6 +252,7 @@ function fetchSuggestions(query) {
     });
 }
 
+// 高亮键盘选中的下拉项并滚动到可见
 function updateDropdownSelection() {
   const list = document.getElementById('history-list');
   if (!list) return;
@@ -239,6 +265,7 @@ function updateDropdownSelection() {
   }
 }
 
+// 渲染搜索建议下拉列表
 function renderSuggestionsList(suggestions) {
   var dd = document.getElementById('history-dropdown');
   var list = document.getElementById('history-list');
@@ -299,6 +326,21 @@ function hideHistoryDropdown() {
   dropdownSelectedIndex = -1;
 }
 
+// 把命中区间 hits([[start,end),...])渲染进历史文本,命中段用 <span class="hl"> 高亮
+function appendHighlighted(el, text, hits) {
+  let pos = 0;
+  for (const [s, e] of hits) {
+    if (s > pos) el.appendChild(document.createTextNode(text.slice(pos, s)));
+    const hl = document.createElement('span');
+    hl.className = 'hl';
+    hl.textContent = text.slice(s, e);
+    el.appendChild(hl);
+    pos = e;
+  }
+  if (pos < text.length) el.appendChild(document.createTextNode(text.slice(pos)));
+}
+
+// 渲染搜索历史下拉列表(支持按拼音过滤),每项可点击/删除
 function renderHistoryList(filter = '') {
   if (!isSearchHistoryEnabled()) { hideHistoryDropdown(); return; }
   const list = document.getElementById('history-list');
@@ -314,16 +356,20 @@ function renderHistoryList(filter = '') {
   dd.classList.remove('suggestions');
 
   const history = getSearchHistory();
-  let filtered = filter
-    ? history.filter(item => matchPinyin(item, filter))
-    : history;
-  if (filter && filtered.length === 0) filtered = history;
+  // 评分排序:匹配质量优先,并列时按新鲜度(位置,index 0 最近)与命中位置
+  let data = history.map((item, idx) => ({ item, idx, m: scorePinyinMatch(item, filter) }))
+                    .filter(x => x.m);
+  if (data.length === 0 && filter.trim()) {
+    // 无匹配:与未输入时一致,回退显示全部历史(按最近优先,不高亮)
+    data = history.map((item, idx) => ({ item, idx, m: { score: 0, first: -1, hits: [] } }));
+  }
+  data.sort((a, b) => b.m.score - a.m.score || a.idx - b.idx || a.m.first - b.m.first);
 
   list.innerHTML = '';
 
-  if (filtered.length === 0) { hideHistoryDropdown(); return; }
+  if (data.length === 0) { hideHistoryDropdown(); return; }
 
-  filtered.forEach(item => {
+  data.forEach(({ item, m }) => {
     const row = document.createElement('div');
     row.className = 'history-item';
 
@@ -335,7 +381,7 @@ function renderHistoryList(filter = '') {
 
     const text = document.createElement('span');
     text.className = 'history-text';
-    text.textContent = item;
+    appendHighlighted(text, item, m.hits);
     row.appendChild(text);
 
     const del = document.createElement('div');
@@ -365,6 +411,7 @@ const engineIconWrap = document.querySelector('.engine-icon-wrap');
 const engineListEl = document.getElementById('engineList');
 const searchInput = document.getElementById('search-input');
 
+// 从 DOM/存储恢复当前选中引擎
 function initEngineFromDOM() {
   const saved = localStorage.getItem(LS_DEFAULT_ENGINE);
   if (saved) {
@@ -383,6 +430,8 @@ function initEngineFromDOM() {
     currentEngineIcon = active.dataset.default;
   }
 }
+// 先注入自定义引擎,使 initEngineFromDOM 能恢复自定义默认引擎,且禁用引擎能被 applyEngineVisibility 正确归档
+injectCustomEngines();
 initEngineFromDOM();
 
 if (engineIconWhite && engineIconDefault) {
@@ -391,6 +440,7 @@ if (engineIconWhite && engineIconDefault) {
   engineIconDefault.src = currentEngineIcon;
 }
 
+// 同步当前引擎图标(白色掩码 + 彩色图)与列表选中态
 function updateEngineIcon() {
   if (!engineIconWrap || !searchInput) return;
   if (engineIconWhite) {
@@ -413,6 +463,7 @@ function updateEngineIcon() {
 const clearBtn = document.getElementById('clear-btn');
 const searchBtn = document.getElementById('search-btn');
 
+// 根据输入内容显示/隐藏清空与搜索按钮
 function toggleBtns() {
   const has = searchInput.value.trim() !== '';
   clearBtn.style.display = has ? 'flex' : 'none';
@@ -420,6 +471,7 @@ function toggleBtns() {
   updateEngineIcon();
 }
 
+// 执行搜索:记录历史并按设置在当前/新标签打开
 function search() {
   const kw = searchInput.value.trim();
   if (!kw) return;
@@ -434,9 +486,9 @@ function search() {
   toggleBtns();
 }
 
+// 输入时:更新按钮,防抖拉取建议或过滤历史
 searchInput.addEventListener('input', function() {
-  toggleBtns();
-  updateEngineIcon();
+  toggleBtns(); // 内部已调用 updateEngineIcon
   var value = searchInput.value.trim();
 
   if (suggestionTimer) clearTimeout(suggestionTimer);
@@ -469,6 +521,7 @@ searchInput.addEventListener('change', () => setTimeout(toggleBtns, 100));
 searchInput.addEventListener('webkitFillAvailable', toggleBtns);
 searchInput.addEventListener('autocomplete', toggleBtns);
 
+// 聚焦时展示建议/历史并隐藏时钟
 searchInput.addEventListener('focus', function() {
   updateEngineIcon();
   var value = searchInput.value.trim();
@@ -479,12 +532,14 @@ searchInput.addEventListener('focus', function() {
   }
   hideDigitalClock();
 });
+// 失焦时取消建议并延迟收起下拉,恢复时钟显示
 searchInput.addEventListener('blur', function() {
   updateEngineIcon();
   cancelSuggestions();
   setTimeout(hideHistoryDropdown, 150);
   showDigitalClock();
 });
+// 键盘控制:回车搜索,上下键选下拉项,Esc 关闭
 searchInput.addEventListener('keydown', function(e) {
   const dd = document.getElementById('history-dropdown');
   const isOpen = dd && dd.classList.contains('show');
@@ -521,6 +576,7 @@ searchInput.addEventListener('keydown', function(e) {
   }
 });
 
+// 清空按钮:清空输入并聚焦
 clearBtn.addEventListener('click', () => {
   searchInput.value = '';
   toggleBtns();
@@ -535,11 +591,12 @@ updateEngineIcon();
 
 window.addEventListener('load', () => setTimeout(updateEngineIcon, 200));
 
+// 引擎选择器下拉(带 300ms 防重开)
 const engineSelectorEl = document.querySelector('.engine-selector');
 let preventReopenUntil = 0;
 
 if (engineSelectorEl && engineListEl) {
-
+  // 点击引擎项:切换当前引擎并收起下拉
   engineSelectorEl.addEventListener('click', (e) => {
     e.stopPropagation();
     if (Date.now() < preventReopenUntil) return;
@@ -569,6 +626,7 @@ if (engineSelectorEl && engineListEl) {
   });
 }
 
+// 侧边栏设置主逻辑(主题/壁纸/搜索/时钟/个性化等)
 (function(){
   const settingsBtn = document.getElementById('settingsBtn');
   const sidebar = document.getElementById('sidebar');
@@ -580,6 +638,7 @@ if (engineSelectorEl && engineListEl) {
   const bgLayerB = document.getElementById('bgLayerB');
   let bgActive = 'a';
 
+  // 打开/关闭侧边栏
   function openSidebar() {
     sidebar.classList.add('open');
     sidebarOverlay.classList.add('show');
@@ -595,28 +654,14 @@ if (engineSelectorEl && engineListEl) {
     settingsBtn.style.opacity = '';
   }
 
+  // 关闭所有打开的拾色器并恢复原色预览
   function closeAllPickers() {
-    if (pickerPanel && !pickerPanel.classList.contains('hidden')) {
-      pickerPanel.classList.add('hidden');
-      if (pickerOrigAccent) { previewAccent(pickerOrigAccent); highlightSwatch(pickerOrigAccent); }
-    }
-    if (clockPickerPanel && !clockPickerPanel.classList.contains('hidden')) {
-      clockPickerPanel.classList.add('hidden');
-      if (clockOrigColor) { previewClockColor(clockOrigColor); highlightClockSwatch(clockOrigColor); }
-    }
-    if (searchPickerPanel && !searchPickerPanel.classList.contains('hidden')) {
-      searchPickerPanel.classList.add('hidden');
-      if (searchOrigColor) { previewSearchColor(searchOrigColor); highlightSearchSwatch(searchOrigColor); }
-    }
+    if (themePicker && themePicker.isOpen()) themePicker.close();
+    if (clockPicker && clockPicker.isOpen()) clockPicker.close();
+    if (searchPicker && searchPicker.isOpen()) searchPicker.close();
   }
 
-  function setBgDirect(url) {
-    bgLayerA.style.backgroundImage = url ? `url(${url})` : '';
-    bgLayerA.style.opacity = '1';
-    bgLayerB.style.opacity = '0';
-    bgActive = 'a';
-  }
-
+  // 壁纸相关存储键与定时器
   const LS_WALLPAPER_SOURCE = 'wallpaperSource';
   const LS_BING_URL = 'bingWallpaperUrl';
   const LS_BING_DATE = 'bingWallpaperDate';
@@ -625,6 +670,7 @@ if (engineSelectorEl && engineListEl) {
   var rotateTimer = null;
   var bingMidnightTimer = null;
 
+  // 不使用壁纸(纯黑背景)
   function applyNoneWallpaper() {
     [bgLayerA, bgLayerB].forEach(function(layer) {
       layer.style.backgroundImage = 'none';
@@ -636,6 +682,7 @@ if (engineSelectorEl && engineListEl) {
   }
 
   var bingWallpaperCache = null;
+  // 拉取必应每日壁纸列表(当日缓存,两张接口去重合并)
   function fetchBingWallpapers(callback) {
     var today = new Date().toISOString().slice(0, 10);
     var cachedDate = localStorage.getItem(LS_BING_DATE);
@@ -672,6 +719,7 @@ if (engineSelectorEl && engineListEl) {
       });
   }
 
+  // 双图层淡入切换必应壁纸
   function applyBingWallpaper(url) {
     var img = new Image();
     img.onload = function() {
@@ -692,6 +740,7 @@ if (engineSelectorEl && engineListEl) {
     img.src = url;
   }
 
+  // 渲染必应壁纸缩略图列表
   function renderBingList(list, activeUrl) {
     var container = document.getElementById('bingWallpaperList');
     if (!container) return;
@@ -718,6 +767,7 @@ if (engineSelectorEl && engineListEl) {
   }
 
   var bingRotateIdx = -1;
+  // 轮换到下一张必应壁纸
   function rotateBingWallpaper() {
     if (!bingWallpaperCache || !bingWallpaperCache.length) return;
     bingRotateIdx = (bingRotateIdx + 1) % bingWallpaperCache.length;
@@ -731,6 +781,10 @@ if (engineSelectorEl && engineListEl) {
       });
     }
   }
+
+  // 切换壁纸来源(无/本地/必应),并联动显示对应控件
+  // 轮换间隔 → i18n 词条映射(本地/Bing 共用)
+  const ROTATE_I18N_MAP = { off: 'rotateOff', '1h': 'rotate1h', '6h': 'rotate6h', '12h': 'rotate12h', '24h': 'rotate24h' };
 
   function setWallpaperSource(source) {
     localStorage.setItem(LS_WALLPAPER_SOURCE, source);
@@ -759,7 +813,7 @@ if (engineSelectorEl && engineListEl) {
       if (ovSlider) { ovSlider.value = '0'; ovVal.textContent = '0%'; }
       var blSlider = document.getElementById('sidebarBlurSlider');
       var blVal = document.getElementById('sidebarBlurVal');
-      if (blSlider) { blSlider.value = '0'; blVal.textContent = '0'; }
+      if (blSlider) { blSlider.value = '0'; blVal.textContent = '0px'; }
     } else if (source === 'local') {
       var savedBg = localStorage.getItem(LS_BG);
       if (savedBg) { applyWallpaper(savedBg); } else {
@@ -781,8 +835,7 @@ if (engineSelectorEl && engineListEl) {
       var lr = localStorage.getItem('wallpaperRotation') || 'off';
       if (lr !== 'off' && getRotationPool().length < 2) lr = 'off';
       startWallpaperRotation(lr);
-      var lrMap = { off: 'rotateOff', '1h': 'rotate1h', '6h': 'rotate6h', '12h': 'rotate12h', '24h': 'rotate24h' };
-      var lrKey = lrMap[lr];
+      var lrKey = ROTATE_I18N_MAP[lr];
       var rt = document.getElementById('rotateTrigger');
       var rl = document.getElementById('rotateList');
       if (lrKey && rt) rt.textContent = t(lrKey);
@@ -802,8 +855,7 @@ if (engineSelectorEl && engineListEl) {
       if (blS2) { blS2.value = savedBlur; blV2.textContent = savedBlur + 'px'; }
       var br = localStorage.getItem('bingRotation') || 'off';
       startWallpaperRotation(br);
-      var brMap = { off: 'rotateOff', '1h': 'rotate1h', '6h': 'rotate6h', '12h': 'rotate12h', '24h': 'rotate24h' };
-      var brKey = brMap[br];
+      var brKey = ROTATE_I18N_MAP[br];
       var rt2 = document.getElementById('rotateTrigger');
       var rl2 = document.getElementById('rotateList');
       if (brKey && rt2) rt2.textContent = t(brKey);
@@ -824,7 +876,7 @@ if (engineSelectorEl && engineListEl) {
     }
   }
 
-  // Init wallpaper source
+
   var wallpaperSourceSeg = document.getElementById('wallpaperSourceSeg');
   var savedSource = localStorage.getItem(LS_WALLPAPER_SOURCE) || 'none';
   if (wallpaperSourceSeg) {
@@ -845,8 +897,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
-  const savedBg = localStorage.getItem(LS_BG);
-
+  // 应用本地壁纸(双图层淡入),保存到存储并更新缩略图
   function applyWallpaper(dataUrl) {
     const incoming = bgActive === 'a' ? bgLayerB : bgLayerA;
     const outgoing = bgActive === 'a' ? bgLayerA : bgLayerB;
@@ -860,6 +911,7 @@ if (engineSelectorEl && engineListEl) {
     updateWallpaperThumb();
   }
 
+  // 清除本地壁纸设置
   function resetWallpaper() {
     const incoming = bgActive === 'a' ? bgLayerB : bgLayerA;
     const outgoing = bgActive === 'a' ? bgLayerA : bgLayerB;
@@ -873,6 +925,7 @@ if (engineSelectorEl && engineListEl) {
     updateWallpaperThumb();
   }
 
+  // 搜索历史开关
   if (historyToggle) {
     historyToggle.checked = isSearchHistoryEnabled();
     historyToggle.addEventListener('change', () => {
@@ -881,6 +934,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 新标签页打开结果开关
   const newTabToggle = document.getElementById('sidebarNewTabToggle');
   if (newTabToggle) {
     newTabToggle.checked = isOpenInNewTab();
@@ -889,6 +943,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 搜索建议提供商选择下拉(关闭/百度/谷歌/必应)
   (function() {
     var dropdown = document.getElementById('suggestionProviderDropdown');
     var trigger = document.getElementById('suggestionProviderTrigger');
@@ -942,6 +997,7 @@ if (engineSelectorEl && engineListEl) {
     window._selectSuggestionProvider = selectProvider;
   })();
 
+  // 时钟设置相关 DOM 与存储键
   const clockToggle = document.getElementById('sidebarClockToggle');
   const clockFollowRow = document.getElementById('clockFollowRow');
   const clockFollowToggle = document.getElementById('clockFollowToggle');
@@ -961,6 +1017,7 @@ if (engineSelectorEl && engineListEl) {
   const LS_CLOCK_CUSTOM_POS = 'clockCustomPos';
   const LS_CLOCK_LOCKED = 'clockCustomLocked';
 
+  // 时钟相对搜索框的上下位置
   function applyClockPosition(pos) {
     if (clockEl) {
       if (clockEl.classList.contains('follow-mode')) {
@@ -974,6 +1031,7 @@ if (engineSelectorEl && engineListEl) {
     localStorage.setItem(LS_CLOCK_POS, pos);
   }
 
+  // 按开关级联显示时钟相关设置行
   function updateClockCascade() {
     const clockOn = isClockVisible();
     if (clockFollowRow) clockFollowRow.classList.toggle('hidden', !clockOn);
@@ -1047,6 +1105,7 @@ if (engineSelectorEl && engineListEl) {
   const LS_CLOCK_CUSTOM_X = 'clockCustomX';
   const LS_CLOCK_CUSTOM_Y = 'clockCustomY';
 
+  // 时钟自定义位置的锁定开关
   function isClockLocked() {
     return localStorage.getItem(LS_CLOCK_LOCKED) === 'true';
   }
@@ -1070,6 +1129,7 @@ if (engineSelectorEl && engineListEl) {
     if (clockCustomYInput) clockCustomYInput.value = top;
   }
 
+  // 启用/禁用时钟拖拽
   function enableClockDrag() {
     if (!clockEl || isClockLocked()) return;
     clockEl.style.cursor = 'grab';
@@ -1103,6 +1163,7 @@ if (engineSelectorEl && engineListEl) {
     document.addEventListener('touchend', onClockDragEnd);
   }
 
+  // 拖拽中更新时钟位置并同步输入框
   function onClockDragMove(e) {
     if (!clockDrag) return;
     e.preventDefault();
@@ -1129,6 +1190,7 @@ if (engineSelectorEl && engineListEl) {
     document.removeEventListener('touchend', onClockDragEnd);
   }
 
+  // 应用时钟位置预设(6 个锚点)或自定义坐标
   function applyClockCustomPos(pos) {
     if (!clockEl || !posMap[pos]) return;
     disableClockDrag();
@@ -1207,6 +1269,7 @@ if (engineSelectorEl && engineListEl) {
     clockCustomYInput.addEventListener('change', applyInputsToClock);
   }
 
+  // 时钟右键菜单(自定义位置时输入坐标/锁定)
   const clockContextMenu = document.getElementById('clockContextMenu');
   const clockMenuX = document.getElementById('clockMenuX');
   const clockMenuY = document.getElementById('clockMenuY');
@@ -1282,6 +1345,7 @@ if (engineSelectorEl && engineListEl) {
   const savedClockPos = localStorage.getItem(LS_CLOCK_CUSTOM_POS) || 'center';
   applyClockCustomPos(savedClockPos);
 
+  // 时钟是否跟随搜索框(绝对定位居中)
   function applyClockFollow(enabled) {
     if (clockEl) {
       if (enabled) {
@@ -1312,6 +1376,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 主题模式(系统/浅色/深色)
   const themeModeSeg = document.getElementById('themeModeSeg');
   const LS_THEME_MODE = 'themeMode';
   const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1348,6 +1413,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 界面语言切换
   const languageSeg = document.getElementById('languageSeg');
   if (languageSeg) {
     languageSeg.querySelectorAll('.theme-mode-opt').forEach(btn => {
@@ -1355,6 +1421,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 语言切换后刷新侧边栏全部动态文案
   window.refreshI18n = function() {
     if (customEngineForm.classList.contains('open')) closeCustomEngineForm();
     populateEngineManager();
@@ -1429,18 +1496,18 @@ if (engineSelectorEl && engineListEl) {
   sidebarOverlay.addEventListener('click', closeSidebar);
 
   const LS_ACCENT = 'accentColor';
+  // 主题色:保存到存储
   function applyAccent(hex) {
     previewAccent(hex);
     localStorage.setItem(LS_ACCENT, hex);
   }
 
+  // 预览主题色:设置 CSS 变量并计算对比文字色
   function previewAccent(hex) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
+    const { r, g, b } = hexToRgb(hex);
     document.body.style.setProperty('--accent', hex);
     document.body.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
-    // Auto-adjust accent text contrast
+
     var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     var textColor = lum > 0.55 ? '#1a1a1a' : '#ffffff';
     document.body.style.setProperty('--accent-text', textColor);
@@ -1448,6 +1515,7 @@ if (engineSelectorEl && engineListEl) {
     if (cb) cb.style.color = textColor;
   }
 
+  // 时钟颜色:保存,若与搜索框联动则一并更新
   function applyClockColor(hex) {
     document.body.style.setProperty('--clock-color', hex);
     localStorage.setItem(LS_CLOCK_COLOR, hex);
@@ -1461,14 +1529,13 @@ if (engineSelectorEl && engineListEl) {
   function previewClockColor(hex) {
     document.body.style.setProperty('--clock-color', hex);
     if (isClockSearchLinked) {
-      var r = parseInt(hex.slice(1, 3), 16);
-      var g = parseInt(hex.slice(3, 5), 16);
-      var b = parseInt(hex.slice(5, 7), 16);
+      const { r, g, b } = hexToRgb(hex);
       document.body.style.setProperty('--search-color', hex);
       document.body.style.setProperty('--search-color-rgb', r + ', ' + g + ', ' + b);
     }
   }
 
+  // 搜索框文字颜色:保存,联动时同步时钟色
   function applySearchColor(hex) {
     previewSearchColor(hex);
     localStorage.setItem(LS_SEARCH_COLOR, hex);
@@ -1480,9 +1547,7 @@ if (engineSelectorEl && engineListEl) {
   }
 
   function previewSearchColor(hex) {
-    var r = parseInt(hex.slice(1, 3), 16);
-    var g = parseInt(hex.slice(3, 5), 16);
-    var b = parseInt(hex.slice(5, 7), 16);
+    const { r, g, b } = hexToRgb(hex);
     document.body.style.setProperty('--search-color', hex);
     document.body.style.setProperty('--search-color-rgb', r + ', ' + g + ', ' + b);
     if (isClockSearchLinked) {
@@ -1495,6 +1560,7 @@ if (engineSelectorEl && engineListEl) {
 
   const themeColorRow = document.getElementById('themeColorRow');
 
+  // 高亮当前主题色对应的预设色块
   function highlightSwatch(hex) {
     themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
       s.classList.toggle('active', s.dataset.color === hex);
@@ -1508,14 +1574,7 @@ if (engineSelectorEl && engineListEl) {
       const hex = s.dataset.color;
       applyAccent(hex);
       highlightSwatch(hex);
-      if (pickerPanel && !pickerPanel.classList.contains('hidden')) {
-        pickerOrigAccent = hex;
-        var hsl = hslFromHex(hex);
-        pickerHue = hsl.h; pickerSat = hsl.s; pickerLum = hsl.l;
-        hexInput.value = hex.toLowerCase();
-        drawPalette();
-        drawHueBar();
-      }
+      if (themePicker && themePicker.isOpen()) themePicker.setFromHex(hex);
     });
   });
 
@@ -1523,6 +1582,7 @@ if (engineSelectorEl && engineListEl) {
   const savedClockColor = localStorage.getItem(LS_CLOCK_COLOR) || '#ffffff';
   applyClockColor(savedClockColor);
 
+  // 高亮当前时钟色预设色块
   function highlightClockSwatch(hex) {
     if (!clockColorRow) return;
     clockColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
@@ -1538,14 +1598,7 @@ if (engineSelectorEl && engineListEl) {
         const hex = s.dataset.color;
         applyClockColor(hex);
         highlightClockSwatch(hex);
-        if (clockPickerPanel && !clockPickerPanel.classList.contains('hidden')) {
-          clockOrigColor = hex;
-          var hsl = hslFromHex(hex);
-          clockHue = hsl.h; clockSat = hsl.s; clockLum = hsl.l;
-          clockHexInput.value = hex.toLowerCase();
-          drawClockPalette();
-          drawClockHueBar();
-        }
+        if (clockPicker && clockPicker.isOpen()) clockPicker.setFromHex(hex);
       });
     });
   }
@@ -1554,6 +1607,7 @@ if (engineSelectorEl && engineListEl) {
   const savedSearchColor = localStorage.getItem(LS_SEARCH_COLOR) || '#ffffff';
   applySearchColor(savedSearchColor);
 
+  // 高亮当前搜索色预设色块
   function highlightSearchSwatch(hex) {
     if (!searchColorRow) return;
     searchColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
@@ -1569,80 +1623,89 @@ if (engineSelectorEl && engineListEl) {
         const hex = s.dataset.color;
         applySearchColor(hex);
         highlightSearchSwatch(hex);
-        if (searchPickerPanel && !searchPickerPanel.classList.contains('hidden')) {
-          searchOrigColor = hex;
-          var hsl = hslFromHex(hex);
-          searchHue = hsl.h; searchSat = hsl.s; searchLum = hsl.l;
-          searchHexInput.value = hex.toLowerCase();
-          drawSearchPalette();
-          drawSearchHueBar();
-        }
+        if (searchPicker && searchPicker.isOpen()) searchPicker.setFromHex(hex);
       });
     });
   }
 
-  // Color picker
-  var pickerPanel = document.getElementById('colorPickerPanel');
-  var pickerTrigger = document.getElementById('colorPickerTrigger');
-  var palette = document.getElementById('pickerPalette');
-  var hueBar = document.getElementById('pickerHueBar');
-  var hexInput = document.getElementById('pickerHexInput');
-  var confirmBtn = document.getElementById('pickerConfirmBtn');
-  var pickerHue = 0, pickerSat = 100, pickerLum = 50, pickerSize = 160;
-  var pickerOrigAccent = '';
 
-  if (pickerPanel && palette && hueBar) {
-    var pctx = palette.getContext('2d');
-    var hctx = hueBar.getContext('2d');
+  // 主题色拾色器(HSV 画板 + 色相条)
+  // ---- 取色器通用实现(主题/时钟/搜索三套共用) ----
 
-    function _h2rgb(pp, qq, t) {
-      if (t < 0) t += 1; if (t > 1) t -= 1;
-      if (t < 1/6) return pp + (qq - pp) * 6 * t;
-      if (t < 1/2) return qq;
-      if (t < 2/3) return pp + (qq - pp) * (2/3 - t) * 6;
-      return pp;
+  // HSV 颜色换算辅助函数
+  function _h2rgb(pp, qq, t) {
+    if (t < 0) t += 1; if (t > 1) t -= 1;
+    if (t < 1/6) return pp + (qq - pp) * 6 * t;
+    if (t < 1/2) return qq;
+    if (t < 2/3) return pp + (qq - pp) * (2/3 - t) * 6;
+    return pp;
+  }
+
+  function hslToRgb(h, s, l) {
+    var ss = s / 100, ll = l / 100;
+    var qq = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
+    var pp = 2 * ll - qq;
+    var hh = h / 360;
+    var r = Math.round(_h2rgb(pp, qq, hh + 1/3) * 255);
+    var g = Math.round(_h2rgb(pp, qq, hh) * 255);
+    var b = Math.round(_h2rgb(pp, qq, hh - 1/3) * 255);
+    return {r: r, g: g, b: b};
+  }
+
+  function hslFromHex(hex) {
+    const { r: r0, g: g0, b: b0 } = hexToRgb(hex);
+    var r = r0 / 255, g = g0 / 255, b = b0 / 255;
+    var max = Math.max(r,g,b), min = Math.min(r,g,b);
+    var l = (max + min) / 2 * 100;
+    var d = max - min;
+    var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l / 100 - 1)) * 100;
+    var hue = 0;
+    if (d !== 0) {
+      if (max === r) hue = ((g - b) / d) % 6;
+      else if (max === g) hue = (b - r) / d + 2;
+      else hue = (r - g) / d + 4;
     }
+    hue = (hue * 60 + 360) % 360;
+    return {h: hue, s: s, l: l};
+  }
 
-    function hslToRgb(h, s, l) {
-      var ss = s / 100, ll = l / 100;
-      var qq = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
-      var pp = 2 * ll - qq;
-      var hh = h / 360;
-      var r = Math.round(_h2rgb(pp, qq, hh + 1/3) * 255);
-      var g = Math.round(_h2rgb(pp, qq, hh) * 255);
-      var b = Math.round(_h2rgb(pp, qq, hh - 1/3) * 255);
-      return {r: r, g: g, b: b};
-    }
+  // 拾色器工厂:画板/色相条/hex 输入/确认/触发器逻辑,三套共用
+  function createColorPicker(cfg) {
+    const { panel, palette, hueBar, hexInput, confirmBtn, trigger, savedKey, defaultColor, preview, apply, highlight } = cfg;
+    if (!panel || !palette || !hueBar) return null;
+    const pctx = palette.getContext('2d');
+    const hctx = hueBar.getContext('2d');
+    let hue = 0, sat = 100, lum = 50, size = 160, origColor = '';
 
     function drawHueBar() {
-      for (var y = 0; y < pickerSize; y++) {
-        var rgb = hslToRgb(y / pickerSize * 360, 100, 50);
+      for (var y = 0; y < size; y++) {
+        var rgb = hslToRgb(y / size * 360, 100, 50);
         hctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
         hctx.fillRect(0, y, 20, 1);
       }
-      var hy = Math.round(pickerHue / 360 * pickerSize);
-      var irgb = hslToRgb(pickerHue, 100, 50);
-      var lum = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
-      hctx.fillStyle = lum > 0.65 ? '#333' : '#fff';
+      var hy = Math.round(hue / 360 * size);
+      var irgb = hslToRgb(hue, 100, 50);
+      var l = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
+      hctx.fillStyle = l > 0.65 ? '#333' : '#fff';
       hctx.fillRect(0, hy - 3, 20, 5);
     }
 
     function drawPalette() {
-      var prgb = hslToRgb(pickerHue, 100, 50);
-      pctx.clearRect(0, 0, pickerSize, pickerSize);
-      var gradW = pctx.createLinearGradient(0, 0, pickerSize, 0);
+      var prgb = hslToRgb(hue, 100, 50);
+      pctx.clearRect(0, 0, size, size);
+      var gradW = pctx.createLinearGradient(0, 0, size, 0);
       gradW.addColorStop(0, '#ffffff');
       gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
       pctx.fillStyle = gradW;
-      pctx.fillRect(0, 0, pickerSize, pickerSize);
-      var gradB = pctx.createLinearGradient(0, 0, 0, pickerSize);
+      pctx.fillRect(0, 0, size, size);
+      var gradB = pctx.createLinearGradient(0, 0, 0, size);
       gradB.addColorStop(0, 'transparent');
       gradB.addColorStop(1, '#000000');
       pctx.fillStyle = gradB;
-      pctx.fillRect(0, 0, pickerSize, pickerSize);
-      var px = Math.round(pickerSat / 100 * pickerSize);
-      var py = Math.round((100 - pickerLum) / 100 * pickerSize);
-      var crgb = hslToRgb(pickerHue, pickerSat, pickerLum);
+      pctx.fillRect(0, 0, size, size);
+      var px = Math.round(sat / 100 * size);
+      var py = Math.round((100 - lum) / 100 * size);
+      var crgb = hslToRgb(hue, sat, lum);
       var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
       pctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
       pctx.lineWidth = 2;
@@ -1652,38 +1715,20 @@ if (engineSelectorEl && engineListEl) {
     }
 
     function updateFromPicker() {
-      var rgb = hslToRgb(pickerHue, pickerSat, pickerLum);
+      var rgb = hslToRgb(hue, sat, lum);
       var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
       hexInput.value = hex;
-      previewAccent(hex);
-    }
-
-    function hslFromHex(hex) {
-      var r = parseInt(hex.slice(1,3), 16) / 255;
-      var g = parseInt(hex.slice(3,5), 16) / 255;
-      var b = parseInt(hex.slice(5,7), 16) / 255;
-      var max = Math.max(r,g,b), min = Math.min(r,g,b);
-      var l = (max + min) / 2 * 100;
-      var d = max - min;
-      var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l / 100 - 1)) * 100;
-      var hue = 0;
-      if (d !== 0) {
-        if (max === r) hue = ((g - b) / d) % 6;
-        else if (max === g) hue = (b - r) / d + 2;
-        else hue = (r - g) / d + 4;
-      }
-      hue = (hue * 60 + 360) % 360;
-      return {h: hue, s: s, l: l};
+      preview(hex);
     }
 
     function onPaletteMove(e) {
       var rect = palette.getBoundingClientRect();
       var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
       var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      x = Math.max(0, Math.min(pickerSize, x));
-      y = Math.max(0, Math.min(pickerSize, y));
-      pickerSat = Math.round(x / pickerSize * 100);
-      pickerLum = Math.round(100 - y / pickerSize * 100);
+      x = Math.max(0, Math.min(size, x));
+      y = Math.max(0, Math.min(size, y));
+      sat = Math.round(x / size * 100);
+      lum = Math.round(100 - y / size * 100);
       drawPalette();
       updateFromPicker();
     }
@@ -1691,8 +1736,8 @@ if (engineSelectorEl && engineListEl) {
     function onHueMove(e) {
       var rect = hueBar.getBoundingClientRect();
       var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      y = Math.max(0, Math.min(pickerSize, y));
-      pickerHue = Math.round(y / pickerSize * 360);
+      y = Math.max(0, Math.min(size, y));
+      hue = Math.round(y / size * 360);
       drawPalette();
       drawHueBar();
       updateFromPicker();
@@ -1718,330 +1763,108 @@ if (engineSelectorEl && engineListEl) {
       var hex = hexInput.value.trim();
       if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
         var hsl = hslFromHex(hex);
-        pickerHue = hsl.h;
-        pickerSat = hsl.s;
-        pickerLum = hsl.l;
+        hue = hsl.h; sat = hsl.s; lum = hsl.l;
         drawPalette();
         drawHueBar();
-        previewAccent(hex.toLowerCase());
+        preview(hex.toLowerCase());
       }
     });
 
     confirmBtn.addEventListener('click', function() {
       var hex = hexInput.value.trim();
       if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        applyAccent(hex.toLowerCase());
-        highlightSwatch(hex.toLowerCase());
-        pickerPanel.classList.add('hidden');
+        apply(hex.toLowerCase());
+        highlight(hex.toLowerCase());
+        panel.classList.add('hidden');
       }
     });
 
-    pickerTrigger.addEventListener('click', function(e) {
+    trigger.addEventListener('click', function(e) {
       e.stopPropagation();
-      var isHidden = pickerPanel.classList.contains('hidden');
+      var isHidden = panel.classList.contains('hidden');
       if (isHidden) {
-        pickerPanel.classList.remove('hidden');
-        pickerOrigAccent = localStorage.getItem(LS_ACCENT) || '#2563eb';
-        var row = document.querySelector('.picker-row');
+        panel.classList.remove('hidden');
+        origColor = localStorage.getItem(savedKey) || defaultColor;
+        var row = panel.querySelector('.picker-row');
         var available = row ? row.clientWidth - 26 : 160;
-        pickerSize = available;
+        size = available;
         palette.width = available; palette.height = available;
         hueBar.height = available;
-        var hsl = hslFromHex(pickerOrigAccent);
-        pickerHue = hsl.h; pickerSat = hsl.s; pickerLum = hsl.l;
+        var hsl = hslFromHex(origColor);
+        hue = hsl.h; sat = hsl.s; lum = hsl.l;
         drawPalette();
         drawHueBar();
         updateFromPicker();
       } else {
-        pickerPanel.classList.add('hidden');
-        previewAccent(pickerOrigAccent);
-        highlightSwatch(pickerOrigAccent);
+        panel.classList.add('hidden');
+        preview(origColor);
+        highlight(origColor);
       }
     });
-  }
 
-  var clockPickerPanel = document.getElementById('clockColorPickerPanel');
-  var clockPickerTrigger = document.getElementById('clockColorPickerTrigger');
-  var clockPalette = document.getElementById('clockPickerPalette');
-  var clockHueBar = document.getElementById('clockPickerHueBar');
-  var clockHexInput = document.getElementById('clockPickerHexInput');
-  var clockConfirmBtn = document.getElementById('clockPickerConfirmBtn');
-  var clockHue = 0, clockSat = 100, clockLum = 50, clockSize = 160;
-  var clockOrigColor = '#ffffff';
-
-  if (clockPickerPanel && clockPalette && clockHueBar) {
-    var cpctx = clockPalette.getContext('2d');
-    var chctx = clockHueBar.getContext('2d');
-
-    function drawClockHueBar() {
-      for (var y = 0; y < clockSize; y++) {
-        var rgb = hslToRgb(y / clockSize * 360, 100, 50);
-        chctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-        chctx.fillRect(0, y, 20, 1);
-      }
-      var hy = Math.round(clockHue / 360 * clockSize);
-      var irgb = hslToRgb(clockHue, 100, 50);
-      var lum = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
-      chctx.fillStyle = lum > 0.65 ? '#333' : '#fff';
-      chctx.fillRect(0, hy - 3, 20, 5);
-    }
-
-    function drawClockPalette() {
-      var prgb = hslToRgb(clockHue, 100, 50);
-      cpctx.clearRect(0, 0, clockSize, clockSize);
-      var gradW = cpctx.createLinearGradient(0, 0, clockSize, 0);
-      gradW.addColorStop(0, '#ffffff');
-      gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
-      cpctx.fillStyle = gradW;
-      cpctx.fillRect(0, 0, clockSize, clockSize);
-      var gradB = cpctx.createLinearGradient(0, 0, 0, clockSize);
-      gradB.addColorStop(0, 'transparent');
-      gradB.addColorStop(1, '#000000');
-      cpctx.fillStyle = gradB;
-      cpctx.fillRect(0, 0, clockSize, clockSize);
-      var px = Math.round(clockSat / 100 * clockSize);
-      var py = Math.round((100 - clockLum) / 100 * clockSize);
-      var crgb = hslToRgb(clockHue, clockSat, clockLum);
-      var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
-      cpctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
-      cpctx.lineWidth = 2;
-      cpctx.beginPath();
-      cpctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      cpctx.stroke();
-    }
-
-    function updateClockPicker() {
-      var rgb = hslToRgb(clockHue, clockSat, clockLum);
-      var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
-      clockHexInput.value = hex;
-      previewClockColor(hex);
-    }
-
-    function onClockPaletteMove(e) {
-      var rect = clockPalette.getBoundingClientRect();
-      var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      x = Math.max(0, Math.min(clockSize, x));
-      y = Math.max(0, Math.min(clockSize, y));
-      clockSat = Math.round(x / clockSize * 100);
-      clockLum = Math.round(100 - y / clockSize * 100);
-      drawClockPalette();
-      updateClockPicker();
-    }
-
-    function onClockHueMove(e) {
-      var rect = clockHueBar.getBoundingClientRect();
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      y = Math.max(0, Math.min(clockSize, y));
-      clockHue = Math.round(y / clockSize * 360);
-      drawClockPalette();
-      drawClockHueBar();
-      updateClockPicker();
-    }
-
-    clockPalette.addEventListener('mousedown', function(e) {
-      onClockPaletteMove(e);
-      document.addEventListener('mousemove', onClockPaletteMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onClockPaletteMove);
-      }, {once: true});
-    });
-
-    clockHueBar.addEventListener('mousedown', function(e) {
-      onClockHueMove(e);
-      document.addEventListener('mousemove', onClockHueMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onClockHueMove);
-      }, {once: true});
-    });
-
-    clockHexInput.addEventListener('input', function() {
-      var hex = clockHexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    return {
+      isOpen: function() { return !panel.classList.contains('hidden'); },
+      close: function() { panel.classList.add('hidden'); preview(origColor); highlight(origColor); },
+      setFromHex: function(hex) {
         var hsl = hslFromHex(hex);
-        clockHue = hsl.h; clockSat = hsl.s; clockLum = hsl.l;
-        drawClockPalette();
-        drawClockHueBar();
-        previewClockColor(hex.toLowerCase());
+        hue = hsl.h; sat = hsl.s; lum = hsl.l;
+        hexInput.value = hex.toLowerCase();
+        drawPalette();
+        drawHueBar();
       }
-    });
-
-    clockConfirmBtn.addEventListener('click', function() {
-      var hex = clockHexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        applyClockColor(hex.toLowerCase());
-        highlightClockSwatch(hex.toLowerCase());
-        clockPickerPanel.classList.add('hidden');
-      }
-    });
-
-    clockPickerTrigger.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var isHidden = clockPickerPanel.classList.contains('hidden');
-      if (isHidden) {
-        clockPickerPanel.classList.remove('hidden');
-        clockOrigColor = localStorage.getItem(LS_CLOCK_COLOR) || '#ffffff';
-        var row = document.querySelector('.picker-row');
-        var available = row ? row.clientWidth - 26 : 160;
-        clockSize = available;
-        clockPalette.width = available; clockPalette.height = available;
-        clockHueBar.height = available;
-        var hsl = hslFromHex(clockOrigColor);
-        clockHue = hsl.h; clockSat = hsl.s; clockLum = hsl.l;
-        drawClockPalette();
-        drawClockHueBar();
-        updateClockPicker();
-      } else {
-        clockPickerPanel.classList.add('hidden');
-        previewClockColor(clockOrigColor);
-        highlightClockSwatch(clockOrigColor);
-      }
-    });
+    };
   }
 
-  var searchPickerPanel = document.getElementById('searchColorPickerPanel');
-  var searchPickerTrigger = document.getElementById('searchColorPickerTrigger');
-  var searchPalette = document.getElementById('searchPickerPalette');
-  var searchHueBar = document.getElementById('searchPickerHueBar');
-  var searchHexInput = document.getElementById('searchPickerHexInput');
-  var searchConfirmBtn = document.getElementById('searchPickerConfirmBtn');
-  var searchHue = 0, searchSat = 100, searchLum = 50, searchSize = 160;
-  var searchOrigColor = '#ffffff';
+  // 主题色拾色器
+  var themePicker = createColorPicker({
+    panel: document.getElementById('colorPickerPanel'),
+    palette: document.getElementById('pickerPalette'),
+    hueBar: document.getElementById('pickerHueBar'),
+    hexInput: document.getElementById('pickerHexInput'),
+    confirmBtn: document.getElementById('pickerConfirmBtn'),
+    trigger: document.getElementById('colorPickerTrigger'),
+    savedKey: LS_ACCENT,
+    defaultColor: '#2563eb',
+    preview: previewAccent,
+    apply: applyAccent,
+    highlight: highlightSwatch
+  });
 
-  if (searchPickerPanel && searchPalette && searchHueBar) {
-    var spctx = searchPalette.getContext('2d');
-    var shctx = searchHueBar.getContext('2d');
+  // 时钟色拾色器
+  var clockPicker = createColorPicker({
+    panel: document.getElementById('clockColorPickerPanel'),
+    palette: document.getElementById('clockPickerPalette'),
+    hueBar: document.getElementById('clockPickerHueBar'),
+    hexInput: document.getElementById('clockPickerHexInput'),
+    confirmBtn: document.getElementById('clockPickerConfirmBtn'),
+    trigger: document.getElementById('clockColorPickerTrigger'),
+    savedKey: LS_CLOCK_COLOR,
+    defaultColor: '#ffffff',
+    preview: previewClockColor,
+    apply: applyClockColor,
+    highlight: highlightClockSwatch
+  });
 
-    function drawSearchHueBar() {
-      for (var y = 0; y < searchSize; y++) {
-        var rgb = hslToRgb(y / searchSize * 360, 100, 50);
-        shctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-        shctx.fillRect(0, y, 20, 1);
-      }
-      var hy = Math.round(searchHue / 360 * searchSize);
-      var irgb = hslToRgb(searchHue, 100, 50);
-      var lum = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
-      shctx.fillStyle = lum > 0.65 ? '#333' : '#fff';
-      shctx.fillRect(0, hy - 3, 20, 5);
-    }
-
-    function drawSearchPalette() {
-      var prgb = hslToRgb(searchHue, 100, 50);
-      spctx.clearRect(0, 0, searchSize, searchSize);
-      var gradW = spctx.createLinearGradient(0, 0, searchSize, 0);
-      gradW.addColorStop(0, '#ffffff');
-      gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
-      spctx.fillStyle = gradW;
-      spctx.fillRect(0, 0, searchSize, searchSize);
-      var gradB = spctx.createLinearGradient(0, 0, 0, searchSize);
-      gradB.addColorStop(0, 'transparent');
-      gradB.addColorStop(1, '#000000');
-      spctx.fillStyle = gradB;
-      spctx.fillRect(0, 0, searchSize, searchSize);
-      var px = Math.round(searchSat / 100 * searchSize);
-      var py = Math.round((100 - searchLum) / 100 * searchSize);
-      var crgb = hslToRgb(searchHue, searchSat, searchLum);
-      var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
-      spctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
-      spctx.lineWidth = 2;
-      spctx.beginPath();
-      spctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      spctx.stroke();
-    }
-
-    function updateSearchPicker() {
-      var rgb = hslToRgb(searchHue, searchSat, searchLum);
-      var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
-      searchHexInput.value = hex;
-      previewSearchColor(hex);
-    }
-
-    function onSearchPaletteMove(e) {
-      var rect = searchPalette.getBoundingClientRect();
-      var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      x = Math.max(0, Math.min(searchSize, x));
-      y = Math.max(0, Math.min(searchSize, y));
-      searchSat = Math.round(x / searchSize * 100);
-      searchLum = Math.round(100 - y / searchSize * 100);
-      drawSearchPalette();
-      updateSearchPicker();
-    }
-
-    function onSearchHueMove(e) {
-      var rect = searchHueBar.getBoundingClientRect();
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      y = Math.max(0, Math.min(searchSize, y));
-      searchHue = Math.round(y / searchSize * 360);
-      drawSearchPalette();
-      drawSearchHueBar();
-      updateSearchPicker();
-    }
-
-    searchPalette.addEventListener('mousedown', function(e) {
-      onSearchPaletteMove(e);
-      document.addEventListener('mousemove', onSearchPaletteMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onSearchPaletteMove);
-      }, {once: true});
-    });
-
-    searchHueBar.addEventListener('mousedown', function(e) {
-      onSearchHueMove(e);
-      document.addEventListener('mousemove', onSearchHueMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onSearchHueMove);
-      }, {once: true});
-    });
-
-    searchHexInput.addEventListener('input', function() {
-      var hex = searchHexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        var hsl = hslFromHex(hex);
-        searchHue = hsl.h; searchSat = hsl.s; searchLum = hsl.l;
-        drawSearchPalette();
-        drawSearchHueBar();
-        previewSearchColor(hex.toLowerCase());
-      }
-    });
-
-    searchConfirmBtn.addEventListener('click', function() {
-      var hex = searchHexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        applySearchColor(hex.toLowerCase());
-        highlightSearchSwatch(hex.toLowerCase());
-        searchPickerPanel.classList.add('hidden');
-      }
-    });
-
-    searchPickerTrigger.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var isHidden = searchPickerPanel.classList.contains('hidden');
-      if (isHidden) {
-        searchPickerPanel.classList.remove('hidden');
-        searchOrigColor = localStorage.getItem(LS_SEARCH_COLOR) || '#ffffff';
-        var row = document.querySelector('.picker-row');
-        var available = row ? row.clientWidth - 26 : 160;
-        searchSize = available;
-        searchPalette.width = available; searchPalette.height = available;
-        searchHueBar.height = available;
-        var hsl = hslFromHex(searchOrigColor);
-        searchHue = hsl.h; searchSat = hsl.s; searchLum = hsl.l;
-        drawSearchPalette();
-        drawSearchHueBar();
-        updateSearchPicker();
-      } else {
-        searchPickerPanel.classList.add('hidden');
-        previewSearchColor(searchOrigColor);
-        highlightSearchSwatch(searchOrigColor);
-      }
-    });
-  }
+  // 搜索色拾色器
+  var searchPicker = createColorPicker({
+    panel: document.getElementById('searchColorPickerPanel'),
+    palette: document.getElementById('searchPickerPalette'),
+    hueBar: document.getElementById('searchPickerHueBar'),
+    hexInput: document.getElementById('searchPickerHexInput'),
+    confirmBtn: document.getElementById('searchPickerConfirmBtn'),
+    trigger: document.getElementById('searchColorPickerTrigger'),
+    savedKey: LS_SEARCH_COLOR,
+    defaultColor: '#ffffff',
+    preview: previewSearchColor,
+    apply: applySearchColor,
+    highlight: highlightSearchSwatch
+  });
 
   var clockLinkBtn = document.getElementById('clockLinkBtn');
   var searchLinkBtn = document.getElementById('searchLinkBtn');
   var isClockSearchLinked = localStorage.getItem(LS_CLOCK_SEARCH_LINK) !== 'false';
 
+  // 时钟/搜索颜色联动开关
   function setLinkState(linked) {
     isClockSearchLinked = linked;
     localStorage.setItem(LS_CLOCK_SEARCH_LINK, linked ? 'true' : 'false');
@@ -2060,6 +1883,7 @@ if (engineSelectorEl && engineListEl) {
   var sidebarNav = sidebar.querySelector('.sidebar-nav');
   const navItems = sidebar.querySelectorAll('.sidebar-nav-item');
 
+  // 侧边栏导航:切换面板并移动高亮条
   const navHighlight = document.createElement('div');
   navHighlight.className = 'nav-highlight';
   sidebarNav.appendChild(navHighlight);
@@ -2092,6 +1916,7 @@ if (engineSelectorEl && engineListEl) {
     });
   });
 
+  // 壁纸弹窗:历史网格、轮换池、导入
   const wallpaperModal = document.getElementById('wallpaperModal');
   const wallpaperGrid = document.getElementById('wallpaperGrid');
   const wallpaperImportBtn = document.getElementById('wallpaperImportBtn');
@@ -2101,28 +1926,25 @@ if (engineSelectorEl && engineListEl) {
   const LS_WH = 'wallpaperHistory';
   const LS_WRP = 'wallpaperRotationPool';
 
+  // 轮换池的读写
   function getRotationPool() {
-    try {
-      const p = JSON.parse(localStorage.getItem(LS_WRP) || '[]');
-      return Array.isArray(p) ? p : [];
-    } catch (e) { return []; }
+    return readJsonArray(LS_WRP);
   }
 
   function saveRotationPool(pool) {
     localStorage.setItem(LS_WRP, JSON.stringify(pool));
   }
 
+  // 壁纸历史的读写(最多 MAX_WALLPAPER_HISTORY 条)
   function getWallpaperHistory() {
-    try {
-      const h = JSON.parse(localStorage.getItem(LS_WH) || '[]');
-      return Array.isArray(h) ? h : [];
-    } catch (e) { return []; }
+    return readJsonArray(LS_WH);
   }
 
   function saveWallpaperHistory(list) {
     localStorage.setItem(LS_WH, JSON.stringify(list.slice(0, MAX_WALLPAPER_HISTORY)));
   }
 
+  // 压缩壁纸图片:限制尺寸与体积(渐降 JPEG 质量)
   function compressWallpaper(dataUrl, callback) {
     const MAX_DIM = 1920;
     const MAX_BYTES = 400 * 1024;
@@ -2173,6 +1995,7 @@ if (engineSelectorEl && engineListEl) {
   let wallpaperEditMode = false;
   let wallpaperEditChecked = new Set();
 
+  // 渲染壁纸历史网格,编辑模式下展示轮换勾选框
   function renderWallpaperGrid() {
     const history = getWallpaperHistory();
     const current = localStorage.getItem(LS_BG);
@@ -2255,6 +2078,7 @@ if (engineSelectorEl && engineListEl) {
     updateStorageInfo();
   }
 
+  // 计算并显示 localStorage 占用
   function updateStorageInfo() {
     const el = document.getElementById('wallpaperStorageInfo');
     if (!el) return;
@@ -2269,6 +2093,7 @@ if (engineSelectorEl && engineListEl) {
       : (total / 1024).toFixed(1) + ' KB';
   }
 
+  // 壁纸轮换编辑模式:确认时保存选中集合为轮换池
   wallpaperRotateEditBtn.addEventListener('click', () => {
     if (wallpaperEditMode) {
 
@@ -2315,6 +2140,7 @@ if (engineSelectorEl && engineListEl) {
 
   wallpaperImportBtn.addEventListener('click', () => wallpaperFileInput.click());
 
+  // 导入本地壁纸:校验类型、压缩后加入历史并应用
   wallpaperFileInput.addEventListener('change', (ev) => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
@@ -2354,6 +2180,7 @@ if (engineSelectorEl && engineListEl) {
     if (e.target === wallpaperModal) wallpaperModal.classList.remove('show');
   });
 
+  // 更新侧边栏壁纸缩略图
   function updateWallpaperThumb() {
     const thumb = document.getElementById('sidebarWallpaperThumbImg');
     if (!thumb) return;
@@ -2387,6 +2214,7 @@ if (engineSelectorEl && engineListEl) {
     showToast(t('toastCleared'), 2000, 'success');
   });
 
+  // 壁纸轮换间隔下拉(关闭/1h/6h/12h/24h)
   const rotateDropdown = document.getElementById('wallpaperRotateDropdown');
   const rotateTrigger = document.getElementById('rotateTrigger');
   const rotateSizer = document.getElementById('rotateSizer');
@@ -2418,6 +2246,7 @@ if (engineSelectorEl && engineListEl) {
     rotateSizer.appendChild(sz);
   });
 
+  // 选择轮换间隔并启动定时器(本地需先配好轮换池)
   function selectRotation(value) {
 
     if (value !== 'off' && localStorage.getItem(LS_WALLPAPER_SOURCE) !== 'bing' && getRotationPool().length < 2) {
@@ -2442,6 +2271,7 @@ if (engineSelectorEl && engineListEl) {
     }
   }
 
+  // 立即执行一次轮换(本地随机/必应下一张)
   function doWallpaperRotate() {
     if (localStorage.getItem(LS_WALLPAPER_SOURCE) === 'bing') {
       rotateBingWallpaper();
@@ -2459,11 +2289,12 @@ if (engineSelectorEl && engineListEl) {
     if (pick) applyWallpaper(pick);
   }
 
+  // 启动壁纸轮换定时器(必应另有每日零点刷新)
   function startWallpaperRotation(value) {
     if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
     if (bingMidnightTimer) { clearTimeout(bingMidnightTimer); bingMidnightTimer = null; }
 
-    // Bing: always schedule a midnight refresh (forced daily update)
+
     if (localStorage.getItem(LS_WALLPAPER_SOURCE) === 'bing') {
       function scheduleMidnight() {
         var now = new Date();
@@ -2535,6 +2366,7 @@ if (engineSelectorEl && engineListEl) {
     selectRotation(savedRotation);
   }
 
+  // 可折叠分区的展开状态记忆
   document.querySelectorAll('.section-collapse-header').forEach(header => {
     const section = header.parentElement;
     const sectionId = section.id;
@@ -2548,6 +2380,7 @@ if (engineSelectorEl && engineListEl) {
     });
   });
 
+  // 滑杆工具:填充轨道、按步长吸附、格式化数值
   function updateSliderTrack(slider) {
     const min = parseFloat(slider.min);
     const max = parseFloat(slider.max);
@@ -2580,63 +2413,51 @@ if (engineSelectorEl && engineListEl) {
     s.addEventListener('change', () => snapToNode(s));
   });
 
+  // 滑块通用绑定:恢复保存值、input 更新 CSS 变量/数值、滚轮步进
+  function bindSlider({ slider, label, key, cssVar, root, varUnit, onChange }) {
+    if (!slider) return;
+    const saved = localStorage.getItem(key);
+    if (saved != null) slider.value = saved;
+    const initStep = getNodeStep(slider);
+    label.textContent = formatSliderVal(roundToNode(parseFloat(slider.value), initStep), initStep, slider);
+    if (cssVar) root.style.setProperty(cssVar, slider.value + (varUnit || ''));
+    if (onChange) onChange(slider.value);
+    updateSliderTrack(slider);
+
+    slider.addEventListener('input', () => {
+      const v = slider.value;
+      const step = getNodeStep(slider);
+      label.textContent = formatSliderVal(roundToNode(v, step), step, slider);
+      if (cssVar) root.style.setProperty(cssVar, v + (varUnit || ''));
+      localStorage.setItem(key, v);
+      if (onChange) onChange(v);
+      updateSliderTrack(slider);
+    });
+
+    slider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = getNodeStep(slider);
+      const delta = e.deltaY > 0 ? -step : step;
+      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
+      slider.dispatchEvent(new Event('input'));
+    });
+  }
+
+  // 壁纸遮罩透明度滑杆
   const sidebarOverlaySlider = document.getElementById('sidebarOverlaySlider');
   const sidebarOverlayVal = document.getElementById('sidebarOverlayVal');
-  const savedOpacity = localStorage.getItem('overlayOpacity');
-  if (savedOpacity) {
-    sidebarOverlaySlider.value = savedOpacity;
-    document.body.style.setProperty('--overlay-opacity', savedOpacity);
-  }
-  sidebarOverlayVal.textContent = Math.round(parseFloat(sidebarOverlaySlider.value) * 100) + '%';
-  updateSliderTrack(sidebarOverlaySlider);
+  bindSlider({ slider: sidebarOverlaySlider, label: sidebarOverlayVal, key: 'overlayOpacity', cssVar: '--overlay-opacity', root: document.body });
 
-  sidebarOverlaySlider.addEventListener('input', () => {
-    const v = sidebarOverlaySlider.value;
-    const step = getNodeStep(sidebarOverlaySlider);
-    sidebarOverlayVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarOverlaySlider);
-    document.body.style.setProperty('--overlay-opacity', v);
-    localStorage.setItem('overlayOpacity', v);
-    updateSliderTrack(sidebarOverlaySlider);
-  });
-
-  sidebarOverlaySlider.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const step = getNodeStep(sidebarOverlaySlider);
-    const delta = e.deltaY > 0 ? -step : step;
-    sidebarOverlaySlider.value = Math.max(parseFloat(sidebarOverlaySlider.min), Math.min(parseFloat(sidebarOverlaySlider.max), parseFloat(sidebarOverlaySlider.value) + delta));
-    sidebarOverlaySlider.dispatchEvent(new Event('input'));
-  });
-
+  // 壁纸模糊滑杆
   const sidebarBlurSlider = document.getElementById('sidebarBlurSlider');
   const sidebarBlurVal = document.getElementById('sidebarBlurVal');
   const LS_BLUR = 'wallpaperBlur';
-  const savedBlur = localStorage.getItem(LS_BLUR) || '0';
-  sidebarBlurSlider.value = savedBlur;
-  document.body.style.setProperty('--blur-px', savedBlur + 'px');
-  sidebarBlurVal.textContent = savedBlur + 'px';
-  updateSliderTrack(sidebarBlurSlider);
+  bindSlider({ slider: sidebarBlurSlider, label: sidebarBlurVal, key: LS_BLUR, cssVar: '--blur-px', root: document.body, varUnit: 'px' });
 
-  sidebarBlurSlider.addEventListener('input', () => {
-    const v = sidebarBlurSlider.value;
-    const step = getNodeStep(sidebarBlurSlider);
-    sidebarBlurVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarBlurSlider);
-    document.body.style.setProperty('--blur-px', v + 'px');
-    localStorage.setItem(LS_BLUR, v);
-    updateSliderTrack(sidebarBlurSlider);
-  });
-
-  sidebarBlurSlider.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const step = getNodeStep(sidebarBlurSlider);
-    const delta = e.deltaY > 0 ? -step : step;
-    sidebarBlurSlider.value = Math.max(parseFloat(sidebarBlurSlider.min), Math.min(parseFloat(sidebarBlurSlider.max), parseFloat(sidebarBlurSlider.value) + delta));
-    sidebarBlurSlider.dispatchEvent(new Event('input'));
-  });
-
+  // 侧边栏透明度滑杆(联动灰度文字色)
   const sidebarOpacitySlider = document.getElementById('sidebarOpacitySlider');
   const sidebarOpacityVal = document.getElementById('sidebarOpacityVal');
   const LS_SIDEBAR_OPACITY = 'sidebarOpacity';
-  const savedSidebarOpacity = localStorage.getItem(LS_SIDEBAR_OPACITY) || '1';
 
   function applySidebarOpacity(v) {
     const opacity = parseFloat(v);
@@ -2651,54 +2472,15 @@ if (engineSelectorEl && engineListEl) {
     document.body.style.setProperty('--sidebar-label-rgb', `${labelGray},${labelGray},${labelGray}`);
   }
 
-  sidebarOpacitySlider.value = savedSidebarOpacity;
-  applySidebarOpacity(savedSidebarOpacity);
-  sidebarOpacityVal.textContent = parseInt(parseFloat(savedSidebarOpacity) * 100) + '%';
-  updateSliderTrack(sidebarOpacitySlider);
+  bindSlider({ slider: sidebarOpacitySlider, label: sidebarOpacityVal, key: LS_SIDEBAR_OPACITY, onChange: applySidebarOpacity });
 
-  sidebarOpacitySlider.addEventListener('input', () => {
-    const v = sidebarOpacitySlider.value;
-    const step = getNodeStep(sidebarOpacitySlider);
-    sidebarOpacityVal.textContent = formatSliderVal(roundToNode(v, step), step,sidebarOpacitySlider);
-    applySidebarOpacity(v);
-    localStorage.setItem(LS_SIDEBAR_OPACITY, v);
-    updateSliderTrack(sidebarOpacitySlider);
-  });
-
-  sidebarOpacitySlider.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const step = getNodeStep(sidebarOpacitySlider);
-    const delta = e.deltaY > 0 ? -step : step;
-    sidebarOpacitySlider.value = Math.max(parseFloat(sidebarOpacitySlider.min), Math.min(parseFloat(sidebarOpacitySlider.max), parseFloat(sidebarOpacitySlider.value) + delta));
-    sidebarOpacitySlider.dispatchEvent(new Event('input'));
-  });
-
+  // 侧边栏毛玻璃强度滑杆
   const sidebarBlurSlider2 = document.getElementById('sidebarBlurSlider2');
   const sidebarBlurVal2 = document.getElementById('sidebarBlurVal2');
   const LS_SIDEBAR_BLUR = 'sidebarBlur';
-  const savedSidebarBlur = localStorage.getItem(LS_SIDEBAR_BLUR) || '0';
-  sidebarBlurSlider2.value = savedSidebarBlur;
-  document.body.style.setProperty('--sidebar-blur', savedSidebarBlur);
-  sidebarBlurVal2.textContent = savedSidebarBlur + 'px';
-  updateSliderTrack(sidebarBlurSlider2);
+  bindSlider({ slider: sidebarBlurSlider2, label: sidebarBlurVal2, key: LS_SIDEBAR_BLUR, cssVar: '--sidebar-blur', root: document.body });
 
-  sidebarBlurSlider2.addEventListener('input', () => {
-    const v = sidebarBlurSlider2.value;
-    const step = getNodeStep(sidebarBlurSlider2);
-    sidebarBlurVal2.textContent = formatSliderVal(roundToNode(v, step), step,sidebarBlurSlider2);
-    document.body.style.setProperty('--sidebar-blur', v);
-    localStorage.setItem(LS_SIDEBAR_BLUR, v);
-    updateSliderTrack(sidebarBlurSlider2);
-  });
-
-  sidebarBlurSlider2.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const step = getNodeStep(sidebarBlurSlider2);
-    const delta = e.deltaY > 0 ? -step : step;
-    sidebarBlurSlider2.value = Math.max(parseFloat(sidebarBlurSlider2.min), Math.min(parseFloat(sidebarBlurSlider2.max), parseFloat(sidebarBlurSlider2.value) + delta));
-    sidebarBlurSlider2.dispatchEvent(new Event('input'));
-  });
-
+  // 搜索框启用开关
   (function() {
     const toggle = document.getElementById('searchBoxToggle');
     const controls = document.getElementById('searchBoxControls');
@@ -2720,138 +2502,19 @@ if (engineSelectorEl && engineListEl) {
     apply(saved !== 'false');
   })();
 
-  (function() {
-    const slider = document.getElementById('searchOffsetYSlider');
-    const label = document.getElementById('searchOffsetYVal');
-    const key = 'searchOffsetY';
-    const cssVar = '--search-offset-y';
-    const unit = 'px';
+  // 搜索框垂直偏移滑杆
+  bindSlider({ slider: document.getElementById('searchOffsetYSlider'), label: document.getElementById('searchOffsetYVal'), key: 'searchOffsetY', cssVar: '--search-offset-y', root: document.documentElement, varUnit: 'px' });
 
-    const saved = localStorage.getItem(key);
-    if (saved != null) {
-      slider.value = saved;
-      document.documentElement.style.setProperty(cssVar, saved + unit);
-    }
-    label.textContent = slider.value + 'px';
-    updateSliderTrack(slider);
+  // 搜索框水平偏移滑杆
+  bindSlider({ slider: document.getElementById('searchOffsetXSlider'), label: document.getElementById('searchOffsetXVal'), key: 'searchOffsetX', cssVar: '--search-offset-x', root: document.documentElement, varUnit: 'px' });
 
-    slider.addEventListener('input', () => {
-      const v = slider.value;
-      const step = getNodeStep(slider);
-      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
-      document.documentElement.style.setProperty(cssVar, v + unit);
-      localStorage.setItem(key, v);
-      updateSliderTrack(slider);
-    });
+  // 搜索框宽度滑杆
+  bindSlider({ slider: document.getElementById('searchWidthSlider'), label: document.getElementById('searchWidthVal'), key: 'searchWidth', cssVar: '--search-width', root: document.documentElement, varUnit: 'px' });
 
-    slider.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const step = getNodeStep(slider);
-      const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
-      slider.dispatchEvent(new Event('input'));
-    });
-  })();
+  // 搜索框圆角滑杆
+  bindSlider({ slider: document.getElementById('searchRadiusSlider'), label: document.getElementById('searchRadiusVal'), key: 'searchRadius', cssVar: '--search-radius', root: document.documentElement, varUnit: 'px' });
 
-  (function() {
-    const slider = document.getElementById('searchOffsetXSlider');
-    const label = document.getElementById('searchOffsetXVal');
-    const key = 'searchOffsetX';
-    const cssVar = '--search-offset-x';
-    const unit = 'px';
-
-    const saved = localStorage.getItem(key);
-    if (saved != null) {
-      slider.value = saved;
-      document.documentElement.style.setProperty(cssVar, saved + unit);
-    }
-    label.textContent = slider.value + 'px';
-    updateSliderTrack(slider);
-
-    slider.addEventListener('input', () => {
-      const v = slider.value;
-      const step = getNodeStep(slider);
-      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
-      document.documentElement.style.setProperty(cssVar, v + unit);
-      localStorage.setItem(key, v);
-      updateSliderTrack(slider);
-    });
-
-    slider.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const step = getNodeStep(slider);
-      const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
-      slider.dispatchEvent(new Event('input'));
-    });
-  })();
-
-  (function() {
-    const slider = document.getElementById('searchWidthSlider');
-    const label = document.getElementById('searchWidthVal');
-    const key = 'searchWidth';
-    const cssVar = '--search-width';
-    const unit = 'px';
-
-    const saved = localStorage.getItem(key);
-    if (saved != null) {
-      slider.value = saved;
-      document.documentElement.style.setProperty(cssVar, saved + unit);
-    }
-    label.textContent = slider.value + 'px';
-    updateSliderTrack(slider);
-
-    slider.addEventListener('input', () => {
-      const v = slider.value;
-      const step = getNodeStep(slider);
-      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
-      document.documentElement.style.setProperty(cssVar, v + unit);
-      localStorage.setItem(key, v);
-      updateSliderTrack(slider);
-    });
-
-    slider.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const step = getNodeStep(slider);
-      const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
-      slider.dispatchEvent(new Event('input'));
-    });
-  })();
-
-  (function() {
-    const slider = document.getElementById('searchRadiusSlider');
-    const label = document.getElementById('searchRadiusVal');
-    const key = 'searchRadius';
-    const cssVar = '--search-radius';
-    const unit = 'px';
-
-    const saved = localStorage.getItem(key);
-    if (saved != null) {
-      slider.value = saved;
-      document.documentElement.style.setProperty(cssVar, saved + unit);
-    }
-    label.textContent = slider.value + 'px';
-    updateSliderTrack(slider);
-
-    slider.addEventListener('input', () => {
-      const v = slider.value;
-      const step = getNodeStep(slider);
-      label.textContent = formatSliderVal(roundToNode(v, step), step,slider);
-      document.documentElement.style.setProperty(cssVar, v + unit);
-      localStorage.setItem(key, v);
-      updateSliderTrack(slider);
-    });
-
-    slider.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const step = getNodeStep(slider);
-      const delta = e.deltaY > 0 ? -step : step;
-      slider.value = Math.max(parseFloat(slider.min), Math.min(parseFloat(slider.max), parseFloat(slider.value) + delta));
-      slider.dispatchEvent(new Event('input'));
-    });
-  })();
-
+  // 自定义搜索引擎的新增/编辑表单
   const customEngineForm = document.getElementById('customEngineForm');
   const customEngineName = document.getElementById('customEngineName');
   const customEngineUrl = document.getElementById('customEngineUrl');
@@ -2865,6 +2528,7 @@ if (engineSelectorEl && engineListEl) {
 
   const ceIconDefaultPreview = document.getElementById('customEngineIconDefaultPreview');
 
+  // 读取自定义引擎图标 SVG 文件并校验大小
   function readIconFile(file, inputEl, nameEl, previewEl, onDone) {
     if (!file.type.includes('svg')) {
       showToast(t('toastSelectSvg'), 3000);
@@ -2889,6 +2553,7 @@ if (engineSelectorEl && engineListEl) {
     readIconFile(file, customEngineIconDefault, customEngineIconDefaultName, ceIconDefaultPreview, (data) => { ceDefaultData = data; });
   });
 
+  // 打开表单(新增或编辑指定引擎),预填数据
   function openCustomEngineForm(editId) {
     const triggerKey = editId || 'add';
 
@@ -2954,6 +2619,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 关闭表单并归还 DOM 位置
   function closeCustomEngineForm() {
     customEngineForm.classList.remove('open');
     ceOpenFor = null;
@@ -2972,6 +2638,7 @@ if (engineSelectorEl && engineListEl) {
   });
 
   const customEngineDelete = document.getElementById('customEngineDelete');
+  // 删除自定义引擎(默认引擎不可删),并清理相关状态
   customEngineDelete.addEventListener('click', () => {
     if (!ceEditingId) return;
     const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
@@ -3003,6 +2670,7 @@ if (engineSelectorEl && engineListEl) {
     showToast(t('toastDeleteSuccess'));
   });
 
+  // 保存自定义引擎:校验名称/URL/图标,去重后写入
   customEngineSave.addEventListener('click', () => {
     const name = customEngineName.value.trim();
     const url = customEngineUrl.value.trim();
@@ -3039,6 +2707,7 @@ if (engineSelectorEl && engineListEl) {
     showToast(ceEditingId ? t('toastUpdateSuccess', { name: name }) : t('toastAddSuccess', { name: name }), 2000, 'success');
   });
 
+  // 配置导出/导入(JSON 备份还原全部 localStorage)
   const exportConfigBtn = document.getElementById('exportConfigBtn');
   const importConfigBtn = document.getElementById('importConfigBtn');
   const importConfigInput = document.getElementById('importConfigInput');
@@ -3091,13 +2760,14 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 重置全部设置(保留语言),恢复默认值
   const resetSettingsBtn = document.getElementById('sidebarResetBtn');
   if (resetSettingsBtn) {
     resetSettingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!confirm(t('confirmReset'))) return;
-      // 恢复默认：遍历清除本扩展全部配置键，新增配置自动覆盖、不会被遗漏。
-      // 需跨重置存活的键（如语言偏好）加入保留列表即可。
+
+
       const PRESERVE_ON_RESET = new Set(['language']);
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -3182,6 +2852,7 @@ if (engineSelectorEl && engineListEl) {
     });
   }
 
+  // 渲染引擎管理列表(启用开关 + 自定义引擎编辑按钮)
   function populateEngineManager() {
     const items = Array.from(document.querySelectorAll('.engine-item'))
       .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
@@ -3274,9 +2945,11 @@ if (engineSelectorEl && engineListEl) {
 
   window.populateEngineManager = populateEngineManager;
 
+  // 桌面右键菜单(打开设置/切换壁纸)
   const contextMenu = document.getElementById('contextMenu');
 
-  // 各来源的"切换下一张壁纸"处理函数，键与 wallpaperSource 取值对应；新增来源时在此注册。
+
+  // 按壁纸来源切换到下一张的处理逻辑
   const nextWallpaperHandlers = {
     local: function() {
       const pool = getRotationPool();
@@ -3323,6 +2996,7 @@ if (engineSelectorEl && engineListEl) {
     handler();
   }
 
+  // 空白区域右键弹出菜单(避开交互控件)
   document.addEventListener('contextmenu', (e) => {
 
     if (e.target.closest('.sidebar, .sidebar-overlay, .search-input, .search-wrapper, .modal-overlay, .settings-wrap, input, button, a')) return;
@@ -3357,6 +3031,7 @@ if (engineSelectorEl && engineListEl) {
   });
 })();
 
+// 引擎显示隐藏:禁用项移入隐藏归档,并保证始终有选中引擎
 (function(){
   const el = document.getElementById('engineList');
   if (!el) return;
@@ -3372,6 +3047,7 @@ if (engineSelectorEl && engineListEl) {
     if (!item.hasAttribute('data-index')) item.setAttribute('data-index', idx);
   });
 
+  // 按启用状态整理引擎列表,禁用时回退到默认引擎
   function applyEngineVisibility() {
     const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
 
@@ -3428,8 +3104,7 @@ if (engineSelectorEl && engineListEl) {
   window.applyEngineVisibility = applyEngineVisibility;
 })();
 
-injectCustomEngines();
-
+// 清空搜索历史按钮
 document.getElementById('clear-history-btn').addEventListener('click', () => {
   clearSearchHistory();
   hideHistoryDropdown();
@@ -3442,6 +3117,7 @@ document.addEventListener('click', (e) => {
 
 const defaultEngineManager = document.getElementById('sidebarDefaultEngineList');
 
+// 默认引擎管理:单选列表,切换时更新当前引擎
 function populateDefaultEngineManager() {
   if (!defaultEngineManager) return;
   const items = Array.from(document.querySelectorAll('.engine-item'))

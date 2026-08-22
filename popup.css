@@ -1,9 +1,11 @@
+/* 全局重置 */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* 弹窗配色变量(深色主题) */
 :root {
   --p-bg: #17181c;
   --p-text: #e8e8ea;
@@ -12,6 +14,7 @@
   --p-hover: rgba(255, 255, 255, 0.07);
 }
 
+/* 弹窗基础样式,注入主题色 */
 body {
   --accent: #2563eb;
   --accent-rgb: 37, 99, 235;
@@ -24,6 +27,7 @@ body {
   color: var(--p-text);
 }
 
+/* 浅色模式配色 */
 body.light {
   --p-bg: #f6f6f8;
   --p-text: #1c1c1f;
@@ -32,6 +36,7 @@ body.light {
   --p-hover: rgba(0, 0, 0, 0.06);
 }
 
+/* 品牌标识区 */
 .popup-brand {
   display: flex;
   align-items: center;
@@ -52,6 +57,7 @@ body.light {
   font-size: 13px;
 }
 
+/* "打开翻译边栏"主按钮 */
 .open-btn {
   width: 100%;
   padding: 10px 0;
@@ -67,3 +73,29 @@ body.light {
 
 .open-btn:hover { filter: brightness(1.08); }
 .open-btn:active { transform: scale(0.98); }
+
+/* "翻译此页/取消翻译"开关按钮(激活态主题色) */
+.page-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 0;
+  border: 1px solid var(--p-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--p-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.05s;
+}
+
+.page-btn:hover { border-color: rgba(var(--accent-rgb), 0.6); color: var(--accent); }
+
+.page-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.page-btn.active:hover { filter: brightness(1.08); }
+.page-btn:active { transform: scale(0.98); }

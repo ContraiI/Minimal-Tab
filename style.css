@@ -1,3 +1,4 @@
+/* 数码管字体(数字时钟用) */
 @font-face {
   font-family: 'DS-Digital';
   src: local('DS-Digital'),
@@ -7,6 +8,7 @@
   font-display: swap;
 }
 
+/* 搜索框可配置 CSS 变量(默认值) */
 :root {
   --search-offset-y: 0px;
   --search-offset-x: 0px;
@@ -16,6 +18,7 @@
   --search-color-rgb: 255, 255, 255;
 }
 
+/* 全局重置 */
 * {
   margin: 0;
   padding: 0;
@@ -23,6 +26,7 @@
   user-select: none;
 }
 
+/* 页面基础样式,注入主题色变量 */
 body {
   --accent: #2563eb;
   --accent-rgb: 37, 99, 235;
@@ -37,6 +41,7 @@ body {
   padding: 0 20px;
 }
 
+/* 壁纸双图层(交叉淡入切换) */
 .bg-layer {
   position: fixed;
   top: 0;
@@ -52,6 +57,7 @@ body {
   filter: blur(var(--blur-px, 0px));
 }
 
+/* 壁纸遮罩层 */
 body::before {
   content: "";
   position: fixed;
@@ -73,6 +79,7 @@ body::before {
   z-index: 1;
 }
 
+/* 搜索框容器(可整体隐藏) */
 .search-container {
   width: 100%;
   position: relative;
@@ -80,6 +87,7 @@ body::before {
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
+/* 搜索框定位(宽度/偏移) */
 .search-wrapper {
   width: var(--search-width, 100%);
   height: 45px;
@@ -97,6 +105,7 @@ body::before {
   z-index: 1;
 }
 
+/* 搜索框本体(圆角/边框/placeholder 随搜索色) */
 .search-input {
   width: 100%;
   height: 100%;
@@ -144,6 +153,7 @@ body::before {
   opacity: 0;
 }
 
+/* 引擎选择器(左图标 + 下拉列表) */
 .engine-selector {
   position: absolute;
   left: 15px;
@@ -154,6 +164,7 @@ body::before {
   pointer-events: auto;
 }
 
+/* 当前引擎双图标:白色掩码(未聚焦) / 彩色图(聚焦) */
 .engine-icon-wrap {
   position: relative;
   width: 24px;
@@ -185,7 +196,7 @@ body::before {
 .engine-icon-default { opacity: 0; object-fit: contain; }
 
 .engine-icon-wrap.focused .engine-icon-white { opacity: 0; }
-.engine-icon-wrap.focused .engine-icon-default { opacity: 1; } 
+.engine-icon-wrap.focused .engine-icon-default { opacity: 1; }
 
 .engine-icon {
   width: 24px;
@@ -201,6 +212,7 @@ body::before {
   filter: brightness(0) invert(1);
 }
 
+/* 引擎下拉列表 */
 .engine-list {
   position: absolute;
   top: 30px;
@@ -251,6 +263,7 @@ body::before {
   color: #ffffff;
 }
 
+/* 搜索框右侧按钮(清空/搜索) */
 .search-btns-wrap {
   position: absolute;
   right: 12px;
@@ -326,6 +339,7 @@ body::before {
 .search-btn:hover { background-color: #0052a3 !important; }
 .search-btn:hover svg { fill: #e0e0e0 !important; }
 
+/* 搜索历史/建议下拉 */
 .history-dropdown {
   position: absolute;
   top: 100%;
@@ -450,6 +464,13 @@ body::before {
   fill: #666;
 }
 
+/* 历史项命中高亮 */
+.history-item .history-text .hl {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* 数字时钟 */
 .digital-clock {
   font-family: 'DS-Digital', monospace;
   font-size: 80px;
@@ -471,11 +492,12 @@ body::before {
 .digital-clock.follow-mode.pos-below { top: 100%; bottom: auto; }
 .digital-clock.follow-mode.pos-above { top: auto; bottom: 100%; }
 
+/* 顶部 Toast 提示 */
 .toast {
   position: fixed;
   top: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(-120px); 
+  transform: translateX(-50%) translateY(-120px);
   background: rgba(211, 47, 47, 0.92);
   color: #fff;
   padding: 10px 24px;
@@ -498,6 +520,7 @@ body::before {
   opacity: 1;
 }
 
+/* 搜索区整体(时钟 + 搜索框) */
 .search-block {
   width: 100%;
   display: flex;
@@ -507,6 +530,7 @@ body::before {
   position: relative;
 }
 
+/* 右上角设置入口(悬停显示) */
 .settings-wrap {
   position: absolute;
   top: 8px;
@@ -536,6 +560,7 @@ body::before {
   cursor: pointer;
 }
 
+/* 引擎/侧边栏开关行与滑动开关 */
 .engine-toggle {
   display: flex;
   align-items: center;
@@ -608,6 +633,7 @@ body::before {
   opacity: 0.4;
 }
 
+/* 三段式分段选择器(系统/浅色/深色、壁纸来源、语言等) */
 .theme-mode-seg {
   display: flex;
   gap: 1px;
@@ -689,6 +715,7 @@ body::before {
   color: #fff;
 }
 
+/* 侧边栏遮罩 */
 .sidebar-overlay {
   position: fixed;
   top: 0;
@@ -708,6 +735,7 @@ body::before {
   transition: opacity 0.3s ease, visibility 0s 0s;
 }
 
+/* 右侧设置侧边栏 */
 .sidebar {
   position: fixed;
   top: 0;
@@ -748,6 +776,7 @@ body::before {
   overflow: hidden;
 }
 
+/* 侧边栏导航 */
 .sidebar-nav {
   position: relative;
   width: 110px;
@@ -779,6 +808,7 @@ body::before {
   color: rgb(var(--accent-rgb));
 }
 
+/* 导航选中项浮动高亮块 */
 .nav-highlight {
   position: absolute;
   left: 8px;
@@ -844,6 +874,7 @@ body.light-mode .sidebar-content {
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
+/* 侧边栏内容面板(切换时淡入淡出) */
 .sidebar-panel {
   opacity: 0;
   visibility: hidden;
@@ -866,6 +897,7 @@ body.light-mode .sidebar-content {
   transition: opacity 0.18s ease, visibility 0s 0s;
 }
 
+/* 侧边栏分区标签 */
 .sidebar-section-label {
   font-size: 11px;
   color: #888;
@@ -880,6 +912,7 @@ body.light-mode .sidebar-content {
 
 .sidebar.light .sidebar-section-label { color: rgb(var(--sidebar-label-rgb, 136, 136, 136)); border-top-color: rgba(0, 0, 0, 0.08); }
 
+/* 可折叠分区(展开/收起动画) */
 .section-collapse-header {
   cursor: pointer;
   user-select: none;
@@ -922,6 +955,7 @@ body.light-mode .sidebar-content {
   border-top-color: rgba(0, 0, 0, 0.08);
 }
 
+/* 搜索框控制组(随启用开关折叠) */
 #searchBoxControls {
   max-height: 600px;
   opacity: 1;
@@ -941,6 +975,7 @@ body.light-mode .sidebar-content {
   pointer-events: none;
 }
 
+/* 壁纸缩略图(点击打开管理弹窗) */
 .sidebar-wallpaper-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -979,6 +1014,7 @@ body.light-mode .sidebar-content {
   display: none;
 }
 
+/* 颜色预设色块行(主题色/时钟色/搜索色) */
 .theme-color-row {
   display: flex;
   align-items: center;
@@ -1000,6 +1036,7 @@ body.light-mode .sidebar-content {
 .theme-color-swatch:hover { transform: scale(1.15); }
 .theme-color-swatch.active { border-color: #fff; }
 
+/* 取色器触发色块(彩虹渐变) */
 .theme-color-swatch.picker-trigger {
   border: none;
   box-shadow: 0 0 0 2px transparent;
@@ -1009,6 +1046,7 @@ body.light-mode .sidebar-content {
   box-shadow: 0 0 0 2px #fff;
 }
 
+/* 时钟/搜索框颜色联动按钮 */
 .color-link-btn {
   display: flex;
   align-items: center;
@@ -1034,6 +1072,7 @@ body.light-mode .sidebar-content {
 .sidebar.light .color-link-btn svg { fill: #333; }
 .sidebar.light .color-link-btn.active svg { fill: #111; }
 
+/* Bing 壁纸缩略图列表(横向滚动) */
 .bing-wallpaper-list {
   display: flex;
   gap: 8px;
@@ -1066,6 +1105,7 @@ body.light-mode .sidebar-content {
 #wallpaperOverlayGroup.hidden { display: none; }
 #wallpaperRotateGroup.hidden { display: none; }
 
+/* 取色器面板(色盘 + 色相条 + hex 输入) */
 .color-picker-panel {
   margin-top: 0;
   padding: 0 8px;
@@ -1146,6 +1186,7 @@ body.light-mode .sidebar-content {
   background: rgba(0,0,0,0.03);
 }
 
+/* 侧边栏滑杆组(标签 + 滑杆 + 数值) */
 .sidebar-slider-group {
   display: flex;
   align-items: center;
@@ -1198,6 +1239,7 @@ body.light-mode .sidebar-content {
   text-align: right;
 }
 
+/* 壁纸轮换行(立即轮换 + 间隔下拉) */
 .sidebar-rotate-row {
   display: flex;
   align-items: center;
@@ -1222,6 +1264,7 @@ body.light-mode .sidebar-content {
   color: #333;
 }
 
+/* 轮换/建议/时钟位置等下拉控件 */
 .rotate-dropdown {
   position: relative;
   flex-shrink: 0;
@@ -1295,6 +1338,7 @@ body.light-mode .sidebar-content {
   color: #000;
 }
 
+/* 下拉展开列表 */
 .rotate-list {
   position: absolute;
   right: 0;
@@ -1361,10 +1405,12 @@ body.light-mode .sidebar-content {
   color: #333;
 }
 
+/* 引擎管理/默认引擎列表容器 */
 .sidebar-engine-list {
   margin-bottom: 8px;
 }
 
+/* 侧边栏操作按钮(危险类为红色) */
 .sidebar-action-btn {
   display: flex;
   align-items: center;
@@ -1393,6 +1439,7 @@ body.light-mode .sidebar-content {
   color: #fff;
 }
 
+/* 导出/导入配置按钮组 */
 .backup-row {
   display: flex;
   gap: 8px;
@@ -1431,6 +1478,7 @@ body.light-mode .sidebar-content {
   background: rgba(var(--accent-rgb), 0.15);
 }
 
+/* 浅色模式侧边栏配色(文字色随透明度加深) */
 .sidebar.light {
   background: rgba(240, 240, 240, var(--sidebar-opacity, 1));
   color: rgb(var(--sidebar-main-rgb, 51, 51, 51));
@@ -1464,6 +1512,7 @@ body.light-mode .sidebar-content {
   border-top-color: rgba(0, 0, 0, 0.08);
 }
 
+/* 时钟自定义位置:坐标输入 + 锁定按钮 */
 #clockCustomRow {
   overflow: visible;
 }
@@ -1519,6 +1568,7 @@ body.light-mode .sidebar-content {
   border-color: #ccc;
   color: #333;
 }
+/* 锁定/解锁按钮 */
 .lock-btn {
   width: 28px;
   height: 28px;
@@ -1588,6 +1638,7 @@ body.light-mode .sidebar-content {
 .sidebar.light .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
 .sidebar.light .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
 
+/* 自定义搜索引擎表单(滑入展开) */
 .custom-engine-form {
   max-height: 0;
   overflow: hidden;
@@ -1724,6 +1775,7 @@ body.light-mode .sidebar-content {
   border-color: #d32f2f;
 }
 
+/* 模态弹窗遮罩(壁纸管理等) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1855,6 +1907,7 @@ body.light-mode .wallpaper-card .modal-btns {
   background: #f0f0f0;
 }
 
+/* 壁纸管理卡片 */
 .wallpaper-card {
   width: 900px;
   min-height: 500px;
@@ -1873,6 +1926,7 @@ body.light-mode .wallpaper-card .modal-btns {
   transition: background 0.35s ease;
 }
 
+/* 壁纸管理工具栏(导入/轮换/恢复/清空/存储占用) */
 .wallpaper-toolbar {
   display: flex;
   align-items: center;
@@ -1898,6 +1952,7 @@ body.light-mode .wallpaper-card .modal-btns {
 }
 .toolbar-spacer { flex: 1; }
 
+/* 壁纸工具栏按钮(主/次/危险三种) */
 .btn-wallpaper {
   display: inline-flex;
   align-items: center;
@@ -1942,7 +1997,7 @@ body.light-mode .wallpaper-card .modal-btns {
   flex-shrink: 0;
 }
 
-/* Light mode toolbar */
+
 body.light-mode .wallpaper-toolbar { border-bottom-color: rgba(0,0,0,0.08); }
 body.light-mode .toolbar-divider { background: rgba(0,0,0,0.12); }
 body.light-mode .btn-wallpaper-secondary { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.65); }
@@ -1951,6 +2006,7 @@ body.light-mode .btn-wallpaper-danger { background: rgba(0,0,0,0.04); color: rgb
 body.light-mode .btn-wallpaper-danger:hover { background: rgba(211,47,47,0.12); color: #d32f2f; }
 body.light-mode .wallpaper-toolbar .storage-info { color: rgba(0,0,0,0.4); }
 
+/* 壁纸历史网格(4 列) */
 .wallpaper-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1958,6 +2014,7 @@ body.light-mode .wallpaper-toolbar .storage-info { color: rgba(0,0,0,0.4); }
   margin-bottom: 16px;
 }
 
+/* 壁纸卡片(悬停浮起,当前项高亮) */
 .wallpaper-item {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -1990,7 +2047,7 @@ body.light-mode .wallpaper-toolbar .storage-info { color: rgba(0,0,0,0.4); }
   box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35), 0 2px 12px rgba(0,0,0,0.25);
 }
 
-/* Light mode card adjustments */
+
 body.light-mode .wallpaper-item {
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   background: rgba(0,0,0,0.04);
@@ -2002,6 +2059,7 @@ body.light-mode .wallpaper-item.active {
   box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35), 0 2px 12px rgba(0,0,0,0.1);
 }
 
+/* 壁纸删除按钮(悬停显示,变红) */
 .wallpaper-delete {
   position: absolute;
   top: 6px;
@@ -2041,6 +2099,7 @@ body.light-mode .wallpaper-item.active {
   transform: scale(1.1);
 }
 
+/* 轮换勾选框(编辑模式下弹出) */
 .wallpaper-rotate-check {
   position: absolute;
   top: 6px;
@@ -2102,6 +2161,7 @@ body.light-mode .wallpaper-item.active {
 .wallpaper-grid.edit-mode .wallpaper-item { cursor: default; }
 .wallpaper-grid.edit-mode-transitioning { opacity: 0.6; pointer-events: none; }
 
+/* 壁纸空状态提示 */
 .wallpaper-empty {
   grid-column: 1 / -1;
   display: flex;
@@ -2123,6 +2183,7 @@ body.light-mode .wallpaper-item.active {
   opacity: 0.5;
 }
 
+/* 响应式:窄屏(≤800px)与小屏(≤500px)适配 */
 @media (max-width: 800px) {
   .digital-clock { font-size: 50px; letter-spacing: 5px; }
   .search-btns-wrap { right: 5px; gap: 3px; }
@@ -2141,6 +2202,7 @@ body.light-mode .wallpaper-item.active {
   .sidebar-nav-item { padding: 10px 10px; font-size: 12px; margin-right: 4px; }
 }
 
+/* 时钟右键菜单(自定义模式输入坐标/锁定) */
 .clock-context-menu {
   position: fixed;
   z-index: 99999;
@@ -2240,6 +2302,7 @@ body.light-mode .clock-menu-lock svg {
   fill: #666;
 }
 
+/* 页面空白处右键菜单(切换壁纸/设置) */
 .context-menu {
   position: fixed;
   z-index: 99999;
@@ -2272,6 +2335,7 @@ body.light-mode .clock-menu-lock svg {
   color: #fff;
 }
 
+/* 全局禁用浏览器自动填充样式 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {

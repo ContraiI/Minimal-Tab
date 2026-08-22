@@ -51,31 +51,63 @@ function fuzzyVariants(py) {
   return r.filter(v => v && v !== py);
 }
 
-function matchPinyin(item, filter) {
+// 本地搜索历史联想打分:返回 null(不匹配)或 { score, first, hits }
+// score 越大匹配质量越高;first 为首个命中下标(拼音命中为 -1);hits 为原文命中区间,仅文本命中时返回用于高亮
+function scorePinyinMatch(item, filter) {
   try {
     const f = filter.toLowerCase().replace(/[^a-z0-9一-鿿]/g, '');
-    if (!f) return true;
     const il = item.toLowerCase();
+    if (!f) return { score: 0, first: -1, hits: [] };
 
-    if (il.includes(f) || (f.length > 1 && isSubsequence(f, il))) return true;
+    // 子序列命中位点:返回 long 中匹配下标数组,非子序列返回 null
+    function subseqPos(short, long) {
+      let si = 0, pos = [];
+      for (let i = 0; i < long.length && si < short.length; i++) {
+        if (long[i] === short[si]) { pos.push(i); si++; }
+      }
+      return si === short.length ? pos : null;
+    }
+    // 紧密度加分:命中跨度越小越接近连续(上限 +10)
+    const tightness = (pos) => Math.round(10 * f.length / (pos[pos.length - 1] - pos[0] + 1));
 
+    // 1) 原文文本匹配(可返回 hits 高亮)
+    if (il === f) return { score: 1000, first: 0, hits: [[0, il.length]] };
+    if (il.startsWith(f)) return { score: 900, first: 0, hits: [[0, f.length]] };
+    {
+      const idx = il.indexOf(f);
+      if (idx >= 0) return { score: 800, first: idx, hits: [[idx, idx + f.length]] };
+    }
+    {
+      const pos = subseqPos(f, il);
+      if (pos) return { score: 700 + tightness(pos), first: pos[0], hits: [[pos[0], pos[pos.length - 1] + 1]] };
+    }
+
+    // 2) 拼音简拼/全拼匹配(命中不高亮)
     const pyFL = toPinyinFL(item);
     if (pyFL) {
-      if (isSubsequence(f, pyFL)) return true;
-
-      for (const v of fuzzyVariants(f)) {
-        if (v && isSubsequence(v, pyFL)) return true;
+      if (pyFL.startsWith(f)) return { score: 600, first: -1, hits: [] };
+      {
+        const pos = subseqPos(f, pyFL);
+        if (pos) return { score: 550 + tightness(pos), first: -1, hits: [] };
+      }
+    }
+    const fullPy = toPinyinFull(item);
+    if (fullPy) {
+      if (fullPy.startsWith(f)) return { score: 480, first: -1, hits: [] };
+      {
+        const pos = subseqPos(f, fullPy);
+        if (pos) return { score: 440 + tightness(pos), first: -1, hits: [] };
       }
     }
 
-    const fullPy = toPinyinFull(item);
-    if (fullPy) {
-      if (fullPy.startsWith(f) || isSubsequence(f, fullPy)) return true;
-
+    // 3) 模糊音(zh↔z 等)子序列匹配
+    if (pyFL || fullPy) {
       for (const v of fuzzyVariants(f)) {
-        if (v && (fullPy.startsWith(v) || isSubsequence(v, fullPy))) return true;
+        if (!v) continue;
+        if (pyFL && isSubsequence(v, pyFL)) return { score: 400, first: -1, hits: [] };
+        if (fullPy && (fullPy.startsWith(v) || isSubsequence(v, fullPy))) return { score: 400, first: -1, hits: [] };
       }
     }
   } catch(e) {}
-  return false;
+  return null;
 }

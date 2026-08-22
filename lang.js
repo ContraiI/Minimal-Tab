@@ -178,6 +178,13 @@ window.I18N_DATA = {
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: '打开翻译边栏',
+    popupTranslatePage: '翻译此页',
+    popupCancelTranslate: '取消翻译',
+
+    sectionPageTrans: '网页翻译',
+    pageTransTarget: '目标语言',
+    pageTransFollowSidebar: '跟随边栏翻译',
+    pageTransBall: '悬浮球',
 
     langZhCn: '中文',
     langZhTw: '繁体中文',
@@ -401,6 +408,13 @@ window.I18N_DATA = {
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: 'Open Translator',
+    popupTranslatePage: 'Translate This Page',
+    popupCancelTranslate: 'Cancel Translation',
+
+    sectionPageTrans: 'Web Page Translation',
+    pageTransTarget: 'Target Language',
+    pageTransFollowSidebar: 'Follow Sidebar Translation',
+    pageTransBall: 'Floating Button',
 
     langZhCn: 'Chinese',
     langZhTw: 'Traditional Chinese',

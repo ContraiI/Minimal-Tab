@@ -1,9 +1,10 @@
 (function () {
   'use strict';
 
-  // ===================== 样式跟随（立即执行，避免闪烁） =====================
+
   var ACCENT_DEFAULT = '#2563eb';
 
+  // 应用主题色到 CSS 变量,并根据亮度选择对比文字色
   function applyAccent(hex) {
     var h = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : ACCENT_DEFAULT;
     var r = parseInt(h.slice(1, 3), 16);
@@ -19,6 +20,7 @@
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
+  // 应用主题模式(系统/浅色/深色)
   function applyThemeMode() {
     var mode = localStorage.getItem('themeMode') || 'system';
     var isDark = mode === 'system' ? getSystemDark() : mode === 'dark';
@@ -32,7 +34,8 @@
     if ((localStorage.getItem('themeMode') || 'system') === 'system') applyThemeMode();
   });
 
-  // 其它扩展页（如 newtab）改动设置时，边栏实时同步
+
+  // 同步其他标签页对主题/语言的修改
   window.addEventListener('storage', function (e) {
     if (e.key === 'accentColor') applyAccent(e.newValue);
     if (e.key === 'themeMode') applyThemeMode();
@@ -42,60 +45,18 @@
     }
   });
 
-  // ===================== 语言列表 =====================
-  // native 为母语名；本地名由 langKeyOf(code) 生成 i18n 词条（如 langEn），
-  // 显示为「本地名(母语名)」，例如中文界面下「英语(English)」。
-  var LANGS = [
-    { code: 'auto', native: '' },
-    { code: 'zh-CN', native: '简体中文' },
-    { code: 'zh-TW', native: '繁體中文' },
-    { code: 'en', native: 'English' },
-    { code: 'ja', native: '日本語' },
-    { code: 'ko', native: '한국어' },
-    { code: 'fr', native: 'Français' },
-    { code: 'de', native: 'Deutsch' },
-    { code: 'es', native: 'Español' },
-    { code: 'ru', native: 'Русский' },
-    { code: 'it', native: 'Italiano' },
-    { code: 'pt', native: 'Português' },
-    { code: 'vi', native: 'Tiếng Việt' },
-    { code: 'th', native: 'ไทย' },
-    { code: 'ar', native: 'العربية' },
-    { code: 'hi', native: 'हिन्दी' },
-    { code: 'nl', native: 'Nederlands' },
-    { code: 'pl', native: 'Polski' },
-    { code: 'tr', native: 'Türkçe' },
-    { code: 'sv', native: 'Svenska' },
-    { code: 'da', native: 'Dansk' },
-    { code: 'fi', native: 'Suomi' },
-    { code: 'no', native: 'Norsk' },
-    { code: 'el', native: 'Ελληνικά' },
-    { code: 'cs', native: 'Čeština' },
-    { code: 'hu', native: 'Magyar' },
-    { code: 'ro', native: 'Română' },
-    { code: 'uk', native: 'Українська' },
-    { code: 'id', native: 'Bahasa Indonesia' },
-    { code: 'ms', native: 'Bahasa Melayu' },
-    { code: 'fil', native: 'Filipino' },
-    { code: 'bn', native: 'বাংলা' },
-    { code: 'ur', native: 'اردو' },
-    { code: 'fa', native: 'فارسی' },
-    { code: 'he', native: 'עברית' },
-    { code: 'ta', native: 'தமிழ்' },
-    { code: 'te', native: 'తెలుగు' },
-    { code: 'ml', native: 'മലയാളം' },
-    { code: 'kn', native: 'ಕನ್ನಡ' },
-    { code: 'mr', native: 'मराठी' },
-    { code: 'pa', native: 'ਪੰਜਾਬੀ' },
-    { code: 'sw', native: 'Kiswahili' }
-  ];
 
+
+  var LANGS = TranslateEngine.LANGS;
+
+  // 语言代码转 i18n key(如 zh-CN → langZhCn)
   function langKeyOf(code) {
     return 'lang' + code.split('-').map(function (part) {
       return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
     }).join('');
   }
 
+  // 语言选项的显示文本(本地化名 + 原生名)
   function labelOf(code) {
     var entry = LANGS.find(function (l) { return l.code === code; });
     if (!entry) return code;
@@ -103,7 +64,8 @@
     return t(langKeyOf(code)) + '(' + entry.native + ')';
   }
 
-  // ===================== 独立翻译设置（trans_*，与 newtab 隔离） =====================
+
+  // 翻译设置与当前语言状态
   var LS = {
     source: 'trans.sourceLang',
     target: 'trans.targetLang',
@@ -115,238 +77,57 @@
   var lastRealSource = sourceLang !== 'auto' ? sourceLang : null;
   var DEBOUNCE_MS = 600;
 
+  // 保存源/目标语言并同步到 chrome.storage
   function saveSettings() {
     localStorage.setItem(LS.source, sourceLang);
     localStorage.setItem(LS.target, targetLang);
+    syncTransToStorage();
+  }
+
+
+  // 把全部 trans.* 设置同步给后台(供整页翻译使用)
+  function syncTransToStorage() {
+    var obj = {};
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('trans.') === 0) obj[k] = localStorage.getItem(k);
+    }
+    chrome.storage.local.set(obj);
   }
 
   var srcDropdown = null;
   var tgtDropdown = null;
+  var pageDropdowns = [];
 
   function renderLangUI() {
     if (srcDropdown) srcDropdown.updateTrigger();
     if (tgtDropdown) tgtDropdown.updateTrigger();
+    pageDropdowns.forEach(function (d) { d.updateTrigger(); });
   }
 
-  function nativeName(code) {
-    var entry = LANGS.find(function (l) { return l.code === code; });
-    return entry ? entry.native : code;
-  }
-
+  // 引擎显示名(优先 i18n key)
   function engineName(eng) {
     return eng.nameKey ? t(eng.nameKey) : eng.name;
   }
 
-  // 读取引擎在设置页配置的字段值（fields 中按 id 找）
-  function engineField(eng, id) {
-    var f = (eng.fields || []).find(function (x) { return x.id === id; });
-    return f ? (localStorage.getItem(f.key) || '') : '';
+
+
+  var ENGINES = TranslateEngine.ENGINES;
+
+  // 把侧边栏的引擎配置同步给 TranslateEngine
+  function syncSidebarEngine() {
+    var eng = ENGINES[ENGINE] || ENGINES.google;
+    var fields = {};
+    (eng.fields || []).forEach(function (f) { fields[f.id] = localStorage.getItem(f.key) || ''; });
+    TranslateEngine.setSettings(ENGINE, fields);
   }
 
-  // 非官方 Bing 翻译：抓取翻译页解析反滥用 token（IG/key/token），免费但可能随页面改版失效
-  var BING_AUTH = { host: 'www.bing.com', ig: '', token: '', key: '', iid: 'translator.5028', fetchedAt: 0 };
 
-  function getBingAuth() {
-    if (BING_AUTH.token && Date.now() - BING_AUTH.fetchedAt < 30 * 60 * 1000) {
-      return Promise.resolve(BING_AUTH);
-    }
-    return fetch('https://www.bing.com/translator').then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.text().then(function (html) {
-        var ig = (html.match(/IG:"([A-Za-z0-9]+)"/) || [])[1];
-        var m = html.match(/params_AbusePreventionHelper\s*=\s*\[(\d+),"([^"]+)",\d+\]/);
-        if (!ig || !m || !m[1] || !m[2]) {
-          var e = new Error('BING_AUTH_PARSE');
-          e.code = 'BING_AUTH_PARSE';
-          throw e;
-        }
-        BING_AUTH.host = res.url ? new URL(res.url).host : BING_AUTH.host;
-        BING_AUTH.ig = ig;
-        BING_AUTH.key = m[1];
-        BING_AUTH.token = m[2];
-        BING_AUTH.fetchedAt = Date.now();
-        return BING_AUTH;
-      });
-    });
-  }
-
-  // ===================== 翻译引擎（可插拔） =====================
-  // 每个引擎：name / nameKey(可选) / fields(可选，设置页动态渲染) / codes(可选，语言码映射) / translate
-  var ENGINES = {
-    google: {
-      name: 'Google',
-      translate: function (text, from, to) {
-        var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' +
-          from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text);
-        return fetch(url).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        }).then(function (data) {
-          if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('bad response');
-          return data[0]
-            .map(function (seg) { return Array.isArray(seg) ? seg[0] : ''; })
-            .filter(Boolean)
-            .join('');
-        });
-      }
-    },
-    microsoft: {
-      name: 'Microsoft Translator',
-      fields: [
-        { id: 'key', key: 'trans.msKey', labelKey: 'transSettingsKey', type: 'password' },
-        {
-          id: 'region', key: 'trans.msRegion', labelKey: 'transSettingsRegion', type: 'select',
-          emptyLabelKey: 'transRegionNone',
-          options: [
-            '', 'eastasia', 'southeastasia', 'eastus', 'eastus2', 'westus', 'westus2', 'westus3',
-            'centralus', 'southcentralus', 'northcentralus', 'westcentralus', 'northeurope', 'westeurope',
-            'japaneast', 'japanwest', 'koreacentral', 'koreasouth', 'australiaeast', 'australiasoutheast',
-            'brazilsouth', 'southafricanorth', 'uaenorth', 'centralindia', 'southindia', 'westindia',
-            'canadacentral', 'canadaeast', 'francecentral', 'germanywestcentral', 'norwayeast',
-            'switzerlandnorth', 'swedencentral', 'qatarcentral', 'polandcentral', 'italynorth', 'israelcentral'
-          ]
-        }
-      ],
-      codes: { 'zh-CN': 'zh-Hans', 'zh-TW': 'zh-Hant' },
-      translate: function (text, from, to) {
-        var key = engineField(this, 'key');
-        if (!key) {
-          var err = new Error('NEED_KEY');
-          err.code = 'NEED_KEY';
-          return Promise.reject(err);
-        }
-        var region = engineField(this, 'region');
-        var toCode = this.codes[to] || to;
-        var fromCode = from === 'auto' ? '' : (this.codes[from] || from);
-        var url = 'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=' +
-          encodeURIComponent(toCode);
-        if (fromCode) url += '&from=' + encodeURIComponent(fromCode);
-        var headers = {
-          'Ocp-Apim-Subscription-Key': key,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        };
-        if (region) headers['Ocp-Apim-Subscription-Region'] = region;
-        return fetch(url, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify([{ Text: text }])
-        }).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        }).then(function (data) {
-          if (!Array.isArray(data) || !data[0] || !data[0].translations || !data[0].translations[0]) {
-            throw new Error('bad response');
-          }
-          return data[0].translations[0].text;
-        });
-      }
-    },
-    bing: {
-      name: 'Microsoft (Unofficial)',
-      nameKey: 'transEngineBing',
-      codes: { 'zh-CN': 'zh-Hans', 'zh-TW': 'zh-Hant' },
-      translate: function (text, from, to) {
-        var self = this;
-        var doRequest = function () {
-          return getBingAuth().then(function (auth) {
-            var toCode = self.codes[to] || to;
-            var fromCode = from === 'auto' ? 'auto-detect' : (self.codes[from] || from);
-            var url = 'https://' + auth.host + '/ttranslatev3?isVertical=1&&IG=' + encodeURIComponent(auth.ig) +
-              '&IID=' + encodeURIComponent(auth.iid) + '&token=' + encodeURIComponent(auth.token) +
-              '&key=' + encodeURIComponent(auth.key);
-            var body = 'fromLang=' + encodeURIComponent(fromCode) +
-              '&text=' + encodeURIComponent(text) +
-              '&to=' + encodeURIComponent(toCode);
-            return fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: body
-            }).then(function (res) {
-              if (res.status === 205 || res.status === 401 || res.status === 403) {
-                var e = new Error('BING_AUTH_STALE');
-                e.code = 'BING_AUTH_STALE';
-                throw e;
-              }
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              return res.json();
-            }).then(function (data) {
-              if (!Array.isArray(data) || !data[0] || !data[0].translations || !data[0].translations[0]) {
-                throw new Error('bad response');
-              }
-              return data[0].translations[0].text;
-            });
-          });
-        };
-        return doRequest().catch(function (err) {
-          // token 过期/被拦 → 强制重新获取后再试一次
-          if (err && err.code === 'BING_AUTH_STALE') {
-            BING_AUTH.fetchedAt = 0;
-            return doRequest();
-          }
-          throw err;
-        });
-      }
-    },
-    custom: {
-      name: 'Custom (OpenAI compatible)',
-      nameKey: 'transEngineCustom',
-      fields: [
-        { id: 'url', key: 'trans.custom.url', labelKey: 'transCustomUrl', type: 'text', placeholderKey: 'transCustomUrlPlaceholder' },
-        { id: 'key', key: 'trans.custom.key', labelKey: 'transSettingsKey', type: 'password' },
-        { id: 'model', key: 'trans.custom.model', labelKey: 'transCustomModel', type: 'text', placeholderKey: 'transCustomModelPlaceholder', fetchModels: true },
-        { id: 'prompt', key: 'trans.custom.prompt', labelKey: 'transCustomPrompt', type: 'text' }
-      ],
-      translate: function (text, from, to) {
-        var url = engineField(this, 'url');
-        var key = engineField(this, 'key');
-        var model = engineField(this, 'model');
-        if (!url || !key || !model) {
-          var err = new Error('MISSING_CONFIG');
-          err.code = 'MISSING_CONFIG';
-          return Promise.reject(err);
-        }
-        var srcName = from === 'auto' ? '' : nativeName(from);
-        var tgtName = nativeName(to);
-        var customPrompt = engineField(this, 'prompt');
-        var systemPrompt = customPrompt
-          ? customPrompt.replace(/\{source\}/g, srcName || 'auto').replace(/\{target\}/g, tgtName)
-          : 'You are a professional translation engine. ' +
-            (srcName
-              ? 'Translate the text from ' + srcName + ' to ' + tgtName + '.'
-              : 'Detect the source language and translate the text into ' + tgtName + '.') +
-            ' Output only the translated text, without quotes or explanations.';
-        var headers = { 'Content-Type': 'application/json' };
-        if (key) headers['Authorization'] = 'Bearer ' + key;
-        var body = {
-          model: model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: text }
-          ],
-          temperature: 0.3
-        };
-        var endpoint = url.replace(/\/+$/, '') + '/chat/completions';
-        return fetch(endpoint, {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(body)
-        }).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        }).then(function (data) {
-          if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) throw new Error('bad response');
-          return data.choices[0].message.content;
-        });
-      }
-    }
-  };
-
-  // 容错：localStorage 可能残留已移除引擎的 id，归一化回默认引擎
   if (!ENGINES[ENGINE]) ENGINE = 'google';
 
-  // ===================== DOM 就绪后初始化 =====================
+
   document.addEventListener('DOMContentLoaded', function () {
+    // 翻译输入/输出与结果状态 DOM
     var inputEl = document.getElementById('transInput');
     var resultText = document.getElementById('resultText');
     var resultStatus = document.getElementById('resultStatus');
@@ -356,14 +137,16 @@
     var debounceTimer = null;
     var seq = 0;
 
+    // 显示翻译状态/错误信息
     function setStatus(text, isError) {
       resultStatus.textContent = text || '';
       resultStatus.classList.toggle('hidden', !text);
       resultStatus.classList.toggle('error', !!isError);
     }
 
+    // 清空结果并取消进行中的翻译
     function clearResult() {
-      seq++;                     // 使在途请求失效
+      seq++;
       clearTimeout(debounceTimer);
       resultText.textContent = '';
       setStatus('');
@@ -374,11 +157,13 @@
       setStatus('');
     }
 
+    // 执行翻译,通过序号丢弃过期结果
     function doTranslate(text) {
       var id = ++seq;
       setStatus(t('transTranslating'));
-      ENGINES[ENGINE].translate(text, sourceLang, targetLang).then(function (out) {
-        if (id !== seq) return;  // 丢弃过期响应
+      syncSidebarEngine();
+      TranslateEngine.translateText(text, sourceLang, targetLang).then(function (out) {
+        if (id !== seq) return;
         renderResult(out);
       }).catch(function (err) {
         if (id !== seq) return;
@@ -392,6 +177,7 @@
       });
     }
 
+    // 输入防抖后触发翻译
     function scheduleTranslate() {
       clearTimeout(debounceTimer);
       var text = inputEl.value.trim();
@@ -401,7 +187,8 @@
 
     function retranslate() { scheduleTranslate(); }
 
-    // ---- 语言下拉（轻量自定义 dropdown，样式对齐 newtab） ----
+
+    // 下拉选择框工厂:渲染选项、更新触发器文案、点击关闭
     function buildDropdown(wrapEl, listEl, options, labelFn, getActive, onChange) {
       function render() {
         listEl.innerHTML = '';
@@ -462,7 +249,8 @@
       }
     );
 
-    // ---- 快捷调换 ----
+
+    // 交换源/目标语言(自动检测时取上次真实源语言)
     swapBtn.addEventListener('click', function () {
       if (sourceLang === 'auto') {
         var oldTarget = targetLang;
@@ -481,15 +269,16 @@
       retranslate();
     });
 
-    // ---- 输入交互 ----
+
     var justFocused = false;
 
+    // 聚焦时全选文本(先聚焦不选中,避免破坏选择)
     inputEl.addEventListener('focus', function () {
       inputEl.select();
       justFocused = true;
     });
 
-    // 仅拦截触发全选那一次点击，避免浏览器把光标定位到点击处覆盖全选；之后再点击仍可取消全选做局部编辑
+
     inputEl.addEventListener('mouseup', function (e) {
       if (justFocused) {
         e.preventDefault();
@@ -501,6 +290,7 @@
       justFocused = false;
     });
 
+    // 输入时防抖翻译,并按内容显示/隐藏清空按钮
     inputEl.addEventListener('input', function () {
       scheduleTranslate();
       clearBtn.style.display = inputEl.value ? 'flex' : 'none';
@@ -513,11 +303,12 @@
       clearBtn.style.display = 'none';
     });
 
-    // ---- 设置页（仅控制翻译模块，完全覆盖翻译界面） ----
+
     var settingsBtn = document.getElementById('settingsBtn');
     var settingsOverlay = document.getElementById('settingsOverlay');
     var settingsCloseBtn = document.getElementById('settingsCloseBtn');
 
+    // 设置弹窗的打开/关闭
     if (settingsBtn && settingsOverlay) {
       settingsBtn.addEventListener('click', function () {
         settingsOverlay.classList.remove('hidden');
@@ -530,38 +321,83 @@
       });
     }
 
-    var engineDropdown = buildDropdown(
-      document.getElementById('engineSelect'),
-      document.getElementById('engineList'),
-      Object.keys(ENGINES),
-      function (code) { return ENGINES[code] ? engineName(ENGINES[code]) : code; },
-      function () { return ENGINE; },
-      function (code) {
-        ENGINE = code;
-        localStorage.setItem(LS.engine, code);
-        renderEngineFields();
-        retranslate();
-      }
-    );
-    engineDropdown.updateTrigger();
 
-    // 引擎配置字段：按所选引擎的 fields 动态渲染（key/区域/自定义配置等）
-    var engineFieldsEl = document.getElementById('engineFields');
 
-    function buildFieldInput(f) {
+    // 渲染当前引擎的配置字段(文本框/下拉/模型拉取按钮)
+    function renderEngineSection(containerEl, store) {
+      containerEl.innerHTML = '';
+      var eng = TranslateEngine.ENGINES[store.engine()] || TranslateEngine.ENGINES.google;
+      (eng.fields || []).forEach(function (f) {
+        var fullKey = f.key;
+        var row = document.createElement('div');
+        row.className = 'setting-row' + (f.wideLabel ? ' setting-row-stacked' : '');
+        var label = document.createElement('label');
+        label.className = 'setting-label';
+        label.textContent = t(f.labelKey);
+        row.appendChild(label);
+
+        if (f.type === 'select') {
+
+          var selWrap = document.createElement('div');
+          selWrap.className = 'lang-select';
+          var trigger = document.createElement('button');
+          trigger.type = 'button';
+          trigger.className = 'lang-trigger';
+          trigger.innerHTML = '<span class="lang-trigger-label"></span>';
+          var listEl = document.createElement('div');
+          listEl.className = 'lang-list';
+          selWrap.appendChild(trigger);
+          selWrap.appendChild(listEl);
+          buildDropdown(
+            selWrap, listEl, f.options,
+            function (v) { return v === '' ? t(f.emptyLabelKey || '') : v; },
+            function () { return store.get(fullKey); },
+            function (v) { store.set(fullKey, v); store.onFieldChange && store.onFieldChange(); }
+          ).updateTrigger();
+          row.appendChild(selWrap);
+        } else if (f.fetchModels) {
+          var wrap = document.createElement('div');
+          wrap.className = 'setting-model-wrap';
+          var input = buildFieldInput(f, fullKey, store);
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'setting-fetch-btn';
+          btn.title = t('transFetchModels');
+          btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
+          var listEl = document.createElement('div');
+          listEl.className = 'model-list';
+          btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            fetchModels(store, listEl, f, input);
+          });
+          wrap.appendChild(input);
+          wrap.appendChild(btn);
+          wrap.appendChild(listEl);
+          row.appendChild(wrap);
+        } else {
+          row.appendChild(buildFieldInput(f, fullKey, store));
+        }
+        containerEl.appendChild(row);
+      });
+    }
+
+    // 构建单个配置输入框
+    function buildFieldInput(f, fullKey, store) {
       var input = document.createElement('input');
       input.className = 'setting-input';
       input.type = f.type || 'text';
       input.autocomplete = 'off';
       input.spellcheck = false;
       if (f.placeholderKey) input.placeholder = t(f.placeholderKey);
-      input.value = localStorage.getItem(f.key) || '';
+      input.value = store.get(fullKey);
       input.addEventListener('change', function () {
-        localStorage.setItem(f.key, input.value.trim());
+        store.set(fullKey, input.value.trim());
+        store.onFieldChange && store.onFieldChange();
       });
       return input;
     }
 
+    // 模型列表区域的提示信息
     function renderModelHint(listEl, msg) {
       listEl.innerHTML = '';
       var div = document.createElement('div');
@@ -571,15 +407,18 @@
       listEl.classList.add('open');
     }
 
-    function renderModelList(listEl, ids, f, input) {
+    // 渲染可选择的模型列表
+    function renderModelList(listEl, ids, f, input, store) {
       listEl.innerHTML = '';
+      var fullKey = f.key;
       ids.forEach(function (id) {
         var item = document.createElement('div');
         item.className = 'model-option' + (id === input.value ? ' active' : '');
         item.textContent = id;
         item.addEventListener('click', function () {
           input.value = id;
-          localStorage.setItem(f.key, id);
+          store.set(fullKey, id);
+          store.onFieldChange && store.onFieldChange();
           listEl.classList.remove('open');
         });
         listEl.appendChild(item);
@@ -587,8 +426,9 @@
       listEl.classList.add('open');
     }
 
-    // 兼容中转站 /models 的多种返回格式：data.data[].id、data.models[]、顶层数组、
-    // 元素为字符串或含 id/model/name/model_id 字段的对象
+
+
+    // 从各种响应结构里提取模型 ID 并去重
     function extractModelIds(data) {
       var ids = [];
       var push = function (v) {
@@ -607,10 +447,19 @@
       return ids.filter(function (v, i) { return ids.indexOf(v) === i; });
     }
 
-    // OpenAI 兼容接口的 GET {base}/models 拉取模型列表
-    function fetchModels(eng, listEl, f, input) {
-      var url = engineField(eng, 'url');
-      var key = engineField(eng, 'key');
+    // 读取自定义引擎的某配置字段
+    function engineStoreField(store, id) {
+      var eng = TranslateEngine.ENGINES.custom;
+      var fd = (eng.fields || []).find(function (x) { return x.id === id; });
+      if (!fd) return '';
+      return store.get(fd.key);
+    }
+
+
+    // 调用自定义引擎的 /models 接口拉取可用模型
+    function fetchModels(store, listEl, f, input) {
+      var url = engineStoreField(store, 'url');
+      var key = engineStoreField(store, 'key');
       if (!url || !key) {
         renderModelHint(listEl, t('transModelNeedUrlKey'));
         return;
@@ -630,7 +479,7 @@
           e2.status = res.status;
           throw e2;
         }
-        // 中转站常把未实现的 /models 返回为 HTML 页面而非 JSON，先按 Content-Type 拦截
+
         var ctype = (res.headers && res.headers.get && res.headers.get('Content-Type')) || '';
         if (ctype && ctype.indexOf('json') === -1) {
           var e3 = new Error('NOT_SUPPORTED');
@@ -646,7 +495,7 @@
           e4.code = 'NO_MODELS';
           throw e4;
         }
-        renderModelList(listEl, ids, f, input);
+        renderModelList(listEl, ids, f, input, store);
       }).catch(function (err) {
         var code = err && err.code;
         if (code === 'AUTH') {
@@ -663,70 +512,84 @@
       });
     }
 
-    function renderEngineFields() {
-      engineFieldsEl.innerHTML = '';
-      var eng = ENGINES[ENGINE];
-      (eng.fields || []).forEach(function (f) {
-        var row = document.createElement('div');
-        row.className = 'setting-row';
-        var label = document.createElement('label');
-        label.className = 'setting-label';
-        label.textContent = t(f.labelKey);
-        row.appendChild(label);
 
-        if (f.type === 'select') {
-          // 下拉选择字段（复用语言下拉组件），例如 Azure 区域
-          var selWrap = document.createElement('div');
-          selWrap.className = 'lang-select';
-          var trigger = document.createElement('button');
-          trigger.type = 'button';
-          trigger.className = 'lang-trigger';
-          trigger.innerHTML = '<span class="lang-trigger-label"></span>';
-          var listEl = document.createElement('div');
-          listEl.className = 'lang-list';
-          selWrap.appendChild(trigger);
-          selWrap.appendChild(listEl);
-          buildDropdown(
-            selWrap, listEl, f.options,
-            function (v) { return v === '' ? t(f.emptyLabelKey || '') : v; },
-            function () { return localStorage.getItem(f.key) || ''; },
-            function (v) { localStorage.setItem(f.key, v); }
-          ).updateTrigger();
-          row.appendChild(selWrap);
-        } else if (f.fetchModels) {
-          var wrap = document.createElement('div');
-          wrap.className = 'setting-model-wrap';
-          var input = buildFieldInput(f);
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'setting-fetch-btn';
-          btn.title = t('transFetchModels');
-          btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
-          var listEl = document.createElement('div');
-          listEl.className = 'model-list';
-          btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            fetchModels(eng, listEl, f, input);
-          });
-          wrap.appendChild(input);
-          wrap.appendChild(btn);
-          wrap.appendChild(listEl);
-          row.appendChild(wrap);
-        } else {
-          row.appendChild(buildFieldInput(f));
-        }
-        engineFieldsEl.appendChild(row);
+    var engineFieldsEl = document.getElementById('engineFields');
+    // 引擎配置的读写封装(读写 localStorage 并同步给引擎)
+    var sidebarStore = {
+      get: function (fullKey) { return localStorage.getItem(fullKey) || ''; },
+      set: function (fullKey, val) { localStorage.setItem(fullKey, val); },
+      engine: function () { return ENGINE; },
+      setEngine: function (id) { ENGINE = id; localStorage.setItem(LS.engine, id); },
+      onEngineChange: function () {
+        syncSidebarEngine();
+        renderEngineSection(engineFieldsEl, sidebarStore);
+        retranslate();
+        syncTransToStorage();
+      },
+      onFieldChange: function () { syncSidebarEngine(); syncTransToStorage(); }
+    };
+
+    var engineDropdown = buildDropdown(
+      document.getElementById('engineSelect'),
+      document.getElementById('engineList'),
+      Object.keys(ENGINES),
+      function (code) { return ENGINES[code] ? engineName(ENGINES[code]) : code; },
+      function () { return ENGINE; },
+      function (code) { sidebarStore.setEngine(code); sidebarStore.onEngineChange(); }
+    );
+    engineDropdown.updateTrigger();
+
+
+    // 整页翻译设置(目标语言、悬浮球开关)
+    var pageTransState = {
+      target: 'sidebar',
+      ball: true
+    };
+
+    function savePageTrans() {
+      chrome.storage.local.set({
+        'pageTrans.target': pageTransState.target,
+        'pageTrans.ball': pageTransState.ball
       });
     }
 
-    // 统一点击外部关闭：语言下拉与模型列表（仅注册一次）
+    var pageTargetDropdown = buildDropdown(
+      document.getElementById('pageTargetSelect'),
+      document.getElementById('pageTargetList'),
+      ['sidebar'].concat(targetOptions),
+      function (code) { return code === 'sidebar' ? t('pageTransFollowSidebar') : labelOf(code); },
+      function () { return pageTransState.target; },
+      function (code) { pageTransState.target = code; savePageTrans(); }
+    );
+    pageDropdowns.push(pageTargetDropdown);
+
+    var pageBallToggle = document.getElementById('pageBallToggle');
+    pageBallToggle.addEventListener('change', function () {
+      pageTransState.ball = pageBallToggle.checked;
+      savePageTrans();
+    });
+
+
+    // 从 chrome.storage 恢复整页翻译设置
+    function loadPageTransSettings() {
+      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball'], function (all) {
+        pageTransState.target = all['pageTrans.target'] || 'sidebar';
+        pageTransState.ball = all['pageTrans.ball'] !== false;
+        pageTargetDropdown.updateTrigger();
+        pageBallToggle.checked = pageTransState.ball;
+      });
+    }
+
     document.addEventListener('click', function () {
       document.querySelectorAll('.lang-select.open').forEach(function (w) { w.classList.remove('open'); });
       document.querySelectorAll('.model-list.open').forEach(function (el) { el.classList.remove('open'); });
     });
 
-    renderEngineFields();
+    renderEngineSection(engineFieldsEl, sidebarStore);
     renderLangUI();
     inputEl.focus();
+    loadPageTransSettings();
+    syncSidebarEngine();
+    syncTransToStorage();
   });
 })();

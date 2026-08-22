@@ -7,6 +7,7 @@
 </head>
 <body>
 
+  <!-- 顶部标题栏与设置入口 -->
   <header class="trans-header">
     <h1 class="trans-title" data-i18n="transTitle">翻译</h1>
     <button type="button" class="settings-btn" id="settingsBtn" data-i18n-title="transSettingsTitle" title="翻译设置">
@@ -14,6 +15,7 @@
     </button>
   </header>
 
+  <!-- 语言栏:源语言 / 调换 / 目标语言 -->
   <div class="lang-bar">
     <div class="lang-select" id="sourceLangSelect">
       <button type="button" class="lang-trigger" id="sourceLangTrigger">
@@ -34,6 +36,7 @@
     </div>
   </div>
 
+  <!-- 翻译输入区(含清空按钮) -->
   <div class="input-area">
     <textarea id="transInput" data-i18n-placeholder="transInputPlaceholder" placeholder="输入要翻译的文本..." spellcheck="false"></textarea>
     <button type="button" class="clear-btn" id="clearBtn" data-i18n-title="transClearTitle" title="清空输入">
@@ -41,12 +44,14 @@
     </button>
   </div>
 
+  <!-- 翻译结果区(状态 + 译文) -->
   <div class="result-area" id="resultArea">
     <div class="result-header" data-i18n="transResultLabel">翻译结果</div>
     <div class="result-status hidden" id="resultStatus"></div>
     <div class="result-text" id="resultText"></div>
   </div>
 
+  <!-- 设置覆盖层(完全覆盖翻译界面) -->
   <div id="settingsOverlay" class="settings-overlay hidden">
     <div class="settings-panel">
       <div class="settings-header">
@@ -65,12 +70,31 @@
             <div class="lang-list" id="engineList" role="listbox"></div>
           </div>
         </div>
+        <!-- 引擎配置字段区,由 translation.js 动态渲染 -->
         <div id="engineFields"></div>
+
+        <!-- 网页翻译设置:目标语言 + 悬浮球开关 -->
+        <div class="settings-section-label" data-i18n="sectionPageTrans">网页翻译</div>
+        <div class="setting-row">
+          <label class="setting-label" data-i18n="pageTransTarget">目标语言</label>
+          <div class="lang-select" id="pageTargetSelect">
+            <button type="button" class="lang-trigger" id="pageTargetTrigger">
+              <span class="lang-trigger-label"></span>
+            </button>
+            <div class="lang-list" id="pageTargetList" role="listbox"></div>
+          </div>
+        </div>
+        <label class="setting-toggle">
+          <span data-i18n="pageTransBall">悬浮球</span>
+          <input type="checkbox" id="pageBallToggle">
+          <span class="toggle-switch"></span>
+        </label>
       </div>
     </div>
   </div>
 
   <script src="lang.js"></script>
+  <script src="translate-engine.js"></script>
   <script src="translation.js"></script>
 </body>
 </html>

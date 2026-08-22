@@ -7,14 +7,15 @@
 </head>
 <body>
   
+  <!-- Toast 提示容器 -->
   <div id="toast" class="toast"></div>
 
-  
+  <!-- 壁纸双图层(交叉淡入切换) -->
   <div id="bgLayerA" class="bg-layer"></div>
   <div id="bgLayerB" class="bg-layer" style="opacity:0"></div>
 
   <div class="container">
-    
+    <!-- 右上角设置入口(悬停显示齿轮) -->
     <div class="settings-wrap" id="settingsWrap" aria-hidden="false">
       <div class="settings-btn" id="settingsBtn" title="设置" data-i18n-title="settingsTitle">
         <img src="./icons/setting-white.svg" alt="设置" />
@@ -22,11 +23,12 @@
     </div>
 
     
+    <!-- 搜索区:时钟 + 搜索框 -->
     <div class="search-block">
       <div class="search-container hidden">
         <div class="search-wrapper">
 
-          
+          <!-- 引擎选择器:当前引擎图标 + 下拉列表 -->
           <div class="engine-selector">
             
             <div class="engine-icon-wrap">
@@ -60,13 +62,13 @@
           </div>
          </div>
 
-          
+          <!-- 搜索输入框 + 历史下拉 + 右侧按钮 -->
           <div class="search-input-wrap">
             <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="输入搜索内容..." class="search-input"
                    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
                    data-lpignore="true">
 
-            
+            <!-- 搜索历史/建议下拉 -->
             <div id="history-dropdown" class="history-dropdown">
               <div class="history-header">
                 <span id="dropdown-title" class="history-title" data-i18n="historyTitle">搜索历史</span>
@@ -75,9 +77,8 @@
               <div id="history-list" class="history-list"></div>
             </div>
 
-            
+            <!-- 清空 / 搜索按钮 -->
             <div class="search-btns-wrap">
-              
               <button id="clear-btn" class="clear-btn" style="display: none;">
                 <svg class="clear-icon white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
@@ -98,15 +99,16 @@
         </div>
       </div>
 
-      
+      <!-- 数字时钟 -->
       <div id="digital-clock" class="digital-clock"></div>
     </div>
   </div>
 
-  
+  <!-- 壁纸管理弹窗 -->
   <div id="wallpaperModal" class="modal-overlay" aria-hidden="true">
     <div class="modal-card wallpaper-card">
       <h3 class="modal-title" data-i18n="wallpaperManage">壁纸管理</h3>
+      <!-- 工具栏:导入 / 轮换 / 恢复 / 清空 / 存储占用 -->
       <div class="wallpaper-toolbar">
         <div class="toolbar-group">
           <button id="wallpaperImportBtn" class="btn-wallpaper btn-wallpaper-primary">
@@ -142,13 +144,14 @@
     </div>
   </div>
 
-  
+  <!-- 右侧设置侧边栏 -->
   <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
   <div id="sidebar" class="sidebar" aria-hidden="true">
     <div class="sidebar-header">
       <span data-i18n="settingsHeader">设置</span>
     </div>
     <div class="sidebar-main">
+      <!-- 导航:主题/壁纸 | 搜索功能 | 个性化 | 更多设置 | 关于 -->
       <nav class="sidebar-nav">
         <div class="sidebar-nav-item active" data-panel="theme" data-i18n="navTheme">主题/壁纸</div>
         <div class="sidebar-nav-item" data-panel="engines" data-i18n="navEngines">搜索功能</div>
@@ -157,6 +160,7 @@
 	        <div class="sidebar-nav-item" data-panel="about" data-i18n="navAbout">关于我们</div>
 	      </nav>
       <div class="sidebar-content">
+        <!-- 主题/壁纸面板 -->
         <div class="sidebar-panel active" id="sidebarPanelTheme">
           <div class="sidebar-section-label" data-i18n="sectionAppearance">整体外观</div>
           <div class="sidebar-toggle">
@@ -168,6 +172,7 @@
             </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionAccentColor">主题色</div>
+          <!-- 主题色预设色块 + 取色器 -->
           <div class="theme-color-row" id="themeColorRow">
             <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
             <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
@@ -180,6 +185,7 @@
             <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
             <span class="theme-color-swatch picker-trigger" id="colorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
           </div>
+          <!-- 主题色取色器面板 -->
           <div id="colorPickerPanel" class="color-picker-panel hidden">
             <div class="picker-row">
               <canvas id="pickerPalette" class="picker-palette" width="160" height="160"></canvas>
@@ -191,16 +197,19 @@
             </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
+          <!-- 壁纸来源选择(无 / 本地 / Bing) -->
           <div class="theme-mode-seg" id="wallpaperSourceSeg" style="margin-bottom:10px">
             <button class="theme-mode-opt active" data-source="none" data-i18n="wpSourceNone">无</button>
             <button class="theme-mode-opt" data-source="local" data-i18n="wpSourceLocal">本地壁纸</button>
             <button class="theme-mode-opt" data-source="bing" data-i18n="wpSourceBing">Bing壁纸</button>
           </div>
+          <!-- 本地壁纸缩略图 -->
           <div id="wallpaperLocalGroup">
             <div id="sidebarWallpaperThumb" class="sidebar-wallpaper-thumb">
               <img id="sidebarWallpaperThumbImg" src="" alt="">
             </div>
           </div>
+          <!-- Bing 壁纸列表 / 壁纸轮换(立即轮换 + 间隔) -->
           <div id="bingWallpaperList" class="bing-wallpaper-list hidden"></div>
           <div id="wallpaperRotateGroup">
             <div class="sidebar-rotate-row">
@@ -215,6 +224,7 @@
               </div>
             </div>
           </div>
+          <!-- 壁纸遮罩 / 模糊滑块 -->
           <div id="wallpaperOverlayGroup">
             <div class="sidebar-slider-group">
               <span data-i18n="wallpaperOverlay">壁纸遮罩</span>
@@ -228,6 +238,7 @@
             </div>
           </div>
         </div>
+        <!-- 个性化面板:侧边栏 / 时钟 / 语言 -->
         <div class="sidebar-panel" id="sidebarPanelPersonalize">
           <div class="sidebar-section-label" data-i18n="sectionSidebar">侧边栏</div>
           <div class="sidebar-slider-group">
@@ -241,6 +252,7 @@
             <span id="sidebarBlurVal2">0</span>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionClock">时钟</div>
+          <!-- 时钟颜色预设 + 取色器 + 与搜索色联动 -->
           <div class="theme-color-row" id="clockColorRow" style="padding:0 4px 8px;">
             <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
             <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
@@ -259,6 +271,7 @@
               </svg>
             </span>
           </div>
+          <!-- 时钟色取色器面板 -->
           <div id="clockColorPickerPanel" class="color-picker-panel hidden">
             <div class="picker-row">
               <canvas id="clockPickerPalette" class="picker-palette" width="160" height="160"></canvas>
@@ -269,6 +282,7 @@
               <button id="clockPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
             </div>
           </div>
+          <!-- 数字时钟开关 / 跟随搜索框 / 位置 -->
           <label class="sidebar-toggle">
             <span data-i18n="digitalClock">数字时钟</span>
             <input type="checkbox" id="sidebarClockToggle" checked>
@@ -293,6 +307,7 @@
               <div class="rotate-list" id="clockPosList"></div>
             </div>
           </div>
+          <!-- 时钟自定义坐标输入 + 锁定 -->
           <div id="clockCustomPanel" class="clock-collapse hidden">
             <div class="custom-pos-row">
               <span class="custom-pos-label" data-i18n="clockCustomX">横坐标</span>
@@ -306,6 +321,7 @@
             </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionLanguage">语言偏好</div>
+          <!-- 语言切换(中文/English) -->
           <div class="sidebar-toggle">
             <span data-i18n="sectionLanguage">语言偏好</span>
             <div class="theme-mode-seg" id="languageSeg">
@@ -314,6 +330,7 @@
             </div>
           </div>
         </div>
+        <!-- 搜索功能面板 -->
         <div class="sidebar-panel" id="sidebarPanelEngines">
           <div class="sidebar-section-label" data-i18n="sectionSearchBox">搜索框</div>
           <label class="sidebar-toggle">
@@ -321,7 +338,9 @@
             <input type="checkbox" id="searchBoxToggle" checked>
             <span class="toggle-switch"></span>
           </label>
+          <!-- 启用搜索框后的样式控件 -->
           <div id="searchBoxControls">
+            <!-- 搜索框颜色预设 + 取色器 + 与时钟色联动 -->
             <div class="theme-color-row" id="searchColorRow" style="padding:0 4px 8px;">
               <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
               <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
@@ -340,6 +359,7 @@
                 </svg>
               </span>
             </div>
+            <!-- 搜索色取色器面板 -->
             <div id="searchColorPickerPanel" class="color-picker-panel hidden">
               <div class="picker-row">
                 <canvas id="searchPickerPalette" class="picker-palette" width="160" height="160"></canvas>
@@ -350,6 +370,7 @@
                 <button id="searchPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
               </div>
             </div>
+            <!-- 搜索框垂直/水平偏移、宽度、圆角滑块 -->
             <div class="sidebar-slider-group">
               <span data-i18n="searchOffsetY">垂直偏移</span>
               <input type="range" id="searchOffsetYSlider" min="-300" max="300" step="any" data-step="1" data-unit="px" value="0">
@@ -371,6 +392,7 @@
               <span id="searchRadiusVal">25</span>
             </div>
           </div>
+          <!-- 搜索引擎列表(可折叠) + 自定义引擎表单 -->
           <div class="section-collapse" id="engineListSection">
             <div class="sidebar-section-label section-collapse-header" data-i18n="sectionEngines">搜索引擎</div>
             <div class="section-collapse-body">
@@ -402,6 +424,7 @@
             </div>
           </div>
           </div>
+          <!-- 默认引擎选择 -->
           <div class="section-collapse" id="defaultEngineSection">
             <div class="sidebar-section-label section-collapse-header" data-i18n="sectionDefaultEngine">默认引擎</div>
             <div class="section-collapse-body">
@@ -409,6 +432,7 @@
             </div>
           </div>
           <div class="sidebar-separator"></div>
+          <!-- 搜索建议接口下拉 / 新标签页打开 / 搜索历史开关 -->
           <div class="sidebar-toggle" style="overflow:visible">
             <span data-i18n="suggestionProvider">搜索建议接口</span>
             <div class="rotate-dropdown" id="suggestionProviderDropdown">
@@ -427,6 +451,7 @@
             <span class="toggle-switch"></span>
           </label>
         </div>
+        <!-- 关于面板 -->
         <div class="sidebar-panel" id="sidebarPanelAbout">
           <div style="padding:24px 12px">
             <div style="font-size:16px;font-weight:600;margin-bottom:6px">Minimal Tab</div>
@@ -442,6 +467,7 @@
             </div>
           </div>
         </div>
+        <!-- 更多设置:备份与恢复 + 重置 -->
         <div class="sidebar-panel" id="sidebarPanelMore">
           <div class="sidebar-section-label" data-i18n="moreBackup">备份与恢复</div>
           <div class="backup-row">
@@ -462,7 +488,7 @@
     </div>
   </div>
 
-  
+  <!-- 时钟右键菜单(自定义位置时输入坐标/锁定) -->
   <div id="clockContextMenu" class="clock-context-menu">
     <div class="clock-menu-row">
       <input type="number" id="clockMenuX" class="clock-menu-input" placeholder="X">
@@ -475,14 +501,14 @@
     </button>
   </div>
 
-  
+  <!-- 页面空白处右键菜单(切换壁纸/设置) -->
   <div id="contextMenu" class="context-menu">
     <div class="context-menu-item" data-action="next-wallpaper" data-i18n="switchWallpaper">切换壁纸</div>
     <div class="context-menu-item" data-action="settings" data-i18n="contextSettings">设置</div>
   </div>
 
   
-  <script src="pinyin-data.js"></script>
+  <script src="pinyin-match.js"></script>
   <script src="lang.js"></script>
   <script src="script.js"></script>
 </body>

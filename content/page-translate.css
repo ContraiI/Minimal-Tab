@@ -1,0 +1,55 @@
+
+/* 网页翻译悬浮球(右下角,可拖拽) */
+#pageTransBall {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  opacity: 0.92;
+  transition: opacity 0.15s, transform 0.1s, background 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#pageTransBall:hover { opacity: 1; }
+#pageTransBall:active { transform: scale(0.94); }
+
+#pageTransBall svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+
+/* 翻译停用时悬浮球置灰 */
+#pageTransBall.page-trans-off { background: #5a5f6b; }
+
+/* 正在翻译的文本末尾的加载图标(翻译完成/失败后移除) */
+.page-trans-loading {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-left: 4px;
+  vertical-align: baseline;
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  border-top-color: rgba(37, 99, 235, 0.9);
+  border-radius: 50%;
+  animation: page-trans-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes page-trans-spin {
+  to { transform: rotate(360deg); }
+}

@@ -4,5 +4,11 @@
   },
   "extDesc": {
     "message": "A lightweight and clean new tab replacement extension with a built-in browser-level translator sidebar, supporting multiple engines and custom LLM translation"
+  },
+  "ballTranslate": {
+    "message": "Translate this page"
+  },
+  "ballCancel": {
+    "message": "Cancel translation"
   }
 }
