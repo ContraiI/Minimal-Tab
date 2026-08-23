@@ -540,16 +540,18 @@
     engineDropdown.updateTrigger();
 
 
-    // 整页翻译设置(目标语言、悬浮球开关)
+    // 整页翻译设置(目标语言、悬浮球开关、双语对照)
     var pageTransState = {
       target: 'sidebar',
-      ball: true
+      ball: true,
+      mode: 'replace'
     };
 
     function savePageTrans() {
       chrome.storage.local.set({
         'pageTrans.target': pageTransState.target,
-        'pageTrans.ball': pageTransState.ball
+        'pageTrans.ball': pageTransState.ball,
+        'pageTrans.mode': pageTransState.mode
       });
     }
 
@@ -569,14 +571,28 @@
       savePageTrans();
     });
 
+    var pageModeSelect = document.getElementById('pageModeSelect');
+    var pageModeOptions = [].slice.call(pageModeSelect.querySelectorAll('.theme-mode-opt'));
+    pageModeOptions.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        pageTransState.mode = btn.getAttribute('data-mode');
+        pageModeOptions.forEach(function (b) { b.classList.toggle('active', b === btn); });
+        savePageTrans();
+      });
+    });
+
 
     // 从 chrome.storage 恢复整页翻译设置
     function loadPageTransSettings() {
-      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball'], function (all) {
+      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode'], function (all) {
         pageTransState.target = all['pageTrans.target'] || 'sidebar';
         pageTransState.ball = all['pageTrans.ball'] !== false;
+        pageTransState.mode = all['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
         pageTargetDropdown.updateTrigger();
         pageBallToggle.checked = pageTransState.ball;
+        pageModeOptions.forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-mode') === pageTransState.mode);
+        });
       });
     }
 

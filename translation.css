@@ -630,6 +630,40 @@ body.light .settings-body .model-option:hover { background: rgba(0, 0, 0, 0.06);
 body.light .settings-body .model-option.active { color: #333; }
 body.light .settings-body .model-hint { color: rgba(0, 0, 0, 0.5); }
 
+/* 呈现方式二元选择器(仅译文 / 双语对照),样式与标签页设置 theme-mode-seg 一致 */
+.settings-body .theme-mode-seg {
+  display: flex;
+  gap: 1px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.35s ease;
+}
+
+.settings-body .theme-mode-opt {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  border: none;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.35s ease;
+}
+
+.settings-body .theme-mode-opt.active {
+  color: #fff;
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.settings-body .theme-mode-opt:not(.active):hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+body.light .settings-body .theme-mode-seg { background: rgba(0, 0, 0, 0.08); }
+body.light .settings-body .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
+body.light .settings-body .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+
 /* 堆叠设置行:标签在上、控件拉满 */
 .settings-body .setting-row-stacked {
   display: block;

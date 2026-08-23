@@ -1632,41 +1632,36 @@ if (engineSelectorEl && engineListEl) {
   // 主题色拾色器(HSV 画板 + 色相条)
   // ---- 取色器通用实现(主题/时钟/搜索三套共用) ----
 
-  // HSV 颜色换算辅助函数
-  function _h2rgb(pp, qq, t) {
-    if (t < 0) t += 1; if (t > 1) t -= 1;
-    if (t < 1/6) return pp + (qq - pp) * 6 * t;
-    if (t < 1/2) return qq;
-    if (t < 2/3) return pp + (qq - pp) * (2/3 - t) * 6;
-    return pp;
+  // HSV 颜色换算辅助函数(色盘按 HSV 布局:横=饱和度,竖=明度)
+  function hsvToRgb(h, s, v) {
+    s = s / 100; v = v / 100;
+    var c = v * s;
+    var hh = (h / 60) % 6;
+    var x = c * (1 - Math.abs(hh % 2 - 1));
+    var m = v - c;
+    var r0, g0, b0;
+    if (hh < 1) { r0 = c; g0 = x; b0 = 0; }
+    else if (hh < 2) { r0 = x; g0 = c; b0 = 0; }
+    else if (hh < 3) { r0 = 0; g0 = c; b0 = x; }
+    else if (hh < 4) { r0 = 0; g0 = x; b0 = c; }
+    else if (hh < 5) { r0 = x; g0 = 0; b0 = c; }
+    else { r0 = c; g0 = 0; b0 = x; }
+    return { r: Math.round((r0 + m) * 255), g: Math.round((g0 + m) * 255), b: Math.round((b0 + m) * 255) };
   }
 
-  function hslToRgb(h, s, l) {
-    var ss = s / 100, ll = l / 100;
-    var qq = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
-    var pp = 2 * ll - qq;
-    var hh = h / 360;
-    var r = Math.round(_h2rgb(pp, qq, hh + 1/3) * 255);
-    var g = Math.round(_h2rgb(pp, qq, hh) * 255);
-    var b = Math.round(_h2rgb(pp, qq, hh - 1/3) * 255);
-    return {r: r, g: g, b: b};
-  }
-
-  function hslFromHex(hex) {
-    const { r: r0, g: g0, b: b0 } = hexToRgb(hex);
-    var r = r0 / 255, g = g0 / 255, b = b0 / 255;
-    var max = Math.max(r,g,b), min = Math.min(r,g,b);
-    var l = (max + min) / 2 * 100;
+  function rgbToHsv(r, g, b) {
+    r = r / 255; g = g / 255; b = b / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
     var d = max - min;
-    var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l / 100 - 1)) * 100;
-    var hue = 0;
+    var h = 0;
     if (d !== 0) {
-      if (max === r) hue = ((g - b) / d) % 6;
-      else if (max === g) hue = (b - r) / d + 2;
-      else hue = (r - g) / d + 4;
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
     }
-    hue = (hue * 60 + 360) % 360;
-    return {h: hue, s: s, l: l};
+    return { h: h, s: max === 0 ? 0 : (d / max) * 100, v: max * 100 };
   }
 
   // 拾色器工厂:画板/色相条/hex 输入/确认/触发器逻辑,三套共用
@@ -1675,23 +1670,23 @@ if (engineSelectorEl && engineListEl) {
     if (!panel || !palette || !hueBar) return null;
     const pctx = palette.getContext('2d');
     const hctx = hueBar.getContext('2d');
-    let hue = 0, sat = 100, lum = 50, size = 160, origColor = '';
+    let hue = 0, sat = 100, val = 100, size = 160, origColor = '';
 
     function drawHueBar() {
       for (var y = 0; y < size; y++) {
-        var rgb = hslToRgb(y / size * 360, 100, 50);
+        var rgb = hsvToRgb(y / size * 360, 100, 100);
         hctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
         hctx.fillRect(0, y, 20, 1);
       }
       var hy = Math.round(hue / 360 * size);
-      var irgb = hslToRgb(hue, 100, 50);
+      var irgb = hsvToRgb(hue, 100, 100);
       var l = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
       hctx.fillStyle = l > 0.65 ? '#333' : '#fff';
       hctx.fillRect(0, hy - 3, 20, 5);
     }
 
     function drawPalette() {
-      var prgb = hslToRgb(hue, 100, 50);
+      var prgb = hsvToRgb(hue, 100, 100);
       pctx.clearRect(0, 0, size, size);
       var gradW = pctx.createLinearGradient(0, 0, size, 0);
       gradW.addColorStop(0, '#ffffff');
@@ -1704,8 +1699,8 @@ if (engineSelectorEl && engineListEl) {
       pctx.fillStyle = gradB;
       pctx.fillRect(0, 0, size, size);
       var px = Math.round(sat / 100 * size);
-      var py = Math.round((100 - lum) / 100 * size);
-      var crgb = hslToRgb(hue, sat, lum);
+      var py = Math.round((100 - val) / 100 * size);
+      var crgb = hsvToRgb(hue, sat, val);
       var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
       pctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
       pctx.lineWidth = 2;
@@ -1715,7 +1710,7 @@ if (engineSelectorEl && engineListEl) {
     }
 
     function updateFromPicker() {
-      var rgb = hslToRgb(hue, sat, lum);
+      var rgb = hsvToRgb(hue, sat, val);
       var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
       hexInput.value = hex;
       preview(hex);
@@ -1728,7 +1723,7 @@ if (engineSelectorEl && engineListEl) {
       x = Math.max(0, Math.min(size, x));
       y = Math.max(0, Math.min(size, y));
       sat = Math.round(x / size * 100);
-      lum = Math.round(100 - y / size * 100);
+      val = Math.round(100 - y / size * 100);
       drawPalette();
       updateFromPicker();
     }
@@ -1762,8 +1757,8 @@ if (engineSelectorEl && engineListEl) {
     hexInput.addEventListener('input', function() {
       var hex = hexInput.value.trim();
       if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        var hsl = hslFromHex(hex);
-        hue = hsl.h; sat = hsl.s; lum = hsl.l;
+        var c = hexToRgb(hex), hsv = rgbToHsv(c.r, c.g, c.b);
+        hue = hsv.h; sat = hsv.s; val = hsv.v;
         drawPalette();
         drawHueBar();
         preview(hex.toLowerCase());
@@ -1790,8 +1785,8 @@ if (engineSelectorEl && engineListEl) {
         size = available;
         palette.width = available; palette.height = available;
         hueBar.height = available;
-        var hsl = hslFromHex(origColor);
-        hue = hsl.h; sat = hsl.s; lum = hsl.l;
+        var c = hexToRgb(origColor), hsv = rgbToHsv(c.r, c.g, c.b);
+        hue = hsv.h; sat = hsv.s; val = hsv.v;
         drawPalette();
         drawHueBar();
         updateFromPicker();
@@ -1806,8 +1801,8 @@ if (engineSelectorEl && engineListEl) {
       isOpen: function() { return !panel.classList.contains('hidden'); },
       close: function() { panel.classList.add('hidden'); preview(origColor); highlight(origColor); },
       setFromHex: function(hex) {
-        var hsl = hslFromHex(hex);
-        hue = hsl.h; sat = hsl.s; lum = hsl.l;
+        var c = hexToRgb(hex), hsv = rgbToHsv(c.r, c.g, c.b);
+        hue = hsv.h; sat = hsv.s; val = hsv.v;
         hexInput.value = hex.toLowerCase();
         drawPalette();
         drawHueBar();

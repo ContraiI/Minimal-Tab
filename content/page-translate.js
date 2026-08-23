@@ -15,10 +15,11 @@
     enabled: false,
     ball: true,
     target: 'zh-CN',
-    engine: 'google'
+    engine: 'google',
+    mode: 'replace'
   };
 
-  var RELEVANT_KEYS = ['pageTrans.enabled', 'pageTrans.ball', 'pageTrans.target', 'trans.engine', 'trans.targetLang'];
+  var RELEVANT_KEYS = ['pageTrans.enabled', 'pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang'];
   var ATTR_NAMES = ['title', 'placeholder', 'alt', 'aria-label'];
   var CONCURRENCY = 4;      // 并发翻译数
   var SCAN_DEBOUNCE = 150;  // 扫描防抖毫秒数
@@ -92,7 +93,7 @@
 
 
   // 需跳过的元素选择器
-  var SKIP_SELECTOR = 'script, style, noscript, template, textarea, input, select, option, datalist, code, pre, kbd, samp, var, head, [contenteditable], [translate="no"]';
+  var SKIP_SELECTOR = 'script, style, noscript, template, textarea, input, select, option, datalist, code, pre, kbd, samp, var, head, [contenteditable], [translate="no"], [data-page-trans-bilingual]';
 
   // 是否值得翻译的文本(至少 2 个字符且含字母)
   function isTranslatableText(text) {
@@ -294,9 +295,21 @@
     if (job.type === 'text') {
       var node = job.node;
       if (!node.parentNode || node.nodeValue !== job.text) return;
-      var rec = { original: node.nodeValue, translated: translated };
+      var rec;
+      if (state.mode === 'bilingual') {
+        // 双语对照:保留原文,在原文后追加含 <br> 的译文块(span 打标记避免被重译/触发重扫)
+        var span = document.createElement('span');
+        span.className = 'page-trans-bilingual';
+        span.setAttribute('data-page-trans-bilingual', '1');
+        span.appendChild(document.createElement('br'));
+        span.appendChild(document.createTextNode(translated));
+        node.parentNode.insertBefore(span, node.nextSibling);
+        rec = { mode: 'bilingual', span: span };
+      } else {
+        rec = { mode: 'replace', original: node.nodeValue, translated: translated };
+        applyText(node, translated);
+      }
       textRecords.set(node, rec);
-      applyText(node, translated);
       processedText.add(node);
     } else {
       if (!job.el.isConnected || job.el.getAttribute(job.attr) !== job.text) return;
@@ -311,7 +324,12 @@
   // 还原全部翻译并清空状态
   function revertAll() {
     textRecords.forEach(function (rec, node) {
-      if (node.parentNode && node.nodeValue === rec.translated) node.textContent = rec.original;
+      if (rec.mode === 'bilingual') {
+        // 双语对照:原文从未被改动,只需移除插入的译文块
+        if (rec.span && rec.span.parentNode) rec.span.parentNode.removeChild(rec.span);
+      } else if (node.parentNode && node.nodeValue === rec.translated) {
+        node.textContent = rec.original;
+      }
     });
     attrRecords.forEach(function (map, el) {
       map.forEach(function (rec, attr) {
@@ -384,18 +402,18 @@
           if (r.target && r.target.nodeType === 3 && processedText.has(r.target)) continue;
           meaningful = true;
         } else {
-          // 忽略仅插入/移除加载图标的 childList 变更,避免扫描循环
-          var onlySpinner = true;
+          // 忽略仅插入/移除自身节点(加载图标、双语译文块)的 childList 变更,避免扫描循环
+          var onlySelfInserted = true;
           var affected = [];
           if (r.addedNodes) { for (var a = 0; a < r.addedNodes.length; a++) affected.push(r.addedNodes[a]); }
           if (r.removedNodes) { for (var b = 0; b < r.removedNodes.length; b++) affected.push(r.removedNodes[b]); }
           for (var k = 0; k < affected.length; k++) {
             var n = affected[k];
-            if (!(n && n.nodeType === 1 && n.getAttribute && n.getAttribute('data-page-trans-loading') === '1')) {
-              onlySpinner = false; break;
-            }
+            var selfInserted = n && n.nodeType === 1 && n.getAttribute &&
+              (n.getAttribute('data-page-trans-loading') === '1' || n.getAttribute('data-page-trans-bilingual') === '1');
+            if (!selfInserted) { onlySelfInserted = false; break; }
           }
-          if (!onlySpinner) meaningful = true;
+          if (!onlySelfInserted) meaningful = true;
         }
       }
       if (!meaningful) return;
@@ -417,7 +435,8 @@
 
   // 页面上的翻译悬浮球:点击切换翻译,可拖动
   var ballEl = null;
-  var dragging = false;
+  var ballDown = false;     // 指针是否按下
+  var ballDragged = false;  // 本次按下是否实际拖动(移动超过阈值),拖动结束不触发开关
   var dragOffset = null;
 
   // 读取 i18n 文案
@@ -431,20 +450,28 @@
     ballEl = document.createElement('div');
     ballEl.id = 'pageTransBall';
     ballEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
-    ballEl.addEventListener('click', function (e) {
-      if (dragging) return;
+    ballEl.addEventListener('click', function () {
+      // 仅未发生拖动时视为点击切换;拖动结束不触发开关
+      if (ballDragged) return;
       setStore({ 'pageTrans.enabled': !state.enabled });
     });
 
     ballEl.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
-      dragging = true;
+      ballDown = true;
+      ballDragged = false;
       dragOffset = { x: e.clientX - ballEl.offsetLeft, y: e.clientY - ballEl.offsetTop };
       try { ballEl.setPointerCapture(e.pointerId); } catch (err) {}
       e.preventDefault();
     });
     ballEl.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
+      if (!ballDown) return;
+      // 移动超过阈值判定为拖动,之后的点击不切换开关
+      if (!ballDragged) {
+        var dx = Math.abs(e.clientX - (ballEl.offsetLeft + dragOffset.x));
+        var dy = Math.abs(e.clientY - (ballEl.offsetTop + dragOffset.y));
+        if (dx + dy > 3) ballDragged = true;
+      }
       var x = Math.min(Math.max(0, e.clientX - dragOffset.x), window.innerWidth - ballEl.offsetWidth);
       var y = Math.min(Math.max(0, e.clientY - dragOffset.y), window.innerHeight - ballEl.offsetHeight);
       ballEl.style.left = x + 'px';
@@ -453,9 +480,9 @@
       ballEl.style.bottom = 'auto';
     });
     var endDrag = function () {
-      if (!dragging) return;
-      dragging = false;
-      setStore({ 'pageTrans.ballPos': { x: ballEl.offsetLeft, y: ballEl.offsetTop } });
+      if (!ballDown) return;
+      ballDown = false;
+      if (ballDragged) setStore({ 'pageTrans.ballPos': { x: ballEl.offsetLeft, y: ballEl.offsetTop } });
     };
     ballEl.addEventListener('pointerup', endDrag);
     ballEl.addEventListener('pointercancel', endDrag);
@@ -508,20 +535,23 @@
     var newBall = cfg['pageTrans.ball'] !== false;
     var newTarget = resolveTarget(cfg);
     var newEngine = cfg['trans.engine'] || 'google';
+    var newMode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
 
     if (newEnabled !== state.enabled) {
       state.enabled = newEnabled;
       if (newEnabled) startTranslate(); else stopTranslate();
     } else if (newEnabled) {
-      if (newTarget !== state.target || newEngine !== state.engine) {
+      if (newTarget !== state.target || newEngine !== state.engine || newMode !== state.mode) {
         revertAll();
         state.target = newTarget;
         state.engine = newEngine;
+        state.mode = newMode;
         scheduleScan();
       }
     } else {
       state.target = newTarget;
       state.engine = newEngine;
+      state.mode = newMode;
     }
 
     if (newBall !== state.ball) {
@@ -537,6 +567,7 @@
     getStore(RELEVANT_KEYS, function (cfg) {
       state.target = resolveTarget(cfg);
       state.engine = cfg['trans.engine'] || 'google';
+      state.mode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
       state.enabled = !!cfg['pageTrans.enabled'];
       state.ball = cfg['pageTrans.ball'] !== false;
       toggleBall(state.ball);

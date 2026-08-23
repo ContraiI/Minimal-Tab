@@ -5,8 +5,8 @@
   right: 16px;
   bottom: 16px;
   z-index: 2147483647;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -26,8 +26,8 @@
 #pageTransBall:active { transform: scale(0.94); }
 
 #pageTransBall svg {
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   fill: currentColor;
   pointer-events: none;
 }
@@ -35,6 +35,9 @@
 
 /* 翻译停用时悬浮球置灰 */
 #pageTransBall.page-trans-off { background: #5a5f6b; }
+
+/* 双语对照模式:原文下方追加的译文块(弱化以区分原文) */
+.page-trans-bilingual { opacity: 0.82; }
 
 /* 正在翻译的文本末尾的加载图标(翻译完成/失败后移除) */
 .page-trans-loading {

@@ -185,6 +185,9 @@ window.I18N_DATA = {
     pageTransTarget: '目标语言',
     pageTransFollowSidebar: '跟随边栏翻译',
     pageTransBall: '悬浮球',
+    pageTransMode: '呈现方式',
+    pageTransModeReplace: '仅译文',
+    pageTransModeBilingual: '双语对照',
 
     langZhCn: '中文',
     langZhTw: '繁体中文',
@@ -415,6 +418,9 @@ window.I18N_DATA = {
     pageTransTarget: 'Target Language',
     pageTransFollowSidebar: 'Follow Sidebar Translation',
     pageTransBall: 'Floating Button',
+    pageTransMode: 'Presentation Mode',
+    pageTransModeReplace: 'Translation Only',
+    pageTransModeBilingual: 'Bilingual',
 
     langZhCn: 'Chinese',
     langZhTw: 'Traditional Chinese',

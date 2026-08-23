@@ -73,7 +73,7 @@
         <!-- 引擎配置字段区,由 translation.js 动态渲染 -->
         <div id="engineFields"></div>
 
-        <!-- 网页翻译设置:目标语言 + 悬浮球开关 -->
+        <!-- 网页翻译设置:目标语言 + 呈现方式 + 悬浮球开关 -->
         <div class="settings-section-label" data-i18n="sectionPageTrans">网页翻译</div>
         <div class="setting-row">
           <label class="setting-label" data-i18n="pageTransTarget">目标语言</label>
@@ -82,6 +82,13 @@
               <span class="lang-trigger-label"></span>
             </button>
             <div class="lang-list" id="pageTargetList" role="listbox"></div>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label class="setting-label" data-i18n="pageTransMode">呈现方式</label>
+          <div class="theme-mode-seg" id="pageModeSelect" role="radiogroup">
+            <button type="button" class="theme-mode-opt" role="radio" data-mode="replace" data-i18n="pageTransModeReplace">仅译文</button>
+            <button type="button" class="theme-mode-opt" role="radio" data-mode="bilingual" data-i18n="pageTransModeBilingual">双语对照</button>
           </div>
         </div>
         <label class="setting-toggle">
