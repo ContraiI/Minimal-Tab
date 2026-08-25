@@ -16,10 +16,16 @@
     ball: true,
     target: 'zh-CN',
     engine: 'google',
-    mode: 'replace'
+    mode: 'replace',
+    fontColor: '',
+    italic: false,
+    bold: false,
+    style: 'none',
+    styleColors: {}
   };
 
-  var RELEVANT_KEYS = ['pageTrans.enabled', 'pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang'];
+  var RELEVANT_KEYS = ['pageTrans.enabled', 'pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',
+    'pageTrans.fontColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style', 'pageTrans.styleColors'];
   var ATTR_NAMES = ['title', 'placeholder', 'alt', 'aria-label'];
   var CONCURRENCY = 4;      // 并发翻译数
   var SCAN_DEBOUNCE = 150;  // 扫描防抖毫秒数
@@ -290,6 +296,39 @@
     el.setAttribute(attr, translated);
   }
 
+  // 写入内联 CSS 变量,空值则移除(让 CSS 回退到默认)
+  function setStyleVar(el, name, value) {
+    if (value) el.style.setProperty(name, value);
+    else el.style.removeProperty(name);
+  }
+
+  // 全部译文样式类(下划线 + 边框)
+  var BILINGUAL_STYLE_CLASSES = ['pt-underlineA', 'pt-underlineB', 'pt-underlineC', 'pt-borderA', 'pt-borderB'];
+
+  // 按当前译文样式设置重涂译文文本(字体颜色/斜体/粗体/下划线/边框)
+  function applyBilingualStyle(el) {
+    for (var i = 0; i < BILINGUAL_STYLE_CLASSES.length; i++) el.classList.remove(BILINGUAL_STYLE_CLASSES[i]);
+    if (state.style !== 'none') el.classList.add('pt-' + state.style);
+    setStyleVar(el, '--pt-color', state.fontColor);
+    setStyleVar(el, '--pt-italic', state.italic ? 'italic' : '');
+    setStyleVar(el, '--pt-bold', state.bold ? 'bold' : '');
+    setStyleVar(el, '--pt-line', (state.styleColors && state.styleColors[state.style]) || '');
+  }
+
+  // 纯样式变化时重涂所有已有双语译文文本(含 shadow DOM),不触发重扫/重译
+  function restyleBilingual() {
+    var targets = [];
+    (function walkRoot(root) {
+      var found = root.querySelectorAll('.page-trans-bilingual .page-trans-text');
+      for (var i = 0; i < found.length; i++) targets.push(found[i]);
+      var all = root.querySelectorAll('*');
+      for (var j = 0; j < all.length; j++) {
+        if (all[j].shadowRoot) walkRoot(all[j].shadowRoot);
+      }
+    })(document);
+    for (var k = 0; k < targets.length; k++) applyBilingualStyle(targets[k]);
+  }
+
   // 记录原文并应用翻译结果
   function applyResult(job, translated) {
     if (job.type === 'text') {
@@ -302,8 +341,12 @@
         span.className = 'page-trans-bilingual';
         span.setAttribute('data-page-trans-bilingual', '1');
         span.appendChild(document.createElement('br'));
-        span.appendChild(document.createTextNode(translated));
+        var textSpan = document.createElement('span');
+        textSpan.className = 'page-trans-text';
+        textSpan.textContent = translated;
+        span.appendChild(textSpan);
         node.parentNode.insertBefore(span, node.nextSibling);
+        applyBilingualStyle(textSpan);
         rec = { mode: 'bilingual', span: span };
       } else {
         rec = { mode: 'replace', original: node.nodeValue, translated: translated };
@@ -529,6 +572,32 @@
       : cfg['pageTrans.target'];
   }
 
+  // 读取译文样式配置
+  function styleOf(cfg) {
+    return {
+      fontColor: cfg['pageTrans.fontColor'] || '',
+      italic: !!cfg['pageTrans.italic'],
+      bold: !!cfg['pageTrans.bold'],
+      style: cfg['pageTrans.style'] || 'none',
+      styleColors: cfg['pageTrans.styleColors'] || {}
+    };
+  }
+
+  function applyStyleState(s) {
+    state.fontColor = s.fontColor;
+    state.italic = s.italic;
+    state.bold = s.bold;
+    state.style = s.style;
+    state.styleColors = s.styleColors;
+  }
+
+  // 仅样式是否发生变化
+  function styleChanged(ns) {
+    return state.fontColor !== ns.fontColor || state.italic !== ns.italic ||
+           state.bold !== ns.bold || state.style !== ns.style ||
+           JSON.stringify(state.styleColors || {}) !== JSON.stringify(ns.styleColors || {});
+  }
+
   // 依据最新配置切换翻译/悬浮球状态
   function onState(cfg) {
     var newEnabled = !!cfg['pageTrans.enabled'];
@@ -536,22 +605,35 @@
     var newTarget = resolveTarget(cfg);
     var newEngine = cfg['trans.engine'] || 'google';
     var newMode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
+    var newStyle = styleOf(cfg);
 
     if (newEnabled !== state.enabled) {
       state.enabled = newEnabled;
-      if (newEnabled) startTranslate(); else stopTranslate();
+      if (newEnabled) { applyStyleState(newStyle); startTranslate(); } else stopTranslate();
     } else if (newEnabled) {
-      if (newTarget !== state.target || newEngine !== state.engine || newMode !== state.mode) {
+      var structural = newTarget !== state.target || newEngine !== state.engine || newMode !== state.mode;
+      if (structural) {
+        // 结构变化:还原并重扫
         revertAll();
         state.target = newTarget;
         state.engine = newEngine;
         state.mode = newMode;
+        applyStyleState(newStyle);
         scheduleScan();
+      } else if (styleChanged(newStyle)) {
+        // 仅译文样式变化:直接重涂已有译文,不重译
+        applyStyleState(newStyle);
+        restyleBilingual();
+      } else {
+        state.target = newTarget;
+        state.engine = newEngine;
+        state.mode = newMode;
       }
     } else {
       state.target = newTarget;
       state.engine = newEngine;
       state.mode = newMode;
+      applyStyleState(newStyle);
     }
 
     if (newBall !== state.ball) {
@@ -570,6 +652,7 @@
       state.mode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
       state.enabled = !!cfg['pageTrans.enabled'];
       state.ball = cfg['pageTrans.ball'] !== false;
+      applyStyleState(styleOf(cfg));
       toggleBall(state.ball);
       if (state.enabled) startTranslate();
     });

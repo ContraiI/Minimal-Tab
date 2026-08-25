@@ -52,7 +52,7 @@
   </div>
 
   <!-- 设置覆盖层(完全覆盖翻译界面) -->
-  <div id="settingsOverlay" class="settings-overlay hidden">
+  <div id="settingsOverlay" class="settings-overlay">
     <div class="settings-panel">
       <div class="settings-header">
         <span data-i18n="transSettingsTitle">翻译设置</span>
@@ -91,6 +91,120 @@
             <button type="button" class="theme-mode-opt" role="radio" data-mode="bilingual" data-i18n="pageTransModeBilingual">双语对照</button>
           </div>
         </div>
+
+        <!-- 译文样式:仅双语对照时显示,默认折叠;只影响双语译文 -->
+        <div id="pageTransStyleSection" class="section-collapse collapsed">
+          <div class="settings-section-label section-collapse-header" id="pageTransStyleToggle" data-i18n="pageTransStyleTitle">译文样式</div>
+          <div class="section-collapse-body" id="pageTransStyleBody">
+            <!-- B 区:译文样式单选(无 / 下划线A / 下划线B / 下划线C),左端圆点 + 第二行译文预览(语言随目标语言) -->
+            <div id="pageTransStyleSelect" role="radiogroup">
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="none">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleNone">无</span>
+                  <span class="style-preview"></span>
+                </span>
+              </label>
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="underlineA">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineA">虚线下划线</span>
+                  <span class="style-preview pt-underlineA"></span>
+                </span>
+              </label>
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="underlineB">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineB">直线下划线</span>
+                  <span class="style-preview pt-underlineB"></span>
+                </span>
+              </label>
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="underlineC">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineC">细虚线下划线</span>
+                  <span class="style-preview pt-underlineC"></span>
+                </span>
+              </label>
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="borderA">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleBorderA">虚线边框</span>
+                  <span class="style-preview pt-borderA"></span>
+                </span>
+              </label>
+              <label class="style-radio-opt">
+                <input type="radio" name="pageTransStyle" value="borderB">
+                <span class="radio-dot"></span>
+                <span class="style-opt-body">
+                  <span class="style-opt-name" data-i18n="pageTransStyleBorderB">直线边框</span>
+                  <span class="style-preview pt-borderB"></span>
+                </span>
+              </label>
+            </div>
+
+            <!-- A 区:字体颜色 + 边框颜色 + 斜体 + 粗体 -->
+            <div class="style-color-row">
+              <span data-i18n="pageTransFontColor">字体颜色</span>
+              <div class="color-actions">
+                <button type="button" class="color-default-btn" id="pageTransFontColorDefault" data-i18n-title="pageTransColorReset" title="恢复默认">
+                  <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                </button>
+                <span class="theme-color-swatch picker-trigger" id="pageTransFontColorTrigger" data-i18n-title="colorPicker" title="取色器"></span>
+              </div>
+            </div>
+            <div id="pageTransFontColorPanel" class="color-picker-panel">
+              <div class="picker-row">
+                <canvas id="pageTransFontPalette" class="picker-palette" width="160" height="160"></canvas>
+                <canvas id="pageTransFontHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
+              </div>
+              <div class="picker-input-row">
+                <input type="text" id="pageTransFontHex" class="picker-hex-input" placeholder="#000000" maxlength="7">
+                <button id="pageTransFontConfirm" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
+              </div>
+            </div>
+
+            <!-- 边框颜色:仅样式为下划线类时显示,绑定当前样式独立的线条颜色 -->
+            <div id="pageTransLineColorBlock" class="style-color-block" hidden>
+              <div class="style-color-row">
+                <span data-i18n="pageTransLineColor">边框颜色</span>
+                <div class="color-actions">
+                  <button type="button" class="color-default-btn" id="pageTransLineColorDefault" data-i18n-title="pageTransColorReset" title="恢复默认">
+                    <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                  </button>
+                  <span class="theme-color-swatch picker-trigger" id="pageTransLineColorTrigger" data-i18n-title="colorPicker" title="取色器"></span>
+                </div>
+              </div>
+              <div id="pageTransLineColorPanel" class="color-picker-panel">
+                <div class="picker-row">
+                  <canvas id="pageTransLinePalette" class="picker-palette" width="160" height="160"></canvas>
+                  <canvas id="pageTransLineHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
+                </div>
+                <div class="picker-input-row">
+                  <input type="text" id="pageTransLineHex" class="picker-hex-input" placeholder="#000000" maxlength="7">
+                  <button id="pageTransLineConfirm" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
+                </div>
+              </div>
+            </div>
+
+            <label class="setting-toggle">
+              <span data-i18n="pageTransItalic">斜体</span>
+              <input type="checkbox" id="pageTransItalic">
+              <span class="toggle-switch"></span>
+            </label>
+            <label class="setting-toggle">
+              <span data-i18n="pageTransBold">粗体</span>
+              <input type="checkbox" id="pageTransBold">
+              <span class="toggle-switch"></span>
+            </label>
+          </div>
+        </div>
+
         <label class="setting-toggle">
           <span data-i18n="pageTransBall">悬浮球</span>
           <input type="checkbox" id="pageBallToggle">

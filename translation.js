@@ -2,6 +2,47 @@
   'use strict';
 
 
+  // 颜色工具函数(移植自标签页 script.js,供取色器使用)
+  function hexToRgb(hex) {
+    return {
+      r: parseInt(hex.slice(1, 3), 16),
+      g: parseInt(hex.slice(3, 5), 16),
+      b: parseInt(hex.slice(5, 7), 16)
+    };
+  }
+
+  function hsvToRgb(h, s, v) {
+    s = s / 100; v = v / 100;
+    var c = v * s;
+    var hh = (h / 60) % 6;
+    var x = c * (1 - Math.abs(hh % 2 - 1));
+    var m = v - c;
+    var r0, g0, b0;
+    if (hh < 1) { r0 = c; g0 = x; b0 = 0; }
+    else if (hh < 2) { r0 = x; g0 = c; b0 = 0; }
+    else if (hh < 3) { r0 = 0; g0 = c; b0 = x; }
+    else if (hh < 4) { r0 = 0; g0 = x; b0 = c; }
+    else if (hh < 5) { r0 = x; g0 = 0; b0 = c; }
+    else { r0 = c; g0 = 0; b0 = x; }
+    return { r: Math.round((r0 + m) * 255), g: Math.round((g0 + m) * 255), b: Math.round((b0 + m) * 255) };
+  }
+
+  function rgbToHsv(r, g, b) {
+    r = r / 255; g = g / 255; b = b / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var d = max - min;
+    var h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return { h: h, s: max === 0 ? 0 : (d / max) * 100, v: max * 100 };
+  }
+
+
   var ACCENT_DEFAULT = '#2563eb';
 
   // 应用主题色到 CSS 变量,并根据亮度选择对比文字色
@@ -246,6 +287,7 @@
         targetLang = code;
         saveSettings();
         retranslate();
+        renderStylePreviews();
       }
     );
 
@@ -308,16 +350,23 @@
     var settingsOverlay = document.getElementById('settingsOverlay');
     var settingsCloseBtn = document.getElementById('settingsCloseBtn');
 
-    // 设置弹窗的打开/关闭
+    // 关闭设置面板:收起浮层,并让译文样式回到折叠、打开的色盘关闭
+    // (styleSection/取色器在下文声明,var 提升 + 空值判断,调用时必已赋值)
+    function closeSettingsPanel() {
+      settingsOverlay.classList.remove('open');
+      if (styleSection) styleSection.classList.add('collapsed');
+      if (pageTransFontPicker && pageTransFontPicker.isOpen()) pageTransFontPicker.close();
+      if (pageTransLinePicker && pageTransLinePicker.isOpen()) pageTransLinePicker.close();
+    }
+
+    // 设置弹窗的打开/关闭(带淡入淡出)
     if (settingsBtn && settingsOverlay) {
       settingsBtn.addEventListener('click', function () {
-        settingsOverlay.classList.remove('hidden');
+        settingsOverlay.classList.add('open');
       });
-      settingsCloseBtn.addEventListener('click', function () {
-        settingsOverlay.classList.add('hidden');
-      });
+      settingsCloseBtn.addEventListener('click', closeSettingsPanel);
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') settingsOverlay.classList.add('hidden');
+        if (e.key === 'Escape') closeSettingsPanel();
       });
     }
 
@@ -540,19 +589,30 @@
     engineDropdown.updateTrigger();
 
 
-    // 整页翻译设置(目标语言、悬浮球开关、双语对照)
+    // 整页翻译设置(目标语言、悬浮球、呈现方式、译文样式)
     var pageTransState = {
       target: 'sidebar',
       ball: true,
-      mode: 'replace'
+      mode: 'replace',
+      fontColor: '',
+      italic: false,
+      bold: false,
+      style: 'none',
+      styleColors: {}
     };
 
     function savePageTrans() {
       chrome.storage.local.set({
         'pageTrans.target': pageTransState.target,
         'pageTrans.ball': pageTransState.ball,
-        'pageTrans.mode': pageTransState.mode
+        'pageTrans.mode': pageTransState.mode,
+        'pageTrans.fontColor': pageTransState.fontColor,
+        'pageTrans.italic': pageTransState.italic,
+        'pageTrans.bold': pageTransState.bold,
+        'pageTrans.style': pageTransState.style,
+        'pageTrans.styleColors': pageTransState.styleColors
       });
+      renderStylePreviews();
     }
 
     var pageTargetDropdown = buildDropdown(
@@ -577,22 +637,329 @@
       btn.addEventListener('click', function () {
         pageTransState.mode = btn.getAttribute('data-mode');
         pageModeOptions.forEach(function (b) { b.classList.toggle('active', b === btn); });
+        updateStyleSectionVisibility();
         savePageTrans();
       });
     });
 
 
+    // ===== 译文样式(双语对照) =====
+
+    var styleSection = document.getElementById('pageTransStyleSection');
+    var styleToggle = document.getElementById('pageTransStyleToggle');
+
+    // 译文样式区块仅双语对照时显示,默认折叠;显隐带 max-height+opacity 过渡(参考标签页时钟条件行)
+    function updateStyleSectionVisibility() {
+      if (styleSection) styleSection.classList.toggle('mode-show', pageTransState.mode === 'bilingual');
+    }
+
+    if (styleToggle && styleSection) {
+      styleToggle.addEventListener('click', function () {
+        styleSection.classList.toggle('collapsed');
+      });
+    }
+
+    // canvas 取色器工厂(移植自标签页 script.js;面板用 .open 展开,颜色经 get/set 回调读写)
+    function createColorPicker(cfg) {
+      var panel = cfg.panel, palette = cfg.palette, hueBar = cfg.hueBar,
+          hexInput = cfg.hexInput, confirmBtn = cfg.confirmBtn, trigger = cfg.trigger,
+          getColor = cfg.getColor, setColor = cfg.setColor,
+          preview = cfg.preview || function () {}, highlight = cfg.highlight || function () {};
+      var DEFAULT_HEX = cfg.defaultColor || '#2563eb';
+      if (!panel || !palette || !hueBar) return null;
+      var pctx = palette.getContext('2d');
+      var hctx = hueBar.getContext('2d');
+      var hue = 0, sat = 100, val = 100, size = 160, origColor = DEFAULT_HEX;
+
+      function drawHueBar() {
+        for (var y = 0; y < size; y++) {
+          var rgb = hsvToRgb(y / size * 360, 100, 100);
+          hctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+          hctx.fillRect(0, y, 20, 1);
+        }
+        var hy = Math.round(hue / 360 * size);
+        var irgb = hsvToRgb(hue, 100, 100);
+        var l = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
+        hctx.fillStyle = l > 0.65 ? '#333' : '#fff';
+        hctx.fillRect(0, hy - 3, 20, 5);
+      }
+
+      function drawPalette() {
+        var prgb = hsvToRgb(hue, 100, 100);
+        pctx.clearRect(0, 0, size, size);
+        var gradW = pctx.createLinearGradient(0, 0, size, 0);
+        gradW.addColorStop(0, '#ffffff');
+        gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
+        pctx.fillStyle = gradW;
+        pctx.fillRect(0, 0, size, size);
+        var gradB = pctx.createLinearGradient(0, 0, 0, size);
+        gradB.addColorStop(0, 'transparent');
+        gradB.addColorStop(1, '#000000');
+        pctx.fillStyle = gradB;
+        pctx.fillRect(0, 0, size, size);
+        var px = Math.round(sat / 100 * size);
+        var py = Math.round((100 - val) / 100 * size);
+        var crgb = hsvToRgb(hue, sat, val);
+        var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
+        pctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
+        pctx.lineWidth = 2;
+        pctx.beginPath();
+        pctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        pctx.stroke();
+      }
+
+      function updateFromPicker() {
+        var rgb = hsvToRgb(hue, sat, val);
+        var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
+        hexInput.value = hex;
+        preview(hex);
+      }
+
+      function onPaletteMove(e) {
+        var rect = palette.getBoundingClientRect();
+        var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+        var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+        x = Math.max(0, Math.min(size, x));
+        y = Math.max(0, Math.min(size, y));
+        sat = Math.round(x / size * 100);
+        val = Math.round(100 - y / size * 100);
+        drawPalette();
+        updateFromPicker();
+      }
+
+      function onHueMove(e) {
+        var rect = hueBar.getBoundingClientRect();
+        var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+        y = Math.max(0, Math.min(size, y));
+        hue = Math.round(y / size * 360);
+        drawPalette();
+        drawHueBar();
+        updateFromPicker();
+      }
+
+      palette.addEventListener('mousedown', function (e) {
+        onPaletteMove(e);
+        document.addEventListener('mousemove', onPaletteMove);
+        document.addEventListener('mouseup', function () {
+          document.removeEventListener('mousemove', onPaletteMove);
+        }, { once: true });
+      });
+
+      hueBar.addEventListener('mousedown', function (e) {
+        onHueMove(e);
+        document.addEventListener('mousemove', onHueMove);
+        document.addEventListener('mouseup', function () {
+          document.removeEventListener('mousemove', onHueMove);
+        }, { once: true });
+      });
+
+      hexInput.addEventListener('input', function () {
+        var hex = hexInput.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+          var c = hexToRgb(hex), hsv = rgbToHsv(c.r, c.g, c.b);
+          hue = hsv.h; sat = hsv.s; val = hsv.v;
+          drawPalette();
+          drawHueBar();
+          preview(hex.toLowerCase());
+        }
+      });
+
+      confirmBtn.addEventListener('click', function () {
+        var hex = hexInput.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+          setColor(hex.toLowerCase());
+          highlight(hex.toLowerCase());
+          panel.classList.remove('open');
+        }
+      });
+
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = panel.classList.contains('open');
+        if (isOpen) {
+          panel.classList.remove('open');
+          preview(origColor);
+          highlight(origColor);
+          return;
+        }
+        panel.classList.add('open');
+        origColor = getColor() || '';          // '' 表示默认,取消时恢复
+        var initHex = origColor || DEFAULT_HEX;
+        var row = panel.querySelector('.picker-row');
+        var available = row ? row.clientWidth - 26 : 160;
+        size = available;
+        palette.width = available; palette.height = available;
+        hueBar.height = available;
+        var c = hexToRgb(initHex), hsv = rgbToHsv(c.r, c.g, c.b);
+        hue = hsv.h; sat = hsv.s; val = hsv.v;
+        drawPalette();
+        drawHueBar();
+        updateFromPicker();
+      });
+
+      return {
+        isOpen: function () { return panel.classList.contains('open'); },
+        close: function () { panel.classList.remove('open'); preview(origColor); highlight(origColor); }
+      };
+    }
+
+    // 字体颜色 / 边框颜色:「恢复默认」按钮的状态渲染(值为空→置灰)
+    function makeColorDefaultRender(btn) {
+      return function (value) { btn.classList.toggle('is-default', !value); };
+    }
+    var pageTransFontColorDefault = document.getElementById('pageTransFontColorDefault');
+    var pageTransLineColorDefault = document.getElementById('pageTransLineColorDefault');
+    var fontRowRender = makeColorDefaultRender(pageTransFontColorDefault);
+    var lineRowRender = makeColorDefaultRender(pageTransLineColorDefault);
+
+    // 字体颜色:恢复默认 + 自定义取色
+    pageTransFontColorDefault.addEventListener('click', function () {
+      if (!pageTransState.fontColor) return;
+      pageTransState.fontColor = '';
+      savePageTrans();
+      fontRowRender('');
+    });
+
+    var pageTransFontPicker = createColorPicker({
+      panel: document.getElementById('pageTransFontColorPanel'),
+      palette: document.getElementById('pageTransFontPalette'),
+      hueBar: document.getElementById('pageTransFontHueBar'),
+      hexInput: document.getElementById('pageTransFontHex'),
+      confirmBtn: document.getElementById('pageTransFontConfirm'),
+      trigger: document.getElementById('pageTransFontColorTrigger'),
+      getColor: function () { return pageTransState.fontColor; },
+      setColor: function (hex) { pageTransState.fontColor = hex; savePageTrans(); },
+      preview: fontRowRender,
+      highlight: fontRowRender
+    });
+
+    // 边框颜色(绑定当前样式,各样式颜色独立)
+    var pageTransLineColorBlock = document.getElementById('pageTransLineColorBlock');
+
+    function lineColorCurrent() {
+      return pageTransState.styleColors[pageTransState.style] || '';
+    }
+    pageTransLineColorDefault.addEventListener('click', function () {
+      if (!lineColorCurrent()) return;
+      pageTransState.styleColors[pageTransState.style] = '';
+      savePageTrans();
+      lineRowRender('');
+    });
+
+    var pageTransLinePicker = createColorPicker({
+      panel: document.getElementById('pageTransLineColorPanel'),
+      palette: document.getElementById('pageTransLinePalette'),
+      hueBar: document.getElementById('pageTransLineHueBar'),
+      hexInput: document.getElementById('pageTransLineHex'),
+      confirmBtn: document.getElementById('pageTransLineConfirm'),
+      trigger: document.getElementById('pageTransLineColorTrigger'),
+      getColor: lineColorCurrent,
+      setColor: function (hex) { pageTransState.styleColors[pageTransState.style] = hex; savePageTrans(); },
+      preview: lineRowRender,
+      highlight: lineRowRender
+    });
+
+    // 带线条的样式开启时显示边框颜色块,切换样式时刷新该样式独立的颜色
+    function updateLineColorBlock() {
+      var hasLine = pageTransState.style !== 'none';
+      if (pageTransLineColorBlock) pageTransLineColorBlock.hidden = !hasLine;
+      if (hasLine) lineRowRender(lineColorCurrent());
+    }
+
+    // B 区:译文样式单选(radio 开关列表)
+    var pageTransStyleSelect = document.getElementById('pageTransStyleSelect');
+    var pageTransStyleRadios = [].slice.call(pageTransStyleSelect.querySelectorAll('input[name="pageTransStyle"]'));
+    pageTransStyleRadios.forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        pageTransState.style = radio.value;
+        updateLineColorBlock();
+        savePageTrans();
+      });
+    });
+
+    // A 区:斜体 / 粗体
+    var pageTransItalicToggle = document.getElementById('pageTransItalic');
+    var pageTransBoldToggle = document.getElementById('pageTransBold');
+    pageTransItalicToggle.addEventListener('change', function () {
+      pageTransState.italic = pageTransItalicToggle.checked;
+      savePageTrans();
+    });
+    pageTransBoldToggle.addEventListener('change', function () {
+      pageTransState.bold = pageTransBoldToggle.checked;
+      savePageTrans();
+    });
+
+
+    // 译文预览样本(按目标语言)
+    var PREVIEW_SAMPLES = {
+      'zh-CN': '译文预览示例', 'zh-TW': '譯文預覽範例', 'en': 'Translation preview',
+      'ja': '翻訳プレビュー', 'ko': '번역 미리보기', 'fr': 'Aperçu de traduction',
+      'de': 'Übersetzungsvorschau', 'es': 'Vista previa', 'ru': 'Предпросмотр перевода',
+      'it': 'Anteprima di traduzione', 'pt': 'Pré-visualização', 'vi': 'Xem trước bản dịch',
+      'th': 'ตัวอย่างคำแปล', 'ar': 'معاينة الترجمة', 'hi': 'अनुवाद पूर्वावलोकन',
+      'nl': 'Vertalingsvoorbeeld', 'pl': 'Podgląd tłumaczenia', 'tr': 'Çeviri önizleme',
+      'sv': 'Förhandsvisning', 'da': 'Oversættelsesvisning', 'fi': 'Käännösesikatselu',
+      'el': 'Προεπισκόπηση μετάφρασης', 'cs': 'Náhled překladu'
+    };
+
+    // 实际目标语言(跟随侧边栏时取侧边栏目标语言)
+    function effectiveTarget() {
+      return pageTransState.target === 'sidebar'
+        ? (localStorage.getItem('trans.targetLang') || 'zh-CN')
+        : pageTransState.target;
+    }
+
+    // 写入内联 CSS 变量,空值则移除
+    function setStyleVar(el, name, value) {
+      if (value) el.style.setProperty(name, value);
+      else el.style.removeProperty(name);
+    }
+
+    // 重绘各样式选项的译文预览(文本随目标语言,样式随 A 区设置与该选项的线条装饰)
+    function renderStylePreviews() {
+      var previews = [].slice.call(document.querySelectorAll('.style-preview'));
+      if (!previews.length) return;
+      var text = PREVIEW_SAMPLES[effectiveTarget()] || 'Translation preview';
+      previews.forEach(function (el) {
+        el.textContent = text;
+        var key = (el.classList.contains('pt-underlineA') && 'underlineA') ||
+                  (el.classList.contains('pt-underlineB') && 'underlineB') ||
+                  (el.classList.contains('pt-underlineC') && 'underlineC') ||
+                  (el.classList.contains('pt-borderA') && 'borderA') ||
+                  (el.classList.contains('pt-borderB') && 'borderB') || 'none';
+        setStyleVar(el, '--pt-color', pageTransState.fontColor);
+        setStyleVar(el, '--pt-italic', pageTransState.italic ? 'italic' : '');
+        setStyleVar(el, '--pt-bold', pageTransState.bold ? 'bold' : '');
+        setStyleVar(el, '--pt-line', (pageTransState.styleColors && pageTransState.styleColors[key]) || '');
+      });
+    }
+
+
     // 从 chrome.storage 恢复整页翻译设置
     function loadPageTransSettings() {
-      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode'], function (all) {
+      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode', 'pageTrans.fontColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style', 'pageTrans.styleColors'], function (all) {
         pageTransState.target = all['pageTrans.target'] || 'sidebar';
         pageTransState.ball = all['pageTrans.ball'] !== false;
         pageTransState.mode = all['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
+        pageTransState.fontColor = all['pageTrans.fontColor'] || '';
+        pageTransState.italic = !!all['pageTrans.italic'];
+        pageTransState.bold = !!all['pageTrans.bold'];
+        pageTransState.style = all['pageTrans.style'] || 'none';
+        pageTransState.styleColors = all['pageTrans.styleColors'] || {};
         pageTargetDropdown.updateTrigger();
         pageBallToggle.checked = pageTransState.ball;
         pageModeOptions.forEach(function (b) {
           b.classList.toggle('active', b.getAttribute('data-mode') === pageTransState.mode);
         });
+        pageTransItalicToggle.checked = pageTransState.italic;
+        pageTransBoldToggle.checked = pageTransState.bold;
+        pageTransStyleRadios.forEach(function (r) {
+          r.checked = (r.value === pageTransState.style);
+        });
+        fontRowRender(pageTransState.fontColor);
+        updateLineColorBlock();
+        updateStyleSectionVisibility();
+        renderStylePreviews();
       });
     }
 

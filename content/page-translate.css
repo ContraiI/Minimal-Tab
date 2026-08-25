@@ -37,7 +37,52 @@
 #pageTransBall.page-trans-off { background: #5a5f6b; }
 
 /* 双语对照模式:原文下方追加的译文块(弱化以区分原文) */
-.page-trans-bilingual { opacity: 0.82; }
+.page-trans-bilingual {
+  opacity: 0.82;
+}
+/* 颜色/斜体/粗体/线条色经内联 CSS 变量驱动(--pt-color/--pt-italic/--pt-bold/--pt-line) */
+.page-trans-bilingual .page-trans-text {
+  color: var(--pt-color, inherit);
+  font-style: var(--pt-italic, normal);
+  font-weight: var(--pt-bold, normal);
+}
+
+/* 下划线样式:虚线 / 直线 / 细虚线(text-underline-offset 与文本拉开距离) */
+.page-trans-bilingual .page-trans-text.pt-underlineA {
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.page-trans-bilingual .page-trans-text.pt-underlineB {
+  text-decoration: underline;
+  text-decoration-style: solid;
+  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+.page-trans-bilingual .page-trans-text.pt-underlineC {
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* 边框样式:用对应线条把译文框起来 */
+.page-trans-bilingual .page-trans-text.pt-borderA {
+  display: inline-block;
+  border: 1px dashed var(--pt-line, currentColor);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+.page-trans-bilingual .page-trans-text.pt-borderB {
+  display: inline-block;
+  border: 1px solid var(--pt-line, currentColor);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
 
 /* 正在翻译的文本末尾的加载图标(翻译完成/失败后移除) */
 .page-trans-loading {
