@@ -18,16 +18,16 @@
     engine: 'google',
     mode: 'replace',
     fontColor: '',
+    lineColor: '',
     italic: false,
     bold: false,
-    style: 'none',
-    styleColors: {}
+    style: 'none'
   };
 
-  var RELEVANT_KEYS = ['pageTrans.enabled', 'pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',
-    'pageTrans.fontColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style', 'pageTrans.styleColors'];
+  var RELEVANT_KEYS = ['pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',
+    'pageTrans.fontColor', 'pageTrans.lineColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style'];
   var ATTR_NAMES = ['title', 'placeholder', 'alt', 'aria-label'];
-  var CONCURRENCY = 4;      // 并发翻译数
+  var CONCURRENCY = 6;      // 本页并发翻译数(全局另有后台限流)
   var SCAN_DEBOUNCE = 150;  // 扫描防抖毫秒数
 
 
@@ -312,7 +312,7 @@
     setStyleVar(el, '--pt-color', state.fontColor);
     setStyleVar(el, '--pt-italic', state.italic ? 'italic' : '');
     setStyleVar(el, '--pt-bold', state.bold ? 'bold' : '');
-    setStyleVar(el, '--pt-line', (state.styleColors && state.styleColors[state.style]) || '');
+    setStyleVar(el, '--pt-line', state.lineColor);
   }
 
   // 纯样式变化时重涂所有已有双语译文文本(含 shadow DOM),不触发重扫/重译
@@ -496,7 +496,8 @@
     ballEl.addEventListener('click', function () {
       // 仅未发生拖动时视为点击切换;拖动结束不触发开关
       if (ballDragged) return;
-      setStore({ 'pageTrans.enabled': !state.enabled });
+      // 由后台按本标签页定位切换(per-tab,不影响其他标签页)
+      try { chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE' }); } catch (e) {}
     });
 
     ballEl.addEventListener('pointerdown', function (e) {
@@ -576,44 +577,46 @@
   function styleOf(cfg) {
     return {
       fontColor: cfg['pageTrans.fontColor'] || '',
+      lineColor: cfg['pageTrans.lineColor'] || '',
       italic: !!cfg['pageTrans.italic'],
       bold: !!cfg['pageTrans.bold'],
-      style: cfg['pageTrans.style'] || 'none',
-      styleColors: cfg['pageTrans.styleColors'] || {}
+      style: cfg['pageTrans.style'] || 'none'
     };
   }
 
   function applyStyleState(s) {
     state.fontColor = s.fontColor;
+    state.lineColor = s.lineColor;
     state.italic = s.italic;
     state.bold = s.bold;
     state.style = s.style;
-    state.styleColors = s.styleColors;
   }
 
   // 仅样式是否发生变化
   function styleChanged(ns) {
-    return state.fontColor !== ns.fontColor || state.italic !== ns.italic ||
-           state.bold !== ns.bold || state.style !== ns.style ||
-           JSON.stringify(state.styleColors || {}) !== JSON.stringify(ns.styleColors || {});
+    return state.fontColor !== ns.fontColor || state.lineColor !== ns.lineColor ||
+           state.italic !== ns.italic || state.bold !== ns.bold || state.style !== ns.style;
   }
 
-  // 依据最新配置切换翻译/悬浮球状态
+  // 依据最新配置切换翻译/悬浮球状态(enabled 由后台消息驱动,不在 storage 里)
   function onState(cfg) {
-    var newEnabled = !!cfg['pageTrans.enabled'];
     var newBall = cfg['pageTrans.ball'] !== false;
     var newTarget = resolveTarget(cfg);
     var newEngine = cfg['trans.engine'] || 'google';
     var newMode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
     var newStyle = styleOf(cfg);
 
-    if (newEnabled !== state.enabled) {
-      state.enabled = newEnabled;
-      if (newEnabled) { applyStyleState(newStyle); startTranslate(); } else stopTranslate();
-    } else if (newEnabled) {
-      var structural = newTarget !== state.target || newEngine !== state.engine || newMode !== state.mode;
-      if (structural) {
-        // 结构变化:还原并重扫
+    var modeChanged = newMode !== state.mode;
+
+    if (state.enabled) {
+      if (modeChanged) {
+        // 切换呈现方式:后台会广播关闭本页翻译,这里只更新配置,不自行重扫
+        state.target = newTarget;
+        state.engine = newEngine;
+        state.mode = newMode;
+        applyStyleState(newStyle);
+      } else if (newTarget !== state.target || newEngine !== state.engine) {
+        // 目标语言/引擎变化:还原并重扫(保持翻译开启)
         revertAll();
         state.target = newTarget;
         state.engine = newEngine;
@@ -644,24 +647,50 @@
     }
   }
 
-  // 初始化:读取配置并监听其变化
+  // 本标签页的翻译开关(由后台广播,仅本页生效)
+  function onEnabledMsg(enabled) {
+    var next = !!enabled;
+    if (next === state.enabled) return;
+    state.enabled = next;
+    if (next) startTranslate(); else stopTranslate();
+  }
+
+  // 初始化:读取配置并查询本标签页翻译开关(两者就绪后才启动)
   function init() {
+    var configReady = false;
+    var enabledReady = false;
+    function maybeStart() {
+      if (configReady && enabledReady && state.enabled) startTranslate();
+    }
+
     getStore(RELEVANT_KEYS, function (cfg) {
       state.target = resolveTarget(cfg);
       state.engine = cfg['trans.engine'] || 'google';
       state.mode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
-      state.enabled = !!cfg['pageTrans.enabled'];
       state.ball = cfg['pageTrans.ball'] !== false;
       applyStyleState(styleOf(cfg));
       toggleBall(state.ball);
-      if (state.enabled) startTranslate();
+      configReady = true;
+      maybeStart();
     });
+
+    // 向后台查询本标签页的翻译开关(per-tab,不随其他页面联动)
+    try {
+      chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_QUERY' }, function (resp) {
+        state.enabled = !!(resp && resp.enabled);
+        enabledReady = true;
+        maybeStart();
+      });
+    } catch (e) { enabledReady = true; }
 
     if (alive()) {
       chrome.storage.onChanged.addListener(function (changes, area) {
         if (area !== 'local') return;
         var hit = Object.keys(changes).some(function (k) { return RELEVANT_KEYS.indexOf(k) > -1; });
         if (hit) getStore(RELEVANT_KEYS, onState);
+      });
+      chrome.runtime.onMessage.addListener(function (msg) {
+        if (msg && msg.type === 'PAGE_TRANSLATE_STATE') onEnabledMsg(msg.enabled);
       });
     }
   }

@@ -595,10 +595,10 @@
       ball: true,
       mode: 'replace',
       fontColor: '',
+      lineColor: '',
       italic: false,
       bold: false,
-      style: 'none',
-      styleColors: {}
+      style: 'none'
     };
 
     function savePageTrans() {
@@ -607,10 +607,10 @@
         'pageTrans.ball': pageTransState.ball,
         'pageTrans.mode': pageTransState.mode,
         'pageTrans.fontColor': pageTransState.fontColor,
+        'pageTrans.lineColor': pageTransState.lineColor,
         'pageTrans.italic': pageTransState.italic,
         'pageTrans.bold': pageTransState.bold,
-        'pageTrans.style': pageTransState.style,
-        'pageTrans.styleColors': pageTransState.styleColors
+        'pageTrans.style': pageTransState.style
       });
       renderStylePreviews();
     }
@@ -837,11 +837,11 @@
     var pageTransLineColorBlock = document.getElementById('pageTransLineColorBlock');
 
     function lineColorCurrent() {
-      return pageTransState.styleColors[pageTransState.style] || '';
+      return pageTransState.lineColor;
     }
     pageTransLineColorDefault.addEventListener('click', function () {
       if (!lineColorCurrent()) return;
-      pageTransState.styleColors[pageTransState.style] = '';
+      pageTransState.lineColor = '';
       savePageTrans();
       lineRowRender('');
     });
@@ -854,7 +854,7 @@
       confirmBtn: document.getElementById('pageTransLineConfirm'),
       trigger: document.getElementById('pageTransLineColorTrigger'),
       getColor: lineColorCurrent,
-      setColor: function (hex) { pageTransState.styleColors[pageTransState.style] = hex; savePageTrans(); },
+      setColor: function (hex) { pageTransState.lineColor = hex; savePageTrans(); },
       preview: lineRowRender,
       highlight: lineRowRender
     });
@@ -922,30 +922,25 @@
       var text = PREVIEW_SAMPLES[effectiveTarget()] || 'Translation preview';
       previews.forEach(function (el) {
         el.textContent = text;
-        var key = (el.classList.contains('pt-underlineA') && 'underlineA') ||
-                  (el.classList.contains('pt-underlineB') && 'underlineB') ||
-                  (el.classList.contains('pt-underlineC') && 'underlineC') ||
-                  (el.classList.contains('pt-borderA') && 'borderA') ||
-                  (el.classList.contains('pt-borderB') && 'borderB') || 'none';
         setStyleVar(el, '--pt-color', pageTransState.fontColor);
         setStyleVar(el, '--pt-italic', pageTransState.italic ? 'italic' : '');
         setStyleVar(el, '--pt-bold', pageTransState.bold ? 'bold' : '');
-        setStyleVar(el, '--pt-line', (pageTransState.styleColors && pageTransState.styleColors[key]) || '');
+        setStyleVar(el, '--pt-line', pageTransState.lineColor);
       });
     }
 
 
     // 从 chrome.storage 恢复整页翻译设置
     function loadPageTransSettings() {
-      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode', 'pageTrans.fontColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style', 'pageTrans.styleColors'], function (all) {
+      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode', 'pageTrans.fontColor', 'pageTrans.lineColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style'], function (all) {
         pageTransState.target = all['pageTrans.target'] || 'sidebar';
         pageTransState.ball = all['pageTrans.ball'] !== false;
         pageTransState.mode = all['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
         pageTransState.fontColor = all['pageTrans.fontColor'] || '';
+        pageTransState.lineColor = all['pageTrans.lineColor'] || '';
         pageTransState.italic = !!all['pageTrans.italic'];
         pageTransState.bold = !!all['pageTrans.bold'];
         pageTransState.style = all['pageTrans.style'] || 'none';
-        pageTransState.styleColors = all['pageTrans.styleColors'] || {};
         pageTargetDropdown.updateTrigger();
         pageBallToggle.checked = pageTransState.ball;
         pageModeOptions.forEach(function (b) {

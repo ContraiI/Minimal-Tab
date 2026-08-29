@@ -873,34 +873,34 @@ body.light .section-collapse.mode-show:not(.collapsed) {
 .style-preview.pt-underlineA {
   text-decoration: underline;
   text-decoration-style: dashed;
-  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-color: var(--pt-line, #888);
   text-decoration-thickness: 2px;
   text-underline-offset: 2px;
 }
 .style-preview.pt-underlineB {
   text-decoration: underline;
   text-decoration-style: solid;
-  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-color: var(--pt-line, #888);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 2px;
 }
 .style-preview.pt-underlineC {
   text-decoration: underline;
   text-decoration-style: dashed;
-  text-decoration-color: var(--pt-line, currentColor);
+  text-decoration-color: var(--pt-line, #888);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 /* 边框样式:用对应线条把译文框起来 */
 .style-preview.pt-borderA {
   display: inline-block;
-  border: 1px dashed var(--pt-line, currentColor);
+  border: 1px dashed var(--pt-line, #888);
   border-radius: 3px;
   padding: 1px 6px;
 }
 .style-preview.pt-borderB {
   display: inline-block;
-  border: 1px solid var(--pt-line, currentColor);
+  border: 1px solid var(--pt-line, #888);
   border-radius: 3px;
   padding: 1px 6px;
 }

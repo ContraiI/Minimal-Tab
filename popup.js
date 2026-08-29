@@ -29,21 +29,30 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // 整页翻译开关:按钮文案随状态切换
+  // 整页翻译开关:按当前标签页查询/切换(per-tab,不全局联动)
   const pageBtn = document.getElementById('pageToggleBtn');
   function renderPageBtn(enabled) {
     pageBtn.textContent = enabled ? t('popupCancelTranslate') : t('popupTranslatePage');
     pageBtn.classList.toggle('active', enabled);
   }
-  chrome.storage.local.get(['pageTrans.enabled'], (r) => {
-    renderPageBtn(!!r['pageTrans.enabled']);
-  });
-  // 点击后读写 chrome.storage 中的整页翻译开关状态
-  pageBtn.addEventListener('click', () => {
-    chrome.storage.local.get(['pageTrans.enabled'], (r) => {
-      const next = !r['pageTrans.enabled'];
-      chrome.storage.local.set({ 'pageTrans.enabled': next });
-      renderPageBtn(next);
-    });
+  async function currentTabId() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs && tabs[0] ? tabs[0].id : null;
+  }
+  async function queryState(tabId) {
+    if (tabId == null) return false;
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_QUERY', tabId });
+      return !!(resp && resp.enabled);
+    } catch (err) { return false; }
+  }
+  currentTabId().then((id) => queryState(id).then(renderPageBtn));
+  pageBtn.addEventListener('click', async () => {
+    const tabId = await currentTabId();
+    if (tabId == null) return;
+    try {
+      const resp = await chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE', tabId });
+      renderPageBtn(!!(resp && resp.enabled));
+    } catch (err) {}
   });
 });
