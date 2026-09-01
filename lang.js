@@ -163,6 +163,9 @@ window.I18N_DATA = {
     transNeedKey: '请先在设置中填写 API Key',
     transEngineBing: 'Microsoft（非官方）',
     transEngineCustom: '自定义 (OpenAI 兼容)',
+    transEngineTencent: '腾讯云',
+    transTencentSecretId: 'SecretId',
+    transTencentSecretKey: 'SecretKey',
     transCustomUrl: 'API 地址',
     transCustomUrlPlaceholder: 'https://api.deepseek.com/v1',
     transCustomModel: '模型名',
@@ -175,6 +178,14 @@ window.I18N_DATA = {
     transModelFetchFailed: '获取模型列表失败',
     transModelAuthFailed: 'API Key 无效或无权限',
     transModelNotSupported: '该服务不支持列出模型，可手动输入模型名',
+    transTest: '测试',
+    transConfirm: '确定',
+    transModify: '修改',
+    transTesting: '测试中…',
+    transTestSuccess: '连接正常（{latency}ms）',
+    transTestFailed: '测试失败',
+    transTestFailedKey: '请先填写 API Key',
+    transTestFailedConfig: '请先填写完整配置',
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: '打开翻译边栏',
@@ -199,6 +210,7 @@ window.I18N_DATA = {
     pageTransStyleUnderlineC: '细虚线下划线',
     pageTransStyleBorderA: '虚线边框',
     pageTransStyleBorderB: '直线边框',
+    pageTransStyleGroupStyle: '线条样式',
     pageTransColorReset: '恢复默认',
 
     langZhCn: '中文',
@@ -408,6 +420,9 @@ window.I18N_DATA = {
     transNeedKey: 'Please set your API key in Settings first',
     transEngineBing: 'Microsoft (Unofficial)',
     transEngineCustom: 'Custom (OpenAI-compatible)',
+    transEngineTencent: 'Tencent Cloud',
+    transTencentSecretId: 'SecretId',
+    transTencentSecretKey: 'SecretKey',
     transCustomUrl: 'API Base URL',
     transCustomUrlPlaceholder: 'https://api.openai.com/v1',
     transCustomModel: 'Model',
@@ -420,6 +435,14 @@ window.I18N_DATA = {
     transModelFetchFailed: 'Failed to fetch models',
     transModelAuthFailed: 'API Key invalid or no permission',
     transModelNotSupported: 'This service does not support listing models, please type the model name manually',
+    transTest: 'Test',
+    transConfirm: 'Confirm',
+    transModify: 'Edit',
+    transTesting: 'Testing…',
+    transTestSuccess: 'Connection OK ({latency}ms)',
+    transTestFailed: 'Test failed',
+    transTestFailedKey: 'Please enter your API key',
+    transTestFailedConfig: 'Please complete the configuration',
 
     popupTitle: 'Minimal Tab',
     popupOpenPanel: 'Open Translator',
@@ -444,6 +467,7 @@ window.I18N_DATA = {
     pageTransStyleUnderlineC: 'Thin Dashed Underline',
     pageTransStyleBorderA: 'Dashed Border',
     pageTransStyleBorderB: 'Solid Border',
+    pageTransStyleGroupStyle: 'Line Style',
     pageTransColorReset: 'Reset to Default',
 
     langZhCn: 'Chinese',
@@ -511,7 +535,14 @@ function setLanguage(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (key) el.textContent = t(key);
+    if (key) {
+      const rawVars = el.getAttribute('data-i18n-vars');
+      let vars;
+      if (rawVars) {
+        try { vars = JSON.parse(rawVars); } catch (e) {}
+      }
+      el.textContent = t(key, vars);
+    }
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');

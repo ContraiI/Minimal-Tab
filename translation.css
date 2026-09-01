@@ -294,6 +294,7 @@ body.light {
   inset: 0;
   z-index: 100;
   background: var(--trans-bg);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
@@ -724,6 +725,65 @@ body.light .settings-body .theme-mode-opt:not(.active):hover { background: rgba(
   max-width: none;
 }
 
+/* 引擎配置底部:测试结果与按钮同行(状态占左,按钮右对齐) */
+.engine-footer {
+  margin: 10px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.engine-test-status {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--trans-muted);
+  word-break: break-all;
+}
+.engine-test-status.ok { color: #34d399; }
+.engine-test-status.error { color: #f87171; }
+.engine-footer-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.engine-footer-actions button {
+  height: 26px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+.engine-footer-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.engine-test-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--trans-text);
+}
+.engine-test-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.engine-save-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.engine-save-btn:hover { opacity: 0.88; }
+body.light .engine-test-btn {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--trans-text);
+}
+body.light .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
+
+/* 引擎配置锁定态:输入框/模型按钮/区域下拉不可编辑 */
+.settings-body .setting-input:disabled,
+.settings-body .setting-fetch-btn:disabled,
+.settings-body .lang-trigger.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 
 /* ===== 译文样式(双语对照,样式与标签页设置保持一致) ===== */
 
@@ -794,6 +854,52 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   border-top: none;
   margin-top: 0;
   padding-top: 0;
+}
+
+/* 译文样式子菜单(线条样式):作为「译文样式」的子级,缩进 + 左侧引导线区分层级;
+   字体与父级一致;用独立类而非 section-collapse,避免外层展开时级联规则把子菜单 body 强制撑开 */
+.style-group {
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--trans-border);
+}
+.style-group-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--trans-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 10px 0 4px 0;
+  padding: 0;
+}
+.style-group-header::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
+  opacity: 0.5;
+  transition: transform 0.25s ease;
+}
+.style-group.collapsed .style-group-header::after { transform: rotate(-90deg); }
+.style-group-body {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0 8px;
+  transition: height 0.3s ease, opacity 0.25s ease;
+}
+.style-group:not(.collapsed) .style-group-body {
+  height: auto;
+  opacity: 1;
 }
 
 /* B 区样式单选列表:左端圆点指示选中 */

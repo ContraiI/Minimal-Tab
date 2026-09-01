@@ -96,56 +96,61 @@
         <div id="pageTransStyleSection" class="section-collapse collapsed">
           <div class="settings-section-label section-collapse-header" id="pageTransStyleToggle" data-i18n="pageTransStyleTitle">译文样式</div>
           <div class="section-collapse-body" id="pageTransStyleBody">
-            <!-- B 区:译文样式单选(无 / 下划线A / 下划线B / 下划线C),左端圆点 + 第二行译文预览(语言随目标语言) -->
+            <!-- B 区:样式单选(无 / 下划线 / 边框),左端圆点 + 第二行译文预览(语言随目标语言);子菜单默认折叠 -->
             <div id="pageTransStyleSelect" role="radiogroup">
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="none">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleNone">无</span>
-                  <span class="style-preview"></span>
-                </span>
-              </label>
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="underlineA">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineA">虚线下划线</span>
-                  <span class="style-preview pt-underlineA"></span>
-                </span>
-              </label>
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="underlineB">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineB">直线下划线</span>
-                  <span class="style-preview pt-underlineB"></span>
-                </span>
-              </label>
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="underlineC">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleUnderlineC">细虚线下划线</span>
-                  <span class="style-preview pt-underlineC"></span>
-                </span>
-              </label>
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="borderA">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleBorderA">虚线边框</span>
-                  <span class="style-preview pt-borderA"></span>
-                </span>
-              </label>
-              <label class="style-radio-opt">
-                <input type="radio" name="pageTransStyle" value="borderB">
-                <span class="radio-dot"></span>
-                <span class="style-opt-body">
-                  <span class="style-opt-name" data-i18n="pageTransStyleBorderB">直线边框</span>
-                  <span class="style-preview pt-borderB"></span>
-                </span>
-              </label>
+              <div class="style-group collapsed" id="styleGroupStyle">
+                <div class="style-group-header" data-i18n="pageTransStyleGroupStyle">线条样式</div>
+                <div class="style-group-body" inert>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="none">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleNone">无</span>
+                      <span class="style-preview"></span>
+                    </span>
+                  </label>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="underlineA">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleUnderlineA">虚线下划线</span>
+                      <span class="style-preview pt-underlineA"></span>
+                    </span>
+                  </label>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="underlineB">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleUnderlineB">直线下划线</span>
+                      <span class="style-preview pt-underlineB"></span>
+                    </span>
+                  </label>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="underlineC">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleUnderlineC">细虚线下划线</span>
+                      <span class="style-preview pt-underlineC"></span>
+                    </span>
+                  </label>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="borderA">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleBorderA">虚线边框</span>
+                      <span class="style-preview pt-borderA"></span>
+                    </span>
+                  </label>
+                  <label class="style-radio-opt">
+                    <input type="radio" name="pageTransStyle" value="borderB">
+                    <span class="radio-dot"></span>
+                    <span class="style-opt-body">
+                      <span class="style-opt-name" data-i18n="pageTransStyleBorderB">直线边框</span>
+                      <span class="style-preview pt-borderB"></span>
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             <!-- A 区:字体颜色 + 边框颜色 + 斜体 + 粗体 -->

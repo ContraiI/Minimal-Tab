@@ -2706,13 +2706,19 @@ if (engineSelectorEl && engineListEl) {
   const exportConfigBtn = document.getElementById('exportConfigBtn');
   const importConfigBtn = document.getElementById('importConfigBtn');
   const importConfigInput = document.getElementById('importConfigInput');
+  const SENSITIVE_CONFIG_KEYS = new Set([
+    'trans.msKey',
+    'trans.tencent.secretId',
+    'trans.tencent.secretKey',
+    'trans.custom.key'
+  ]);
 
   if (exportConfigBtn) {
     exportConfigBtn.addEventListener('click', () => {
       var data = {};
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
-        data[key] = localStorage.getItem(key);
+        if (!SENSITIVE_CONFIG_KEYS.has(key)) data[key] = localStorage.getItem(key);
       }
       var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       var url = URL.createObjectURL(blob);

@@ -46,13 +46,33 @@ document.addEventListener('DOMContentLoaded', () => {
       return !!(resp && resp.enabled);
     } catch (err) { return false; }
   }
-  currentTabId().then((id) => queryState(id).then(renderPageBtn));
-  pageBtn.addEventListener('click', async () => {
-    const tabId = await currentTabId();
-    if (tabId == null) return;
+  let stateSeq = 0;
+  async function refreshPageBtn() {
+    const id = ++stateSeq;
     try {
+      const tabId = await currentTabId();
+      const enabled = await queryState(tabId);
+      if (id === stateSeq) renderPageBtn(enabled);
+    } catch (err) {
+      if (id === stateSeq) renderPageBtn(false);
+    }
+  }
+  refreshPageBtn();
+  pageBtn.addEventListener('click', async () => {
+    const id = ++stateSeq;
+    try {
+      const tabId = await currentTabId();
+      if (tabId == null) return;
       const resp = await chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE', tabId });
-      renderPageBtn(!!(resp && resp.enabled));
+      if (id === stateSeq) renderPageBtn(!!(resp && resp.enabled));
     } catch (err) {}
+  });
+
+  // 其它标签页切换插件语言时,实时刷新弹窗文案
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'language') {
+      setLanguage(e.newValue || 'zh-CN');
+      refreshPageBtn();
+    }
   });
 });

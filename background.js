@@ -5,19 +5,24 @@ importScripts('translate-engine.js');
 
 // 从 chrome.storage 读取当前翻译引擎及其配置字段
 function loadEngineSettings() {
-  chrome.storage.local.get(['trans.engine'], function (base) {
-    var engine = base['trans.engine'] || 'google';
-    var eng = TranslateEngine.ENGINES[engine] || TranslateEngine.ENGINES.google;
-    var fields = {};
-    var keys = (eng.fields || []).map(function (f) { return f.key; });
-    chrome.storage.local.get(keys, function (all) {
-      (eng.fields || []).forEach(function (f) {
-        fields[f.id] = all[f.key] || '';
+  return new Promise(function (resolve) {
+    chrome.storage.local.get(['trans.engine'], function (base) {
+      var engine = base['trans.engine'] || 'google';
+      var eng = TranslateEngine.ENGINES[engine] || TranslateEngine.ENGINES.google;
+      var fields = {};
+      var keys = (eng.fields || []).map(function (f) { return f.key; });
+      chrome.storage.local.get(keys, function (all) {
+        (eng.fields || []).forEach(function (f) {
+          fields[f.id] = all[f.key] || f.defaultValue || '';
+        });
+        TranslateEngine.setSettings(engine, fields);
+        resolve();
       });
-      TranslateEngine.setSettings(engine, fields);
     });
   });
 }
+
+var engineSettingsReady = loadEngineSettings();
 
 // 判断存储键是否为翻译引擎相关(引擎选择或引擎配置字段)
 function isEngineKey(k) {
@@ -32,7 +37,7 @@ function isEngineKey(k) {
 chrome.storage.onChanged.addListener(function (changes, area) {
   if (area !== 'local') return;
   var relevant = Object.keys(changes).some(isEngineKey);
-  if (relevant) loadEngineSettings();
+  if (relevant) engineSettingsReady = loadEngineSettings();
   // 切换呈现方式时关闭所有标签页翻译(目标语言/引擎变化不影响开关)
   if (changes['pageTrans.mode']) resetAllTabs();
 });
@@ -126,7 +131,9 @@ function pumpGlobal() {
 chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
   if (msg && msg.type === 'PAGE_TRANSLATE') {
     runTranslateLimited(function () {
-      return TranslateEngine.translateText(msg.text, 'auto', msg.to);
+      return engineSettingsReady.then(function () {
+        return TranslateEngine.translateText(msg.text, 'auto', msg.to);
+      });
     }).then(
       function (out) { sendResponse({ ok: true, text: out }); },
       function (err) {
@@ -146,6 +153,3 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
     return true;
   }
 });
-
-// 启动时初始化翻译引擎设置
-loadEngineSettings();

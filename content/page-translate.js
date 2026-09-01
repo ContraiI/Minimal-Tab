@@ -24,6 +24,11 @@
     style: 'none'
   };
 
+  var ENGINE_CONFIG_KEYS = [
+    'trans.msKey', 'trans.msRegion',
+    'trans.tencent.secretId', 'trans.tencent.secretKey', 'trans.tencent.region',
+    'trans.custom.url', 'trans.custom.key', 'trans.custom.model', 'trans.custom.prompt'
+  ];
   var RELEVANT_KEYS = ['pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',
     'pageTrans.fontColor', 'pageTrans.lineColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style'];
   var ATTR_NAMES = ['title', 'placeholder', 'alt', 'aria-label'];
@@ -686,8 +691,15 @@
     if (alive()) {
       chrome.storage.onChanged.addListener(function (changes, area) {
         if (area !== 'local') return;
-        var hit = Object.keys(changes).some(function (k) { return RELEVANT_KEYS.indexOf(k) > -1; });
+        var keys = Object.keys(changes);
+        var hit = keys.some(function (k) { return RELEVANT_KEYS.indexOf(k) > -1; });
         if (hit) getStore(RELEVANT_KEYS, onState);
+        var engineConfigChanged = keys.some(function (k) { return ENGINE_CONFIG_KEYS.indexOf(k) > -1; });
+        if (engineConfigChanged && state.enabled) {
+          processedText = new WeakSet();
+          failedAttrs = new WeakMap();
+          scheduleScan();
+        }
       });
       chrome.runtime.onMessage.addListener(function (msg) {
         if (msg && msg.type === 'PAGE_TRANSLATE_STATE') onEnabledMsg(msg.enabled);

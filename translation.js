@@ -84,6 +84,9 @@
       setLanguage(e.newValue || 'zh-CN');
       renderLangUI();
     }
+    if (e.key === 'ui.trans.locked.' + ENGINE && engineFieldsEl && sidebarStore) {
+      renderEngineSection(engineFieldsEl, sidebarStore);
+    }
   });
 
 
@@ -139,11 +142,15 @@
   var srcDropdown = null;
   var tgtDropdown = null;
   var pageDropdowns = [];
+  var engineFieldDropdowns = [];
+  var engineFieldsEl = null;
+  var sidebarStore = null;
 
   function renderLangUI() {
     if (srcDropdown) srcDropdown.updateTrigger();
     if (tgtDropdown) tgtDropdown.updateTrigger();
     pageDropdowns.forEach(function (d) { d.updateTrigger(); });
+    engineFieldDropdowns.forEach(function (d) { d.updateTrigger(); });
   }
 
   // 引擎显示名(优先 i18n key)
@@ -155,11 +162,16 @@
 
   var ENGINES = TranslateEngine.ENGINES;
 
+  function storedEngineField(f) {
+    var value = localStorage.getItem(f.key);
+    return value || f.defaultValue || '';
+  }
+
   // 把侧边栏的引擎配置同步给 TranslateEngine
   function syncSidebarEngine() {
     var eng = ENGINES[ENGINE] || ENGINES.google;
     var fields = {};
-    (eng.fields || []).forEach(function (f) { fields[f.id] = localStorage.getItem(f.key) || ''; });
+    (eng.fields || []).forEach(function (f) { fields[f.id] = storedEngineField(f); });
     TranslateEngine.setSettings(ENGINE, fields);
   }
 
@@ -350,11 +362,20 @@
     var settingsOverlay = document.getElementById('settingsOverlay');
     var settingsCloseBtn = document.getElementById('settingsCloseBtn');
 
-    // 关闭设置面板:收起浮层,并让译文样式回到折叠、打开的色盘关闭
+    // 关闭设置面板:收起浮层,并让译文样式回到折叠、样式子菜单回到默认折叠、打开的色盘关闭
     // (styleSection/取色器在下文声明,var 提升 + 空值判断,调用时必已赋值)
     function closeSettingsPanel() {
       settingsOverlay.classList.remove('open');
       if (styleSection) styleSection.classList.add('collapsed');
+      styleSubgroups.forEach(function (id) {
+        var sec = document.getElementById(id);
+        if (sec) {
+          sec.classList.add('collapsed');
+          var body = sec.querySelector('.style-group-body');
+          if (body) body.inert = true;
+        }
+      });
+      if (engineFieldsEl && sidebarStore) renderEngineSection(engineFieldsEl, sidebarStore);
       if (pageTransFontPicker && pageTransFontPicker.isOpen()) pageTransFontPicker.close();
       if (pageTransLinePicker && pageTransLinePicker.isOpen()) pageTransLinePicker.close();
     }
@@ -372,16 +393,35 @@
 
 
 
-    // 渲染当前引擎的配置字段(文本框/下拉/模型拉取按钮)
+    // 渲染当前引擎的配置字段(文本框/下拉/模型拉取按钮);已确认的引擎锁定为只读
     function renderEngineSection(containerEl, store) {
       containerEl.innerHTML = '';
-      var eng = TranslateEngine.ENGINES[store.engine()] || TranslateEngine.ENGINES.google;
-      (eng.fields || []).forEach(function (f) {
+      var engId = store.engine();
+      var eng = TranslateEngine.ENGINES[engId] || TranslateEngine.ENGINES.google;
+      var fields = eng.fields || [];
+      var locked = localStorage.getItem('ui.trans.locked.' + engId) === '1';
+      var draft = {};
+      fields.forEach(function (f) { draft[f.id] = storedEngineField(f); });
+      var editStore = {
+        get: function (fullKey) {
+          var field = fields.find(function (f) { return f.key === fullKey; });
+          return field ? draft[field.id] : '';
+        },
+        set: function (fullKey, value) {
+          var field = fields.find(function (f) { return f.key === fullKey; });
+          if (field) draft[field.id] = value;
+        },
+        engine: store.engine
+      };
+      engineFieldDropdowns = [];
+
+      fields.forEach(function (f) {
         var fullKey = f.key;
         var row = document.createElement('div');
         row.className = 'setting-row' + (f.wideLabel ? ' setting-row-stacked' : '');
         var label = document.createElement('label');
         label.className = 'setting-label';
+        label.dataset.i18n = f.labelKey;
         label.textContent = t(f.labelKey);
         row.appendChild(label);
 
@@ -397,37 +437,48 @@
           listEl.className = 'lang-list';
           selWrap.appendChild(trigger);
           selWrap.appendChild(listEl);
-          buildDropdown(
+          var fieldDropdown = buildDropdown(
             selWrap, listEl, f.options,
             function (v) { return v === '' ? t(f.emptyLabelKey || '') : v; },
-            function () { return store.get(fullKey); },
-            function (v) { store.set(fullKey, v); store.onFieldChange && store.onFieldChange(); }
-          ).updateTrigger();
+            function () { return editStore.get(fullKey); },
+            function (v) { editStore.set(fullKey, v); }
+          );
+          fieldDropdown.updateTrigger();
+          engineFieldDropdowns.push(fieldDropdown);
+          if (locked) { trigger.disabled = true; trigger.classList.add('locked'); }
           row.appendChild(selWrap);
         } else if (f.fetchModels) {
           var wrap = document.createElement('div');
           wrap.className = 'setting-model-wrap';
-          var input = buildFieldInput(f, fullKey, store);
+          var input = buildFieldInput(f, fullKey, editStore);
           var btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'setting-fetch-btn';
           btn.title = t('transFetchModels');
+          btn.dataset.i18nTitle = 'transFetchModels';
           btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>';
           var listEl = document.createElement('div');
           listEl.className = 'model-list';
+          if (locked) { input.disabled = true; btn.disabled = true; }
           btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            fetchModels(store, listEl, f, input);
+            fetchModels(editStore, listEl, f, input);
           });
           wrap.appendChild(input);
           wrap.appendChild(btn);
           wrap.appendChild(listEl);
           row.appendChild(wrap);
         } else {
-          row.appendChild(buildFieldInput(f, fullKey, store));
+          var fieldInput = buildFieldInput(f, fullKey, editStore);
+          if (locked) fieldInput.disabled = true;
+          row.appendChild(fieldInput);
         }
         containerEl.appendChild(row);
       });
+
+      if (fields.length) {
+        containerEl.appendChild(buildEngineFooter(engId, containerEl, store, editStore, locked));
+      }
     }
 
     // 构建单个配置输入框
@@ -437,13 +488,105 @@
       input.type = f.type || 'text';
       input.autocomplete = 'off';
       input.spellcheck = false;
-      if (f.placeholderKey) input.placeholder = t(f.placeholderKey);
+      input.dataset.field = f.id;
+      if (f.placeholderKey) {
+        input.dataset.i18nPlaceholder = f.placeholderKey;
+        input.placeholder = t(f.placeholderKey);
+      }
       input.value = store.get(fullKey);
-      input.addEventListener('change', function () {
+      input.addEventListener('input', function () {
         store.set(fullKey, input.value.trim());
-        store.onFieldChange && store.onFieldChange();
       });
       return input;
+    }
+
+    // 收集当前引擎各字段的草稿值
+    function collectEngineValues(eng, store) {
+      var values = {};
+      (eng.fields || []).forEach(function (f) { values[f.id] = store.get(f.key); });
+      return values;
+    }
+
+    // 引擎配置底部:测试(检测可用性) + 确定/修改(保存并锁定 / 解锁)
+    function buildEngineFooter(engId, containerEl, store, editStore, locked) {
+      var eng = TranslateEngine.ENGINES[engId] || TranslateEngine.ENGINES.google;
+      var testSeq = 0;
+      var footer = document.createElement('div');
+      footer.className = 'engine-footer';
+      var status = document.createElement('div');
+      status.className = 'engine-test-status';
+      function renderTestStatus(key, vars, state) {
+        status.dataset.i18n = key || '';
+        status.dataset.i18nVars = vars ? JSON.stringify(vars) : '';
+        status.textContent = key ? t(key, vars) : '';
+        status.classList.remove('ok', 'error');
+        if (state) status.classList.add(state);
+      }
+      var actions = document.createElement('div');
+      actions.className = 'engine-footer-actions';
+
+      var testBtn = document.createElement('button');
+      testBtn.type = 'button';
+      testBtn.className = 'engine-test-btn';
+      testBtn.dataset.i18n = 'transTest';
+      testBtn.textContent = t('transTest');
+      testBtn.addEventListener('click', function () {
+        var id = ++testSeq;
+        var startedAt = (window.performance && typeof window.performance.now === 'function')
+          ? window.performance.now()
+          : Date.now();
+        testBtn.disabled = true;
+        saveBtn.disabled = true;
+        renderTestStatus('transTesting');
+        TranslateEngine.setSettings(engId, collectEngineValues(eng, editStore));
+        var testRequest = TranslateEngine.translateText('Hello', 'en', 'zh-CN');
+        syncSidebarEngine();
+        testRequest.then(function () {
+          if (id !== testSeq) return;
+          var endedAt = (window.performance && typeof window.performance.now === 'function')
+            ? window.performance.now()
+            : Date.now();
+          renderTestStatus('transTestSuccess', {
+            latency: Math.max(0, Math.round(endedAt - startedAt))
+          }, 'ok');
+        }).catch(function (err) {
+          if (id !== testSeq) return;
+          var code = err && err.code;
+          var key = code === 'NEED_KEY'
+            ? 'transTestFailedKey'
+            : (code === 'MISSING_CONFIG' ? 'transTestFailedConfig' : 'transTestFailed');
+          renderTestStatus(key, null, 'error');
+        }).then(function () {
+          if (id !== testSeq) return;
+          testBtn.disabled = false;
+          saveBtn.disabled = false;
+        });
+      });
+
+      var saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'engine-save-btn';
+      saveBtn.dataset.i18n = locked ? 'transModify' : 'transConfirm';
+      saveBtn.textContent = t(locked ? 'transModify' : 'transConfirm');
+      saveBtn.addEventListener('click', function () {
+        if (locked) {
+          localStorage.removeItem('ui.trans.locked.' + engId);
+        } else {
+          var values = collectEngineValues(eng, editStore);
+          (eng.fields || []).forEach(function (f) {
+            store.set(f.key, values[f.id]);
+          });
+          localStorage.setItem('ui.trans.locked.' + engId, '1');
+          store.onFieldChange && store.onFieldChange();
+        }
+        renderEngineSection(containerEl, store);
+      });
+
+      actions.appendChild(testBtn);
+      actions.appendChild(saveBtn);
+      footer.appendChild(status);
+      footer.appendChild(actions);
+      return footer;
     }
 
     // 模型列表区域的提示信息
@@ -467,7 +610,6 @@
         item.addEventListener('click', function () {
           input.value = id;
           store.set(fullKey, id);
-          store.onFieldChange && store.onFieldChange();
           listEl.classList.remove('open');
         });
         listEl.appendChild(item);
@@ -562,9 +704,9 @@
     }
 
 
-    var engineFieldsEl = document.getElementById('engineFields');
+    engineFieldsEl = document.getElementById('engineFields');
     // 引擎配置的读写封装(读写 localStorage 并同步给引擎)
-    var sidebarStore = {
+    sidebarStore = {
       get: function (fullKey) { return localStorage.getItem(fullKey) || ''; },
       set: function (fullKey, val) { localStorage.setItem(fullKey, val); },
       engine: function () { return ENGINE; },
@@ -587,6 +729,7 @@
       function (code) { sidebarStore.setEngine(code); sidebarStore.onEngineChange(); }
     );
     engineDropdown.updateTrigger();
+    pageDropdowns.push(engineDropdown);
 
 
     // 整页翻译设置(目标语言、悬浮球、呈现方式、译文样式)
@@ -658,6 +801,20 @@
         styleSection.classList.toggle('collapsed');
       });
     }
+
+    // 译文样式子菜单(线条样式)折叠开关
+    var styleSubgroups = ['styleGroupStyle'];
+    styleSubgroups.forEach(function (id) {
+      var sec = document.getElementById(id);
+      if (sec) {
+        var subToggle = sec.querySelector('.style-group-header');
+        var subBody = sec.querySelector('.style-group-body');
+        if (subToggle) subToggle.addEventListener('click', function () {
+          var collapsed = sec.classList.toggle('collapsed');
+          if (subBody) subBody.inert = collapsed;
+        });
+      }
+    });
 
     // canvas 取色器工厂(移植自标签页 script.js;面板用 .open 展开,颜色经 get/set 回调读写)
     function createColorPicker(cfg) {

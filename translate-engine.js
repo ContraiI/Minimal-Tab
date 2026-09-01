@@ -63,7 +63,8 @@
     var f = (eng.fields || []).find(function (x) { return x.id === id; });
     if (!f) return '';
     var v = current.fields[id];
-    return (v === undefined || v === null) ? '' : String(v);
+    if (v === undefined || v === null || v === '') return f.defaultValue || '';
+    return String(v);
   }
 
 
@@ -96,6 +97,96 @@
   }
 
 
+
+
+  // 腾讯云 TC3-HMAC-SHA256 签名所需工具(WebCrypto 异步实现,扩展页与服务工均为安全上下文)
+  function bytesToHex(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += ('0' + bytes[i].toString(16)).slice(-2);
+    return s;
+  }
+
+  function tc3Hmac(keyBytes, msg) {
+    return crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+      .then(function (key) { return crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)); });
+  }
+
+  function tc3Sha256Hex(data) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(data)).then(function (buf) {
+      return bytesToHex(new Uint8Array(buf));
+    });
+  }
+
+  // 腾讯云 TMT 文本翻译请求(TextTranslate,TC3 签名)
+  function tencentTmtFetch(cfg) {
+    var host = 'tmt.tencentcloudapi.com';
+    var service = 'tmt';
+    var action = 'TextTranslate';
+    var version = '2018-03-21';
+    var timestamp = Math.floor(Date.now() / 1000);
+    var date = new Date(timestamp * 1000).toISOString().slice(0, 10);
+    var payload = JSON.stringify({ SourceText: cfg.text, Source: cfg.from, Target: cfg.to, ProjectId: 0 });
+    var canonicalHeaders = 'content-type:application/json; charset=utf-8\n' +
+      'host:' + host + '\n' +
+      'x-tc-action:' + action.toLowerCase() + '\n' +
+      'x-tc-timestamp:' + timestamp + '\n';
+    var signedHeaders = 'content-type;host;x-tc-action;x-tc-timestamp';
+    return tc3Sha256Hex(payload).then(function (payloadHash) {
+      var canonicalRequest = 'POST\n/\n\n' + canonicalHeaders + '\n' + signedHeaders + '\n' + payloadHash;
+      return tc3Sha256Hex(canonicalRequest).then(function (requestHash) {
+        var credentialScope = date + '/' + service + '/tc3_request';
+        var stringToSign = 'TC3-HMAC-SHA256\n' + timestamp + '\n' + credentialScope + '\n' + requestHash;
+        // 签名链:SecretDate → SecretService → SecretSigning → Signature
+        return Promise.resolve(new TextEncoder().encode('TC3' + cfg.secretKey))
+          .then(function (baseKey) { return tc3Hmac(baseKey, date); })
+          .then(function (k) { return tc3Hmac(k, service); })
+          .then(function (k) { return tc3Hmac(k, 'tc3_request'); })
+          .then(function (k) { return tc3Hmac(k, stringToSign); })
+          .then(function (sigBuf) {
+            var signature = bytesToHex(new Uint8Array(sigBuf));
+            var authorization = 'TC3-HMAC-SHA256 Credential=' + cfg.secretId + '/' + credentialScope +
+              ', SignedHeaders=' + signedHeaders + ', Signature=' + signature;
+            return waitTencentSlot().then(function () {
+              return fetch('https://' + host + '/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json; charset=utf-8',
+                  'X-TC-Action': action,
+                  'X-TC-Version': version,
+                  'X-TC-Timestamp': String(timestamp),
+                  'X-TC-Region': cfg.region,
+                  'Authorization': authorization
+                },
+                body: payload
+              });
+            }).then(function (res) {
+              return res.json().catch(function () {
+                var e = new Error('HTTP ' + res.status);
+                e.code = 'HTTP_' + res.status;
+                e.status = res.status;
+                throw e;
+              }).then(function (data) {
+                var resp = data && data.Response;
+                if (resp && resp.Error) {
+                  var apiErr = new Error(resp.Error.Message || resp.Error.Code || 'Tencent API error');
+                  apiErr.code = resp.Error.Code || ('HTTP_' + res.status);
+                  apiErr.status = res.status;
+                  throw apiErr;
+                }
+                if (!res.ok) {
+                  var httpErr = new Error('HTTP ' + res.status);
+                  httpErr.code = 'HTTP_' + res.status;
+                  httpErr.status = res.status;
+                  throw httpErr;
+                }
+                if (resp == null || resp.TargetText == null) throw new Error('bad response');
+                return resp.TargetText;
+              });
+            });
+          });
+      });
+    });
+  }
 
 
   // 各翻译引擎实现,统一 translate(text, from, to) 接口
@@ -215,6 +306,38 @@
             return doRequest();
           }
           throw err;
+        });
+      }
+    },
+    tencent: {
+      name: 'Tencent Cloud',
+      nameKey: 'transEngineTencent',
+      // 腾讯云机器翻译 TMT,需 SecretId/SecretKey,使用 TC3-HMAC-SHA256 签名
+      fields: [
+        { id: 'secretId', key: 'trans.tencent.secretId', labelKey: 'transTencentSecretId', type: 'password' },
+        { id: 'secretKey', key: 'trans.tencent.secretKey', labelKey: 'transTencentSecretKey', type: 'password' },
+        {
+          id: 'region', key: 'trans.tencent.region', labelKey: 'transSettingsRegion', type: 'select',
+          defaultValue: 'ap-guangzhou',
+          options: ['ap-guangzhou', 'ap-shanghai', 'ap-beijing', 'ap-hongkong', 'na-siliconvalley', 'na-ashburn']
+        }
+      ],
+      codes: { 'zh-CN': 'zh', 'zh-TW': 'zh-TW' },
+      translate: function (text, from, to) {
+        var secretId = getField(this, 'secretId');
+        var secretKey = getField(this, 'secretKey');
+        if (!secretId || !secretKey) {
+          var err = new Error('NEED_KEY');
+          err.code = 'NEED_KEY';
+          return Promise.reject(err);
+        }
+        return tencentTmtFetch({
+          secretId: secretId,
+          secretKey: secretKey,
+          region: getField(this, 'region') || 'ap-guangzhou',
+          from: from === 'auto' ? 'auto' : (this.codes[from] || from),
+          to: this.codes[to] || to,
+          text: text
         });
       }
     },
