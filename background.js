@@ -4,7 +4,10 @@ importScripts('translate-engine.js');
 
 
 // 从 chrome.storage 读取当前翻译引擎及其配置字段
+var engineSettingsGeneration = 0;
+
 function loadEngineSettings() {
+  var generation = ++engineSettingsGeneration;
   return new Promise(function (resolve) {
     chrome.storage.local.get(['trans.engine'], function (base) {
       var engine = base['trans.engine'] || 'google';
@@ -12,6 +15,7 @@ function loadEngineSettings() {
       var fields = {};
       var keys = (eng.fields || []).map(function (f) { return f.key; });
       chrome.storage.local.get(keys, function (all) {
+        if (generation !== engineSettingsGeneration) { resolve(); return; }
         (eng.fields || []).forEach(function (f) {
           fields[f.id] = all[f.key] || f.defaultValue || '';
         });
@@ -111,18 +115,20 @@ function runTranslateLimited(task) {
 
 function pumpGlobal() {
   while (globalInFlight < GLOBAL_CONCURRENCY && globalQueue.length) {
-    var item = globalQueue.shift();
-    globalInFlight++;
-    // 经 Promise.resolve() 调度,即便 task 同步抛错也走 reject 分支归还名额
-    Promise.resolve().then(item.task).then(function (v) {
-      globalInFlight--;
-      item.resolve(v);
-      pumpGlobal();
-    }, function (e) {
-      globalInFlight--;
-      item.reject(e);
-      pumpGlobal();
-    });
+    // 用立即执行函数隔离每次出队的 item,避免异步回调共享循环内被反复覆盖的同一变量
+    (function (item) {
+      globalInFlight++;
+      // 经 Promise.resolve() 调度,即便 task 同步抛错也走 reject 分支归还名额
+      Promise.resolve().then(item.task).then(function (v) {
+        globalInFlight--;
+        item.resolve(v);
+        pumpGlobal();
+      }, function (e) {
+        globalInFlight--;
+        item.reject(e);
+        pumpGlobal();
+      });
+    })(globalQueue.shift());
   }
 }
 

@@ -42,8 +42,9 @@
   var attrRecords = new Map();
   var processedText = new WeakSet();   // 已处理的文本节点
   var failedAttrs = new WeakMap();     // 翻译失败的属性
+  var skippedAttrs = new WeakMap();    // 空译文(成功但无内容)的属性,不算失败
   var inFlightAttrs = new WeakMap();   // 翻译中的属性
-  var inFlight = new Set();
+  var inFlight = new Map();
   var loadingSpinners = new Map();     // 正在翻译的文本节点 → 其加载图标元素(用于移除)
   var targetVersion = 0;               // 状态版本,用于丢弃过期结果
 
@@ -183,10 +184,12 @@
       if (e.id === 'pageTransBall') continue;
       var recs = attrRecords.get(e);
       var failed = failedAttrs.get(e);
+      var skipped = skippedAttrs.get(e);
       for (var a = 0; a < ATTR_NAMES.length; a++) {
         var name = ATTR_NAMES[a];
         if (recs && recs.has(name)) continue;
         if (failed && failed.has(name)) continue;
+        if (skipped && skipped.has(name)) continue;
         var pending = inFlightAttrs.get(e);
         if (pending && pending.has(name)) continue;
         if (name === 'placeholder') {
@@ -215,9 +218,9 @@
     return sp;
   }
 
-  function removeLoadingSpinner(node) {
+  function removeLoadingSpinner(node, spinner) {
     var sp = loadingSpinners.get(node);
-    if (sp) {
+    if (spinner && sp === spinner) {
       if (sp.parentNode) sp.parentNode.removeChild(sp);
       loadingSpinners.delete(node);
     }
@@ -226,13 +229,15 @@
   // 把任务加入队列并启动并发处理
   function enqueueAll(textJobs, attrJobs) {
     textJobs.forEach(function (n) {
-      inFlight.add(n);
-      queue.push({ type: 'text', node: n, text: n.nodeValue });
+      var job = { type: 'text', node: n, text: n.nodeValue };
+      inFlight.set(n, job);
+      queue.push(job);
     });
     attrJobs.forEach(function (a) {
-      if (!inFlightAttrs.has(a.el)) inFlightAttrs.set(a.el, new Set());
-      inFlightAttrs.get(a.el).add(a.attr);
-      queue.push({ type: 'attr', el: a.el, attr: a.attr, text: a.text });
+      if (!inFlightAttrs.has(a.el)) inFlightAttrs.set(a.el, new Map());
+      var job = { type: 'attr', el: a.el, attr: a.attr, text: a.text };
+      inFlightAttrs.get(a.el).set(a.attr, job);
+      queue.push(job);
     });
     pump();
   }
@@ -253,11 +258,11 @@
   function translateJob(job) {
     var version = targetVersion;
     var text = job.text;
-    // 仅对正在翻译的文本加加载图标(排队等待中的不加)
-    if (job.type === 'text') addLoadingSpinner(job.node);
 
     var p;
+    var spinner = null;
     try {
+      if (job.type === 'text') spinner = addLoadingSpinner(job.node);
       p = chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE', text: text, to: state.target });
     } catch (e) {
       p = Promise.reject(e);
@@ -266,14 +271,16 @@
       if (!state.enabled || version !== targetVersion) return;
       if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'translate failed');
       if (resp.text) applyResult(job, resp.text);
-      else markFailed(job);
+      else markSkipped(job); // 空译文:不算失败,仅标记已处理避免反复重扫提交
     }).catch(function () {
       if (state.enabled && version === targetVersion) markFailed(job);
     }).finally(function () {
-      if (job.type === 'text') { inFlight.delete(job.node); removeLoadingSpinner(job.node); }
-      else {
+      if (job.type === 'text') {
+        if (inFlight.get(job.node) === job) inFlight.delete(job.node);
+        removeLoadingSpinner(job.node, spinner);
+      } else {
         var pending = inFlightAttrs.get(job.el);
-        if (pending) {
+        if (pending && pending.get(job.attr) === job) {
           pending.delete(job.attr);
           if (!pending.size) inFlightAttrs.delete(job.el);
         }
@@ -288,6 +295,16 @@
     } else {
       if (!failedAttrs.has(job.el)) failedAttrs.set(job.el, new Set());
       failedAttrs.get(job.el).add(job.attr);
+    }
+  }
+
+  // 标记空译文为已跳过(与失败分离),避免该段反复被重扫提交
+  function markSkipped(job) {
+    if (job.type === 'text') {
+      processedText.add(job.node);
+    } else {
+      if (!skippedAttrs.has(job.el)) skippedAttrs.set(job.el, new Set());
+      skippedAttrs.get(job.el).add(job.attr);
     }
   }
 
@@ -388,6 +405,7 @@
     attrRecords = new Map();
     processedText = new WeakSet();
     failedAttrs = new WeakMap();
+    skippedAttrs = new WeakMap();
     inFlightAttrs = new WeakMap();
     loadingSpinners.forEach(function (sp) {
       if (sp && sp.parentNode) sp.parentNode.removeChild(sp);
@@ -696,8 +714,7 @@
         if (hit) getStore(RELEVANT_KEYS, onState);
         var engineConfigChanged = keys.some(function (k) { return ENGINE_CONFIG_KEYS.indexOf(k) > -1; });
         if (engineConfigChanged && state.enabled) {
-          processedText = new WeakSet();
-          failedAttrs = new WeakMap();
+          revertAll();
           scheduleScan();
         }
       });

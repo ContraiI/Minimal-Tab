@@ -68,16 +68,18 @@
   }
 
 
-  // 必应翻译认证参数缓存(30 分钟内复用)
+  // 必应翻译认证参数缓存(30 分钟内复用);bingAuthFetch 用于合并过期后的并发抓取
   var BING_AUTH = { host: 'www.bing.com', ig: '', token: '', key: '', iid: 'translator.5028', fetchedAt: 0 };
+  var bingAuthFetch = null;
 
   // 抓取必应翻译页并解析认证参数
   function getBingAuth() {
     if (BING_AUTH.token && Date.now() - BING_AUTH.fetchedAt < 30 * 60 * 1000) {
       return Promise.resolve(BING_AUTH);
     }
-    return fetch('https://www.bing.com/translator').then(function (res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (bingAuthFetch) return bingAuthFetch;
+    bingAuthFetch = fetchWithTimeout('https://www.bing.com/translator').then(function (res) {
+      if (!res.ok) throw httpError(res.status);
       return res.text().then(function (html) {
         var ig = (html.match(/IG:"([A-Za-z0-9]+)"/) || [])[1];
         var m = html.match(/params_AbusePreventionHelper\s*=\s*\[(\d+),"([^"]+)",\d+\]/);
@@ -93,11 +95,92 @@
         BING_AUTH.fetchedAt = Date.now();
         return BING_AUTH;
       });
+    }).then(function (auth) {
+      bingAuthFetch = null;
+      return auth;
+    }, function (err) {
+      bingAuthFetch = null;
+      throw err;
     });
+    return bingAuthFetch;
   }
 
 
 
+
+  // 翻译请求超时(毫秒)与统一的 fetch 包装/错误结构
+  var TRANSLATE_TIMEOUT_MS = 20000;
+
+  // 带超时的 fetch:超时/网络失败均带 code,便于调用端区分
+  function fetchWithTimeout(url, options, timeoutMs) {
+    var controller = new AbortController();
+    var opts = {};
+    for (var k in (options || {})) if (k !== 'signal') opts[k] = options[k];
+    opts.signal = controller.signal;
+    var timer = setTimeout(function () { controller.abort(); }, timeoutMs || TRANSLATE_TIMEOUT_MS);
+    var clearTimer = function () { clearTimeout(timer); };
+    var wrapBody = function (res, method) {
+      var body = res[method];
+      if (typeof body !== 'function') return;
+      var original = body.bind(res);
+      return function () {
+        return original.apply(null, arguments).then(function (value) {
+          clearTimer();
+          return value;
+        }, function (err) {
+          clearTimer();
+          if (err && err.name === 'AbortError') {
+            var te = new Error('TIMEOUT');
+            te.code = 'TIMEOUT';
+            te.status = 0;
+            throw te;
+          }
+          if (err && err.code == null && err.name === 'TypeError') err.code = 'NETWORK';
+          throw err;
+        });
+      };
+    };
+    return fetch(url, opts).then(function (res) {
+      return {
+        ok: res.ok,
+        status: res.status,
+        url: res.url,
+        json: wrapBody(res, 'json'),
+        text: wrapBody(res, 'text')
+      };
+    }, function (err) {
+      clearTimer();
+      if (err && err.name === 'AbortError') {
+        var te = new Error('TIMEOUT');
+        te.code = 'TIMEOUT';
+        te.status = 0;
+        throw te;
+      }
+      if (err && err.code == null) err.code = 'NETWORK';
+      throw err;
+    });
+  }
+
+  // 结构化 HTTP 错误(与腾讯云一致的 {code,status})
+  function httpError(status) {
+    var e = new Error('HTTP ' + status);
+    e.code = 'HTTP_' + status;
+    e.status = status;
+    return e;
+  }
+
+  function badResponseError() {
+    var e = new Error('bad response');
+    e.code = 'BAD_RESPONSE';
+    return e;
+  }
+
+  function parseJson(res) {
+    return res.json().catch(function (err) {
+      if (err && err.code) throw err;
+      throw badResponseError();
+    });
+  }
 
   // 腾讯云 TC3-HMAC-SHA256 签名所需工具(WebCrypto 异步实现,扩展页与服务工均为安全上下文)
   function bytesToHex(bytes) {
@@ -146,26 +229,19 @@
             var signature = bytesToHex(new Uint8Array(sigBuf));
             var authorization = 'TC3-HMAC-SHA256 Credential=' + cfg.secretId + '/' + credentialScope +
               ', SignedHeaders=' + signedHeaders + ', Signature=' + signature;
-            return waitTencentSlot().then(function () {
-              return fetch('https://' + host + '/', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json; charset=utf-8',
-                  'X-TC-Action': action,
-                  'X-TC-Version': version,
-                  'X-TC-Timestamp': String(timestamp),
-                  'X-TC-Region': cfg.region,
-                  'Authorization': authorization
-                },
-                body: payload
-              });
+            return fetchWithTimeout('https://' + host + '/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json; charset=utf-8',
+                'X-TC-Action': action,
+                'X-TC-Version': version,
+                'X-TC-Timestamp': String(timestamp),
+                'X-TC-Region': cfg.region,
+                'Authorization': authorization
+              },
+              body: payload
             }).then(function (res) {
-              return res.json().catch(function () {
-                var e = new Error('HTTP ' + res.status);
-                e.code = 'HTTP_' + res.status;
-                e.status = res.status;
-                throw e;
-              }).then(function (data) {
+              return parseJson(res).then(function (data) {
                 var resp = data && data.Response;
                 if (resp && resp.Error) {
                   var apiErr = new Error(resp.Error.Message || resp.Error.Code || 'Tencent API error');
@@ -179,7 +255,7 @@
                   httpErr.status = res.status;
                   throw httpErr;
                 }
-                if (resp == null || resp.TargetText == null) throw new Error('bad response');
+                if (resp == null || resp.TargetText == null) throw badResponseError();
                 return resp.TargetText;
               });
             });
@@ -197,11 +273,11 @@
       translate: function (text, from, to) {
         var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=' +
           from + '&tl=' + to + '&dt=t&q=' + encodeURIComponent(text);
-        return fetch(url).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
+        return fetchWithTimeout(url).then(function (res) {
+          if (!res.ok) throw httpError(res.status);
+          return parseJson(res);
         }).then(function (data) {
-          if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('bad response');
+          if (!Array.isArray(data) || !Array.isArray(data[0])) throw badResponseError();
           return data[0]
             .map(function (seg) { return Array.isArray(seg) ? seg[0] : ''; })
             .filter(Boolean)
@@ -247,16 +323,16 @@
           'Accept': 'application/json'
         };
         if (region) headers['Ocp-Apim-Subscription-Region'] = region;
-        return fetch(url, {
+        return fetchWithTimeout(url, {
           method: 'POST',
           headers: headers,
           body: JSON.stringify([{ Text: text }])
         }).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
+          if (!res.ok) throw httpError(res.status);
+          return parseJson(res);
         }).then(function (data) {
           if (!Array.isArray(data) || !data[0] || !data[0].translations || !data[0].translations[0]) {
-            throw new Error('bad response');
+            throw badResponseError();
           }
           return data[0].translations[0].text;
         });
@@ -279,7 +355,7 @@
             var body = 'fromLang=' + encodeURIComponent(fromCode) +
               '&text=' + encodeURIComponent(text) +
               '&to=' + encodeURIComponent(toCode);
-            return fetch(url, {
+            return fetchWithTimeout(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: body
@@ -289,11 +365,11 @@
                 e.code = 'BING_AUTH_STALE';
                 throw e;
               }
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              return res.json();
+              if (!res.ok) throw httpError(res.status);
+              return parseJson(res);
             }).then(function (data) {
               if (!Array.isArray(data) || !data[0] || !data[0].translations || !data[0].translations[0]) {
-                throw new Error('bad response');
+                throw badResponseError();
               }
               return data[0].translations[0].text;
             });
@@ -381,15 +457,15 @@
           temperature: 0.3
         };
         var endpoint = url.replace(/\/+$/, '') + '/chat/completions';
-        return fetch(endpoint, {
+        return fetchWithTimeout(endpoint, {
           method: 'POST',
           headers: headers,
           body: JSON.stringify(body)
         }).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
+          if (!res.ok) throw httpError(res.status);
+          return parseJson(res);
         }).then(function (data) {
-          if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) throw new Error('bad response');
+          if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) throw badResponseError();
           return data.choices[0].message.content;
         });
       }

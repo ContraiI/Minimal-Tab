@@ -121,6 +121,21 @@
   var lastRealSource = sourceLang !== 'auto' ? sourceLang : null;
   var DEBOUNCE_MS = 600;
 
+  // 依据引擎错误 code/status 返回更具体的 i18n key;无法归类返回 null
+  function translateErrorKey(code, status) {
+    if (code === 'TIMEOUT') return 'transErrTimeout';
+    if (code === 'NETWORK') return 'transErrNetwork';
+    if (code === 'BAD_RESPONSE') return 'transErrBadResponse';
+    var s = String(code || '');
+    if (status === 429 || s === 'HTTP_429' ||
+        /RequestLimitExceeded|LimitExceeded|TooManyRequests|RateLimit|QPS/i.test(s)) return 'transErrBusy';
+    if (/(AuthFailure|UnauthorizedOperation|InvalidCredential|InvalidAccessKey|SignatureFailure)/.test(s)) return 'transErrAuth';
+    if (/^HTTP_5\d\d$/.test(s)) return 'transErrServer';
+    if (/^HTTP_4\d\d$/.test(s)) return 'transErrRejected';
+    if (status >= 500) return 'transErrServer';
+    return null;
+  }
+
   // 保存源/目标语言并同步到 chrome.storage
   function saveSettings() {
     localStorage.setItem(LS.source, sourceLang);
@@ -225,7 +240,7 @@
           setStatus(code === 'NEED_KEY' ? t('transNeedKey') : t('transNeedConfig'), true);
           return;
         }
-        setStatus(t('transError'), true);
+        setStatus(t(translateErrorKey(code, err && err.status) || 'transError'), true);
         console.error('翻译失败', err);
       });
     }
@@ -552,9 +567,10 @@
         }).catch(function (err) {
           if (id !== testSeq) return;
           var code = err && err.code;
+          var detail = translateErrorKey(code, err && err.status);
           var key = code === 'NEED_KEY'
             ? 'transTestFailedKey'
-            : (code === 'MISSING_CONFIG' ? 'transTestFailedConfig' : 'transTestFailed');
+            : (code === 'MISSING_CONFIG' ? 'transTestFailedConfig' : (detail || 'transTestFailed'));
           renderTestStatus(key, null, 'error');
         }).then(function () {
           if (id !== testSeq) return;
