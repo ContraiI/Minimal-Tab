@@ -89,6 +89,14 @@
     }
   });
 
+  // 新标签页「恢复默认设置」发出重置标记时,整页重建为默认
+  chrome.storage.onChanged.addListener(function (changes, area) {
+    var c = changes['__mtSettingsReset'];
+    if (area === 'local' && c && c.newValue != null) {
+      window.location.reload();
+    }
+  });
+
 
 
   var LANGS = TranslateEngine.LANGS;
@@ -837,8 +845,10 @@
       var panel = cfg.panel, palette = cfg.palette, hueBar = cfg.hueBar,
           hexInput = cfg.hexInput, confirmBtn = cfg.confirmBtn, trigger = cfg.trigger,
           getColor = cfg.getColor, setColor = cfg.setColor,
-          preview = cfg.preview || function () {}, highlight = cfg.highlight || function () {};
+          preview = cfg.preview || function () {}, highlight = cfg.highlight || function () {},
+          live = cfg.live || function () {};
       var DEFAULT_HEX = cfg.defaultColor || '#2563eb';
+      var active = false;  // 面板是否被打开过(避免未打开就 close() 时误回滚)
       if (!panel || !palette || !hueBar) return null;
       var pctx = palette.getContext('2d');
       var hctx = hueBar.getContext('2d');
@@ -881,11 +891,13 @@
         pctx.stroke();
       }
 
-      function updateFromPicker() {
+      function updateFromPicker(notify) {
         var rgb = hsvToRgb(hue, sat, val);
         var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
         hexInput.value = hex;
         preview(hex);
+        // 用户滑动/输入时实时生效(打开初始化不触发,由调用方传 false)
+        if (notify !== false) live(hex);
       }
 
       function onPaletteMove(e) {
@@ -934,6 +946,7 @@
           drawPalette();
           drawHueBar();
           preview(hex.toLowerCase());
+          live(hex.toLowerCase());
         }
       });
 
@@ -943,6 +956,7 @@
           setColor(hex.toLowerCase());
           highlight(hex.toLowerCase());
           panel.classList.remove('open');
+          active = false;
         }
       });
 
@@ -953,10 +967,12 @@
           panel.classList.remove('open');
           preview(origColor);
           highlight(origColor);
+          if (active) { active = false; live(origColor); }
           return;
         }
         panel.classList.add('open');
         origColor = getColor() || '';          // '' 表示默认,取消时恢复
+        active = true;
         var initHex = origColor || DEFAULT_HEX;
         var row = panel.querySelector('.picker-row');
         var available = row ? row.clientWidth - 26 : 160;
@@ -967,12 +983,17 @@
         hue = hsv.h; sat = hsv.s; val = hsv.v;
         drawPalette();
         drawHueBar();
-        updateFromPicker();
+        updateFromPicker(false);
       });
 
       return {
         isOpen: function () { return panel.classList.contains('open'); },
-        close: function () { panel.classList.remove('open'); preview(origColor); highlight(origColor); }
+        close: function () {
+          panel.classList.remove('open');
+          preview(origColor);
+          highlight(origColor);
+          if (active) { active = false; live(origColor); }
+        }
       };
     }
 
@@ -1003,7 +1024,8 @@
       getColor: function () { return pageTransState.fontColor; },
       setColor: function (hex) { pageTransState.fontColor = hex; savePageTrans(); },
       preview: fontRowRender,
-      highlight: fontRowRender
+      highlight: fontRowRender,
+      live: function (hex) { pageTransState.fontColor = hex; savePageTrans(); }
     });
 
     // 边框颜色(绑定当前样式,各样式颜色独立)
@@ -1029,7 +1051,8 @@
       getColor: lineColorCurrent,
       setColor: function (hex) { pageTransState.lineColor = hex; savePageTrans(); },
       preview: lineRowRender,
-      highlight: lineRowRender
+      highlight: lineRowRender,
+      live: function (hex) { pageTransState.lineColor = hex; savePageTrans(); }
     });
 
     // 带线条的样式开启时显示边框颜色块,切换样式时刷新该样式独立的颜色

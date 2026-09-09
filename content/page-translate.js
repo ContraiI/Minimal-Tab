@@ -26,7 +26,6 @@
 
   var ENGINE_CONFIG_KEYS = [
     'trans.msKey', 'trans.msRegion',
-    'trans.tencent.secretId', 'trans.tencent.secretKey', 'trans.tencent.region',
     'trans.custom.url', 'trans.custom.key', 'trans.custom.model', 'trans.custom.prompt'
   ];
   var RELEVANT_KEYS = ['pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',

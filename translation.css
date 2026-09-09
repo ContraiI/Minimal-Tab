@@ -398,6 +398,7 @@ body.light {
   transition: background 0.2s, color 0.35s ease;
 }
 .setting-toggle:hover { background: var(--trans-hover); }
+.setting-toggle:active { background: rgba(var(--accent-rgb), 0.15); }
 
 .setting-toggle input[type="checkbox"] {
   position: absolute;
@@ -453,8 +454,7 @@ body.light {
 .settings-body .lang-trigger::after { display: none; }
 .settings-body .lang-trigger-label { flex: none; }
 .settings-body .lang-trigger:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
-.settings-body .lang-select.open .lang-trigger { background: rgba(var(--accent-rgb), 0.16); }
-
+/* 展开时按钮不着色,与标签页下拉一致:仅弹出列表,选中项在列表内标识 */
 .settings-body .lang-list {
   border: none;
   border-radius: 6px;
@@ -487,7 +487,6 @@ body.light .settings-body .lang-trigger {
 }
 
 body.light .settings-body .lang-trigger:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
-body.light .settings-body .lang-select.open .lang-trigger { background: rgba(var(--accent-rgb), 0.12); }
 
 body.light .settings-body .lang-option { color: rgba(0, 0, 0, 0.5); }
 body.light .settings-body .lang-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
@@ -818,18 +817,19 @@ body.light .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
   border-radius: 8px;
   margin: 0;
   padding: 0;
-  transition: height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
 }
+/* 展开有过渡、收回瞬时:过渡只挂在展开态,闭合态不带过渡 */
 .section-collapse.mode-show {
   height: auto;
   opacity: 1;
-}
-/* 展开时整个区域(含「译文样式」标题)都处于色差背景内;
-   容器负边距+同量内边距保持文本对齐,padding/margin 过渡避免抖动 */
-.section-collapse.mode-show:not(.collapsed) {
-  background: rgba(255, 255, 255, 0.05);
+  /* 容器几何恒定(标题在盒内的位置不变):折叠/展开用同一组 margin/padding,仅切背景与正文 */
   margin: 2px -10px 6px;
   padding: 4px 10px 10px;
+  transition: height 0.18s ease-out, opacity 0.18s ease-out;
+}
+/* 展开:整块(含「译文样式」标题)一起现出色差底;几何不变,故标题不错位、也无左右扩张 */
+.section-collapse.mode-show:not(.collapsed) {
+  background: rgba(255, 255, 255, 0.05);
 }
 body.light .section-collapse.mode-show:not(.collapsed) {
   background: rgba(0, 0, 0, 0.045);
@@ -842,11 +842,11 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   overflow: hidden;
   margin: 0 -8px;
   padding: 0 8px;
-  transition: height 0.3s ease, opacity 0.25s ease;
 }
 .section-collapse:not(.collapsed) .section-collapse-body {
   height: auto;
   opacity: 1;
+  transition: height 0.18s ease-out, opacity 0.15s ease-out;
 }
 
 /* 译文样式折叠头:去掉上方分割线,紧贴「呈现方式」 */
@@ -895,11 +895,11 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   overflow: hidden;
   margin: 0;
   padding: 0 8px;
-  transition: height 0.3s ease, opacity 0.25s ease;
 }
 .style-group:not(.collapsed) .style-group-body {
   height: auto;
   opacity: 1;
+  transition: height 0.18s ease-out, opacity 0.15s ease-out;
 }
 
 /* B 区样式单选列表:左端圆点指示选中 */
@@ -943,7 +943,7 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   height: 6px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: var(--trans-bg);
+  background: #fff;
   opacity: 0;
   transition: opacity 0.2s;
 }

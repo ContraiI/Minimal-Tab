@@ -667,6 +667,8 @@ if (engineSelectorEl && engineListEl) {
   const LS_BING_DATE = 'bingWallpaperDate';
   const LS_BING_LIST = 'bingWallpaperList';
   const LS_BING_ROTATION = 'bingRotation';
+  const LS_WH = 'wallpaperHistory';
+  const LS_WRP = 'wallpaperRotationPool';
   var rotateTimer = null;
   var bingMidnightTimer = null;
 
@@ -1918,8 +1920,6 @@ if (engineSelectorEl && engineListEl) {
   const wallpaperRotateEditBtn = document.getElementById('wallpaperRotateEditBtn');
   const wallpaperFileInput = document.getElementById('wallpaperFileInput');
   const wallpaperCancel = document.getElementById('wallpaperCancel');
-  const LS_WH = 'wallpaperHistory';
-  const LS_WRP = 'wallpaperRotationPool';
 
   // 轮换池的读写
   function getRotationPool() {
@@ -2708,6 +2708,7 @@ if (engineSelectorEl && engineListEl) {
   const importConfigInput = document.getElementById('importConfigInput');
   const SENSITIVE_CONFIG_KEYS = new Set([
     'trans.msKey',
+    // 腾讯云引擎已移除,但保留其密钥为敏感键:防止老版本残留凭证被导出到备份
     'trans.tencent.secretId',
     'trans.tencent.secretKey',
     'trans.custom.key'
@@ -2776,6 +2777,19 @@ if (engineSelectorEl && engineListEl) {
         if (!PRESERVE_ON_RESET.has(key)) keysToRemove.push(key);
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+      // 翻译模块设置会同步一份到 chrome.storage(整页翻译/后台引擎读取),重置需一并清掉;
+      // 清完再发重置标记,避免已打开的侧栏抢先重载读到未清完的旧配置
+      chrome.storage.local.get(null, (all) => {
+        const stale = Object.keys(all).filter((k) => k.indexOf('trans.') === 0 || k.indexOf('pageTrans.') === 0);
+        const done = () => {
+          chrome.storage.local.set({ '__mtSettingsReset': Date.now() }, () => {
+            chrome.storage.local.remove('__mtSettingsReset');
+          });
+        };
+        if (stale.length) chrome.storage.local.remove(stale, done);
+        else done();
+      });
 
       setWallpaperSource('none');
       sidebarOverlaySlider.value = '0.3';
