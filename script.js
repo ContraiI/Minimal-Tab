@@ -56,8 +56,11 @@ const engines = {
 };
 
 // 当前选中引擎及其图标
+// currentEngineIcon 用于搜索框聚焦时的彩色图标;currentEngineIconMask 用于未聚焦时的白色剪影
+// 不透明位图(如 JPG)自身当蒙版会糊成实心方块,导入时另存一张剪影,存在引擎的 iconMask 字段
 let currentEngine = 'bing';
 let currentEngineIcon = './icons/bing-default.svg';
+let currentEngineIconMask = './icons/bing-default.svg';
 
 // localStorage 存储键常量
 const LS_DEFAULT_ENGINE = 'preferredDefaultEngine';
@@ -174,10 +177,12 @@ function injectCustomEngines() {
     item.className = 'engine-item custom';
     item.setAttribute('data-engine', ce.id);
     item.setAttribute('data-default', ce.iconDefault);
+    if (ce.iconMask) item.setAttribute('data-mask', ce.iconMask);
     item.setAttribute('data-index', 100 + i);
     const icon = document.createElement('img');
     icon.className = 'engine-icon sm';
-    icon.src = ce.iconDefault;
+    // 下拉列表里的图标被 CSS 强制染白(filter),不透明位图换成剪影才不会糊成白方块
+    icon.src = ce.iconMask || ce.iconDefault;
     const span = document.createElement('span');
     span.textContent = ce.name;
     item.appendChild(icon);
@@ -411,6 +416,19 @@ const engineIconWrap = document.querySelector('.engine-icon-wrap');
 const engineListEl = document.getElementById('engineList');
 const searchInput = document.getElementById('search-input');
 
+// 取引擎项的蒙版地址:自定义位图引擎有独立剪影(data-mask),其余直接用图标自身
+function iconMaskOf(el) {
+  if (!el) return '';
+  return el.getAttribute('data-mask') || el.getAttribute('data-default') || '';
+}
+
+// 白色图标靠 mask-image 染色,蒙版用剪影、缺省回退到图标自身
+function applyEngineMask(url) {
+  if (!engineIconWhite || !url) return;
+  engineIconWhite.style.maskImage = 'url(' + url + ')';
+  engineIconWhite.style.webkitMaskImage = 'url(' + url + ')';
+}
+
 // 从 DOM/存储恢复当前选中引擎
 function initEngineFromDOM() {
   const saved = localStorage.getItem(LS_DEFAULT_ENGINE);
@@ -421,6 +439,7 @@ function initEngineFromDOM() {
       el.classList.add('active');
       currentEngine = saved;
       currentEngineIcon = el.dataset.default;
+      currentEngineIconMask = iconMaskOf(el);
       return;
     }
   }
@@ -428,6 +447,7 @@ function initEngineFromDOM() {
   if (active) {
     currentEngine = active.dataset.engine;
     currentEngineIcon = active.dataset.default;
+    currentEngineIconMask = iconMaskOf(active);
   }
 }
 // 先注入自定义引擎,使 initEngineFromDOM 能恢复自定义默认引擎,且禁用引擎能被 applyEngineVisibility 正确归档
@@ -435,18 +455,14 @@ injectCustomEngines();
 initEngineFromDOM();
 
 if (engineIconWhite && engineIconDefault) {
-  engineIconWhite.style.maskImage = 'url(' + currentEngineIcon + ')';
-  engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcon + ')';
+  applyEngineMask(currentEngineIconMask);
   engineIconDefault.src = currentEngineIcon;
 }
 
 // 同步当前引擎图标(白色掩码 + 彩色图)与列表选中态
 function updateEngineIcon() {
   if (!engineIconWrap || !searchInput) return;
-  if (engineIconWhite) {
-    engineIconWhite.style.maskImage = 'url(' + currentEngineIcon + ')';
-    engineIconWhite.style.webkitMaskImage = 'url(' + currentEngineIcon + ')';
-  }
+  applyEngineMask(currentEngineIconMask || currentEngineIcon);
   if (engineIconDefault && engineIconDefault.src !== currentEngineIcon) {
     engineIconDefault.src = currentEngineIcon;
   }
@@ -455,7 +471,7 @@ function updateEngineIcon() {
   engineListEl.querySelectorAll('.engine-item').forEach(item => {
     const icon = item.querySelector('.engine-icon');
     if (!icon) return;
-    const target = item.dataset.default;
+    const target = item.dataset.mask || item.dataset.default;
     if (icon.src !== target) icon.src = target;
   });
 }
@@ -611,6 +627,7 @@ if (engineSelectorEl && engineListEl) {
     item.classList.add('active');
     currentEngine = item.dataset.engine;
     currentEngineIcon = item.dataset.default;
+    currentEngineIconMask = iconMaskOf(item);
     updateEngineIcon();
     engineSelectorEl.classList.remove('open');
     preventReopenUntil = Date.now() + 300;
@@ -637,6 +654,20 @@ if (engineSelectorEl && engineListEl) {
   const bgLayerA = document.getElementById('bgLayerA');
   const bgLayerB = document.getElementById('bgLayerB');
   let bgActive = 'a';
+
+  // 壁纸模糊时给图层外扩,否则 blur() 会把图层边缘渐变成透明,视口四周露出底色形成白边
+  // 外扩量取 2 倍模糊半径(blur 的像素值即高斯核 σ),随模糊连续变化:
+  // 0px 不外扩(壁纸裁切与不模糊时完全一致),0.5px 只外扩 1px,拉满 10px 时外扩 20px
+  // 取 2σ 而不是 3σ:视口边缘只剩约 2% 透光,配黑色页面底色看不出来,换来更小的缩放
+  const BLUR_BLEED_RATIO = 2;
+  const BLUR_BLEED_MAX = 60;
+  function syncBlurBleed(value) {
+    const blur = parseFloat(value);
+    const pad = blur > 0 ? Math.min(BLUR_BLEED_MAX, Math.ceil(blur * BLUR_BLEED_RATIO)) : 0;
+    [bgLayerA, bgLayerB].forEach(function (layer) {
+      if (layer) layer.style.setProperty('--blur-bleed', pad + 'px');
+    });
+  }
 
   // 打开/关闭侧边栏
   function openSidebar() {
@@ -810,6 +841,7 @@ if (engineSelectorEl && engineListEl) {
       if (rotateGroup) rotateGroup.classList.add('hidden');
       document.body.style.setProperty('--overlay-opacity', '0');
       document.documentElement.style.setProperty('--blur-px', '0px');
+      syncBlurBleed('0');
       var ovSlider = document.getElementById('sidebarOverlaySlider');
       var ovVal = document.getElementById('sidebarOverlayVal');
       if (ovSlider) { ovSlider.value = '0'; ovVal.textContent = '0%'; }
@@ -828,6 +860,7 @@ if (engineSelectorEl && engineListEl) {
       if (rotateGroup) rotateGroup.classList.remove('hidden');
       document.body.style.setProperty('--overlay-opacity', savedOverlay);
       document.documentElement.style.setProperty('--blur-px', savedBlur + 'px');
+      syncBlurBleed(savedBlur);
       var ovS = document.getElementById('sidebarOverlaySlider');
       var ovV = document.getElementById('sidebarOverlayVal');
       if (ovS) { ovS.value = savedOverlay; ovV.textContent = Math.round(parseFloat(savedOverlay) * 100) + '%'; }
@@ -849,6 +882,7 @@ if (engineSelectorEl && engineListEl) {
       if (rotateGroup) rotateGroup.classList.remove('hidden');
       document.body.style.setProperty('--overlay-opacity', savedOverlay);
       document.documentElement.style.setProperty('--blur-px', savedBlur + 'px');
+      syncBlurBleed(savedBlur);
       var ovS2 = document.getElementById('sidebarOverlaySlider');
       var ovV2 = document.getElementById('sidebarOverlayVal');
       if (ovS2) { ovS2.value = savedOverlay; ovV2.textContent = Math.round(parseFloat(savedOverlay) * 100) + '%'; }
@@ -2447,7 +2481,7 @@ if (engineSelectorEl && engineListEl) {
   const sidebarBlurSlider = document.getElementById('sidebarBlurSlider');
   const sidebarBlurVal = document.getElementById('sidebarBlurVal');
   const LS_BLUR = 'wallpaperBlur';
-  bindSlider({ slider: sidebarBlurSlider, label: sidebarBlurVal, key: LS_BLUR, cssVar: '--blur-px', root: document.body, varUnit: 'px' });
+  bindSlider({ slider: sidebarBlurSlider, label: sidebarBlurVal, key: LS_BLUR, cssVar: '--blur-px', root: document.body, varUnit: 'px', onChange: syncBlurBleed });
 
   // 侧边栏透明度滑杆(联动灰度文字色)
   const sidebarOpacitySlider = document.getElementById('sidebarOpacitySlider');
@@ -2518,34 +2552,205 @@ if (engineSelectorEl && engineListEl) {
   const customEngineSave = document.getElementById('customEngineSave');
   const customEngineCancel = document.getElementById('customEngineCancel');
   let ceDefaultData = null;
+  let ceMaskData = '';
   let ceEditingId = null;
   let ceOpenFor = null;
 
   const ceIconDefaultPreview = document.getElementById('customEngineIconDefaultPreview');
 
-  // 读取自定义引擎图标 SVG 文件并校验大小
+  // 图标规格:SVG 原样保存;位图统一缩放重编码,避免大图撑爆本地存储
+  const ICON_SVG_MAX = 512 * 1024;
+  const ICON_RASTER_MAX = 5 * 1024 * 1024;
+  const ICON_MAX_SIDE = 96;                // 24px 显示 × 最高 4 倍屏
+  const BG_TOLERANCE = 46;                 // 与背景色的欧氏距离阈值(0-441)
+  const MASK_ALPHA_MIN = 26;               // 距背景色小于该值 → 完全透明
+  const MASK_ALPHA_MAX = 92;               // 距背景色大于该值 → 完全不透明
+  const MIN_TRANSPARENT_RATIO = 0.05;      // 自带透明像素占比达标时,原图即可当蒙版
+  const COVERAGE_MIN = 0.02;               // 剪影覆盖率合理区间,越界视为提取失败
+  const COVERAGE_MAX = 0.98;
+
+  // 按 MIME/扩展名判定图标类型(svg / raster),不支持时返回空串
+  function iconFileKind(file) {
+    const type = (file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+    if (type.indexOf('svg') !== -1 || /\.svgz?$/.test(name)) return 'svg';
+    if (type.indexOf('image/') === 0 || /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/.test(name)) return 'raster';
+    return '';
+  }
+
+  function rejectIconFile(inputEl, message) {
+    showToast(message, 3000);
+    inputEl.value = '';
+  }
+
+  function colorDistance(pixels, i, r, g, b) {
+    const dr = pixels[i * 4] - r, dg = pixels[i * 4 + 1] - g, db = pixels[i * 4 + 2] - b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  }
+
+  // 位图缩放到显示够用的尺寸,并读出像素用于判断/生成蒙版
+  function rasterToCanvas(img) {
+    const nw = img.naturalWidth || img.width;
+    const nh = img.naturalHeight || img.height;
+    if (!nw || !nh) return null;
+    const scale = Math.min(1, ICON_MAX_SIDE / Math.max(nw, nh));
+    const w = Math.max(1, Math.round(nw * scale));
+    const h = Math.max(1, Math.round(nh * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return { canvas: canvas, w: w, h: h, pixels: ctx.getImageData(0, 0, w, h).data };
+  }
+
+  // 彩色图标优先存 WebP(体积小),浏览器不支持编码时退回 PNG
+  function canvasToIconUrl(canvas) {
+    const webp = canvas.toDataURL('image/webp', 0.92);
+    if (webp.indexOf('data:image/webp') === 0) return webp;
+    return canvas.toDataURL('image/png');
+  }
+
+  // 纯色背景识别:四角平均色即背景色,且边框像素大多接近它
+  function solidBackgroundColor(pixels, w, h) {
+    const corners = [0, w - 1, (h - 1) * w, w * h - 1];
+    let r = 0, g = 0, b = 0;
+    corners.forEach((i) => { r += pixels[i * 4]; g += pixels[i * 4 + 1]; b += pixels[i * 4 + 2]; });
+    r /= corners.length; g /= corners.length; b /= corners.length;
+
+    let near = 0, count = 0;
+    const border = [];
+    for (let x = 0; x < w; x++) { border.push(x, (h - 1) * w + x); }
+    for (let y = 1; y < h - 1; y++) { border.push(y * w, y * w + w - 1); }
+    border.forEach((i) => {
+      count++;
+      if (colorDistance(pixels, i, r, g, b) <= BG_TOLERANCE) near++;
+    });
+    if (!count || near / count < 0.6) return null;
+    return { r: r, g: g, b: b };
+  }
+
+  // 统计不透明像素占比,用于判断剪影是否可用
+  function alphaCoverage(alphaAt, total) {
+    let opaque = 0;
+    for (let i = 0; i < total; i++) if (alphaAt(i) > 128) opaque++;
+    return opaque / total;
+  }
+
+  // 把每个像素的 alpha 写进新画布,得到可当 mask-image 的剪影
+  function maskCanvas(w, h, alphaAt) {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const out = ctx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) {
+      const a = Math.max(0, Math.min(255, Math.round(alphaAt(i))));
+      out.data[i * 4] = 0;
+      out.data[i * 4 + 1] = 0;
+      out.data[i * 4 + 2] = 0;
+      out.data[i * 4 + 3] = a;
+    }
+    ctx.putImageData(out, 0, 0);
+    return canvas;
+  }
+
+  // 按“离背景色越远越不透明”抠图:抗锯齿边缘平滑,字母内部的镂空也能保留
+  function maskByBackground(pixels, w, h, bg) {
+    const alphaAt = (i) => {
+      const d = colorDistance(pixels, i, bg.r, bg.g, bg.b);
+      if (d <= MASK_ALPHA_MIN) return 0;
+      if (d >= MASK_ALPHA_MAX) return 255;
+      return ((d - MASK_ALPHA_MIN) / (MASK_ALPHA_MAX - MASK_ALPHA_MIN)) * 255;
+    };
+    const coverage = alphaCoverage(alphaAt, w * h);
+    if (coverage < COVERAGE_MIN || coverage > COVERAGE_MAX) return null;
+    return maskCanvas(w, h, alphaAt);
+  }
+
+  // 兜底:按亮度取剪影,适合深色图标配浅色背景
+  function maskByLuminance(pixels, w, h) {
+    const lo = 60, hi = 235;
+    const alphaAt = (i) => {
+      const l = 0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2];
+      if (l <= lo) return 255;
+      if (l >= hi) return 0;
+      return ((hi - l) / (hi - lo)) * 255;
+    };
+    const coverage = alphaCoverage(alphaAt, w * h);
+    if (coverage < COVERAGE_MIN || coverage > COVERAGE_MAX) return null;
+    return maskCanvas(w, h, alphaAt);
+  }
+
+  // 生成剪影:自带透明通道的图直接用原图当蒙版,返回空串表示无需额外剪影
+  function buildIconMask(shot) {
+    const pixels = shot.pixels, total = shot.w * shot.h;
+    let transparent = 0;
+    for (let i = 0; i < total; i++) if (pixels[i * 4 + 3] < 16) transparent++;
+    if (transparent / total >= MIN_TRANSPARENT_RATIO) return '';
+
+    const bg = solidBackgroundColor(pixels, shot.w, shot.h);
+    const byBg = bg ? maskByBackground(pixels, shot.w, shot.h, bg) : null;
+    if (byBg) return byBg.toDataURL('image/png');
+
+    const byLuma = maskByLuminance(pixels, shot.w, shot.h);
+    if (byLuma) return byLuma.toDataURL('image/png');
+    return '';
+  }
+
+  // 位图处理:缩放重编码成彩色图标,必要时再补一张剪影
+  function processRasterIcon(img) {
+    const shot = rasterToCanvas(img);
+    if (!shot) return null;
+    return { icon: canvasToIconUrl(shot.canvas), mask: buildIconMask(shot) };
+  }
+
+  // 读取图标:SVG 直接转 data URL,位图缩放重编码(必要时附剪影),onDone(图标, 剪影)
   function readIconFile(file, inputEl, nameEl, previewEl, onDone) {
-    if (!file.type.includes('svg')) {
-      showToast(t('toastSelectSvg'), 3000);
-      inputEl.value = '';
+    const kind = iconFileKind(file);
+    if (!kind) { rejectIconFile(inputEl, t('toastSelectImage')); return; }
+    if (file.size > (kind === 'svg' ? ICON_SVG_MAX : ICON_RASTER_MAX)) {
+      rejectIconFile(inputEl, t('toastIconTooLarge'));
       return;
     }
-    if (file.size > 512 * 1024) {
-      showToast(t('toastIconTooLarge'), 3000);
-      inputEl.value = '';
-      return;
-    }
-    nameEl.textContent = file.name;
+
     const reader = new FileReader();
-    reader.onload = () => { onDone(reader.result); previewEl.src = reader.result; };
-    reader.onerror = () => { showToast(t('toastIconReadFailed'), 3000); inputEl.value = ''; };
-    reader.readAsDataURL(file);
+    reader.onerror = () => rejectIconFile(inputEl, t('toastIconReadFailed'));
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (kind === 'svg') {
+        nameEl.textContent = file.name;
+        previewEl.src = dataUrl;
+        onDone(dataUrl, '');
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => rejectIconFile(inputEl, t('toastIconReadFailed'));
+      img.onload = () => {
+        let result = null;
+        try { result = processRasterIcon(img); } catch (e) { result = null; }
+        if (!result) { rejectIconFile(inputEl, t('toastIconReadFailed')); return; }
+        nameEl.textContent = file.name;
+        previewEl.src = result.icon;
+        onDone(result.icon, result.mask);
+      };
+      img.src = dataUrl;
+    };
+    try {
+      reader.readAsDataURL(file);
+    } catch (e) {
+      rejectIconFile(inputEl, t('toastCannotReadFile'));
+    }
   }
 
   customEngineIconDefault.addEventListener('change', () => {
     const file = customEngineIconDefault.files[0];
     if (!file) return;
-    readIconFile(file, customEngineIconDefault, customEngineIconDefaultName, ceIconDefaultPreview, (data) => { ceDefaultData = data; });
+    readIconFile(file, customEngineIconDefault, customEngineIconDefaultName, ceIconDefaultPreview, (icon, mask) => {
+      ceDefaultData = icon;
+      ceMaskData = mask;
+    });
   });
 
   // 打开表单(新增或编辑指定引擎),预填数据
@@ -2569,6 +2774,7 @@ if (engineSelectorEl && engineListEl) {
     customEngineIconDefaultName.textContent = '';
     ceIconDefaultPreview.src = '';
     ceDefaultData = null;
+    ceMaskData = '';
 
     if (ceEditingId) {
       const list = getCustomEngines();
@@ -2578,6 +2784,7 @@ if (engineSelectorEl && engineListEl) {
         customEngineUrl.value = ce.url;
         ceIconDefaultPreview.src = ce.iconDefault;
         ceDefaultData = ce.iconDefault;
+        ceMaskData = ce.iconMask || '';
         title.textContent = t('editCustomEngine');
         saveBtn.textContent = t('btnUpdate');
         const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
@@ -2657,6 +2864,7 @@ if (engineSelectorEl && engineListEl) {
       var defEl = document.querySelector('.engine-item[data-engine="' + def + '"]');
       if (defEl) {
         currentEngineIcon = defEl.getAttribute('data-default');
+        currentEngineIconMask = iconMaskOf(defEl);
       }
     }
     injectCustomEngines();
@@ -2681,17 +2889,23 @@ if (engineSelectorEl && engineListEl) {
     const dupUrl = list.find(e => e.url === url && e.id !== ceEditingId);
     if (dupUrl) { showToast(t('toastUrlDuplicate', { name: dupUrl.name })); return; }
 
+    // iconMask 只在不透明位图需要额外剪影时存在;SVG 与透明位图直接拿图标自身当蒙版
+    const iconFields = { name, slug, url, iconDefault: ceDefaultData };
+    if (ceMaskData) iconFields.iconMask = ceMaskData;
+
     if (ceEditingId) {
       const idx = list.findIndex(e => e.id === ceEditingId);
       if (idx !== -1) {
-        list[idx] = { ...list[idx], name, slug, url, iconDefault: ceDefaultData };
+        const next = { ...list[idx], ...iconFields };
+        if (!ceMaskData) delete next.iconMask;
+        list[idx] = next;
       }
     } else {
       const maxNum = list.reduce((max, ce) => {
         const n = parseInt(ce.id.replace('custom_', ''), 10);
         return n >= max ? n + 1 : max;
       }, 0);
-      list.push({ id: `custom_${maxNum}`, name, slug, url, iconDefault: ceDefaultData });
+      list.push({ id: `custom_${maxNum}`, ...iconFields });
     }
 
     closeCustomEngineForm();
@@ -2699,6 +2913,15 @@ if (engineSelectorEl && engineListEl) {
     injectCustomEngines();
     populateEngineManager();
     if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
+    // 改的是当前正在用的引擎时,立即刷新搜索框图标,不必等刷新页面
+    if (ceEditingId && ceEditingId === currentEngine) {
+      const cur = document.querySelector('.engine-item[data-engine="' + ceEditingId + '"]');
+      if (cur) {
+        currentEngineIcon = cur.dataset.default;
+        currentEngineIconMask = iconMaskOf(cur);
+        updateEngineIcon();
+      }
+    }
     showToast(ceEditingId ? t('toastUpdateSuccess', { name: name }) : t('toastAddSuccess', { name: name }), 2000, 'success');
   });
 
@@ -2799,6 +3022,7 @@ if (engineSelectorEl && engineListEl) {
       sidebarBlurSlider.value = '0';
       sidebarBlurVal.textContent = '0px';
       document.body.style.setProperty('--blur-px', '0px');
+      syncBlurBleed('0');
       updateSliderTrack(sidebarBlurSlider);
       sidebarOpacitySlider.value = '1';
       applySidebarOpacity('1');
@@ -2857,6 +3081,7 @@ if (engineSelectorEl && engineListEl) {
         bingItem.classList.add('active');
         currentEngine = 'bing';
         currentEngineIcon = bingItem.dataset.default;
+        currentEngineIconMask = iconMaskOf(bingItem);
         if (typeof updateEngineIcon === 'function') updateEngineIcon();
       }
 
@@ -3102,9 +3327,10 @@ if (engineSelectorEl && engineListEl) {
         fallback.classList.add('active');
         currentEngine = fallback.getAttribute('data-engine');
         currentEngineIcon = fallback.getAttribute('data-default');
+        currentEngineIconMask = iconMaskOf(fallback);
         const wIcon = document.getElementById('currentEngineIconWhite');
         const dIcon = document.getElementById('currentEngineIconDefault');
-        if (wIcon) { var wUrl = fallback.getAttribute('data-default'); if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
+        if (wIcon) { var wUrl = currentEngineIconMask; if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
         if (dIcon) dIcon.src = fallback.getAttribute('data-default') || dIcon.src;
       }
     }
@@ -3180,6 +3406,7 @@ if (defaultEngineManager) defaultEngineManager.addEventListener('change', (e) =>
     item.classList.add('active');
     currentEngine = radio.value;
     currentEngineIcon = item.dataset.default;
+    currentEngineIconMask = iconMaskOf(item);
     updateEngineIcon();
   }
   if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();

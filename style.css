@@ -26,6 +26,12 @@
   user-select: none;
 }
 
+/* 页面兜底底色:壁纸图层边缘透光、或尚未覆盖时,露出的必须是深色而不是浏览器默认的白色画布
+   模糊外扩取 2σ 时视口边缘仍有约 2% 透光,靠这层黑底才不会重新变成白边 */
+html {
+  background-color: #000;
+}
+
 /* 页面基础样式,注入主题色变量 */
 body {
   --accent: #2563eb;
@@ -44,10 +50,13 @@ body {
 /* 壁纸双图层(交叉淡入切换) */
 .bg-layer {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  /* blur() 会把图层边缘渐变为透明,不外扩就会在视口四周露出底色形成白边
+     向外扩 2σ(--blur-bleed 由 JS 按当前模糊值写入,σ 即 blur 的像素值),让衰减落在视口之外
+     外扩量随模糊连续变化,不会出现"刚开模糊壁纸就跳一下";--blur-bleed 只有 JS 会写,恒为合法 px 值 */
+  top: calc(-1 * var(--blur-bleed, 0px));
+  left: calc(-1 * var(--blur-bleed, 0px));
+  width: calc(100% + 2 * var(--blur-bleed, 0px));
+  height: calc(100% + 2 * var(--blur-bleed, 0px));
   background-color: #000;
   background-size: cover;
   background-position: center;
