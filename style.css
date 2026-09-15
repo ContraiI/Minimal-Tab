@@ -141,12 +141,6 @@ body::before {
   transition: background 0.2s ease 0.1s, color 0.3s, border-radius 0.1s ease 0.1s;
 }
 
-.search-input:not(:focus):not(:placeholder-shown) {
-  background: transparent;
-  color: #ffffff;
-  border-color: var(--search-color, #ffffff);
-}
-
 .search-input:-webkit-autofill {
   -webkit-text-fill-color: #ffffff !important;
   -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
@@ -343,10 +337,11 @@ body::before {
 
 .search-input:not(:focus):not(:placeholder-shown) ~ .search-btns-wrap .search-btn { background-color: transparent !important; }
 
-.search-input:not(:focus):placeholder-shown ~ .search-btns-wrap .search-btn { display: none; }
-
-.search-btn:hover { background-color: #0052a3 !important; }
-.search-btn:hover svg { fill: #e0e0e0 !important; }
+/* 悬停背景取「主题色深一档」而非写死的蓝,主题色任意都正确。
+   注意:上面 :focus / :not(:focus):not(:placeholder-shown) 两条 !important 规则权重更高
+   (0,4,0)/(0,5,0) > (0,2,0),所以当前各可见状态下本行都被压住、并不生效——保留它是为了
+   将来那两条若被改动时,这里生效的也是正确颜色。放大镜图标悬停不再变暗(保持纯白)。 */
+.search-btn:hover { background-color: color-mix(in srgb, var(--accent) 85%, #000) !important; }
 
 /* 搜索历史/建议下拉 */
 .history-dropdown {
@@ -493,13 +488,6 @@ body::before {
   z-index: 1;
   white-space: nowrap;
 }
-
-.digital-clock.follow-mode {
-  position: absolute;
-  left: 50%;
-}
-.digital-clock.follow-mode.pos-below { top: 100%; bottom: auto; }
-.digital-clock.follow-mode.pos-above { top: auto; bottom: 100%; }
 
 /* 顶部 Toast 提示 */
 .toast {
@@ -1152,7 +1140,6 @@ body.light-mode .sidebar-content {
   border-radius: 4px;
   cursor: ns-resize;
   display: block;
-  flex-shrink: 0;
 }
 
 .picker-input-row {
@@ -1464,6 +1451,68 @@ body.light-mode .sidebar-content {
   flex-shrink: 0;
 }
 
+/* 「导出时包含密钥」左侧勾选框(区别于右侧拨杆:方块在左、勾号在方块内) */
+.backup-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.35s ease;
+}
+
+.backup-check:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.backup-check:active {
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+.backup-check input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.backup-check-box {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 1.5px solid #777;
+  border-radius: 4px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+/* 勾号由相邻两条边框旋转 45° 拼成,不依赖字体字形;颜色跟随主题色对比色 */
+.backup-check-box::after {
+  content: '';
+  position: absolute;
+  left: 4.5px;
+  top: 2.5px;
+  width: 3px;
+  height: 7px;
+  border: solid var(--accent-text, #fff);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.backup-check input:checked ~ .backup-check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.backup-check input:checked ~ .backup-check-box::after {
+  transform: rotate(45deg) scale(1);
+}
+
 .sidebar-toggle {
   display: flex;
   align-items: center;
@@ -1503,15 +1552,9 @@ body.light-mode .sidebar-content {
 .sidebar.light .sidebar-action-btn.danger:hover { background: #d32f2f; color: #fff; }
 .sidebar.light .sidebar-toggle { color: rgb(var(--sidebar-main-rgb, 51, 51, 51)); }
 .sidebar.light .sidebar-toggle:hover { background: rgba(0, 0, 0, 0.05); }
-
-.sidebar-divider {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.sidebar.light .sidebar-divider {
-  border-top-color: rgba(0, 0, 0, 0.08);
-}
+.sidebar.light .backup-check { color: rgb(var(--sidebar-main-rgb, 51, 51, 51)); }
+.sidebar.light .backup-check:hover { background: rgba(0, 0, 0, 0.05); }
+.sidebar.light .backup-check-box { border-color: #999; }
 
 .sidebar-separator {
   margin: 18px 10px 6px;
@@ -1784,6 +1827,13 @@ body.light-mode .sidebar-content {
   border-color: #d32f2f;
 }
 
+/* 浅色悬停必须显式给 color:上面这条 (0,3,0) 的权重高于 .modal-btn-delete:hover (0,2,0),
+   否则悬停时背景变 #d32f2f 而文字仍是 #d32f2f,「删除」字样会糊成一片 */
+.sidebar.light .modal-btn-delete:hover {
+  background: #d32f2f;
+  color: #fff;
+}
+
 /* 模态弹窗遮罩(壁纸管理等) */
 .modal-overlay {
   position: fixed;
@@ -1885,8 +1935,11 @@ body.light-mode .sidebar-content {
   transition: background 0.2s;
 }
 
+/* 悬停只压暗背景、不动文字:把主题色与黑混合得到同色相的深色(主题色任意都正确),
+   文字保持纯白。不用 filter:brightness()——那是作用在整个元素上,白字会被一起压灰。
+   原先写死 #0052a3,主题色不是蓝色时悬停会串成深蓝。 */
 .modal-btn-save:hover {
-  background: #0052a3;
+  background: color-mix(in srgb, var(--accent) 85%, #000);
 }
 
 body.light-mode .modal-card {

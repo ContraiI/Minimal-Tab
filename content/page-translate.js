@@ -50,6 +50,7 @@
   // 待扫描节点缓存与翻译队列
   var nodeCache = null;
   var elementCache = null;
+  var observedShadowRoots = new WeakSet();   // 已 observe 过的 shadow root,避免每次重建重复注册
   var cachesDirty = true;
   var scanTimer = null;
   var queue = [];
@@ -84,8 +85,11 @@
         else {
           els.push(n);
           if (n.shadowRoot) {
-
-            if (mutationObserver) mutationObserver.observe(n.shadowRoot, { childList: true, subtree: true, characterData: true });
+            // 同一个 shadow root 只 observe 一次:重建缓存很频繁,重复 observe 会不断累加内部记录
+            if (mutationObserver && !observedShadowRoots.has(n.shadowRoot)) {
+              observedShadowRoots.add(n.shadowRoot);
+              mutationObserver.observe(n.shadowRoot, { childList: true, subtree: true, characterData: true });
+            }
             walkRoot(n.shadowRoot);
           }
         }
@@ -155,6 +159,15 @@
   }
 
 
+  // 元素是否挂着任一待翻译属性(零成本判断,用于在昂贵的视口/可见性检查之前先筛掉绝大多数元素)
+  function hasAnyTranslatableAttr(el) {
+    for (var i = 0; i < ATTR_NAMES.length; i++) {
+      if (el.hasAttribute(ATTR_NAMES[i])) return true;
+    }
+    return false;
+  }
+
+
   // 扫描可见节点,收集待翻译的文本与属性任务
   function processVisible() {
     if (!state.enabled || !alive()) return;
@@ -167,11 +180,15 @@
       var text = node.nodeValue;
       if (!isTranslatableText(text)) { processedText.add(node); continue; }
       var el = node.parentElement;
-      if (!el || isSkippedElement(el) || isInTargetLang(el)) {
+      if (!el) { processedText.add(node); continue; }
+      // 视口判断最廉价,且屏外文本本来就不会被翻译;先做它可省下每个屏外节点的两次祖先链查询
+      // (isSkippedElement 要匹配 18 个选择器,isInTargetLang 要 closest('[lang]')),
+      // 而屏外节点不会被写入 processedText,原先每轮扫描都要为它们重算一遍
+      if (!inViewport(el)) continue;
+      if (isSkippedElement(el) || isInTargetLang(el)) {
         processedText.add(node);
         continue;
       }
-      if (!inViewport(el)) continue;
       if (!isVisible(el)) { processedText.add(node); continue; }
       textJobs.push(node);
     }
@@ -179,11 +196,15 @@
     var attrJobs = [];
     for (var j = 0; j < elementCache.length; j++) {
       var e = elementCache[j];
-      if (!inViewport(e) || !isVisible(e)) continue;
       if (e.id === 'pageTransBall') continue;
+      // 零成本判断先行:绝大多数元素四个待翻译属性一个都没有,不必为它们付
+      // getBoundingClientRect + getComputedStyle(后者会强制样式解析)
+      if (!hasAnyTranslatableAttr(e)) continue;
+      if (!inViewport(e) || !isVisible(e)) continue;
       var recs = attrRecords.get(e);
       var failed = failedAttrs.get(e);
       var skipped = skippedAttrs.get(e);
+      var skippedEl = null;   // 每轮显式重置:var 是函数作用域,不重置会把上一个元素的结果带进来
       for (var a = 0; a < ATTR_NAMES.length; a++) {
         var name = ATTR_NAMES[a];
         if (recs && recs.has(name)) continue;
@@ -193,8 +214,9 @@
         if (pending && pending.has(name)) continue;
         if (name === 'placeholder') {
           if (e.tagName !== 'INPUT' && e.tagName !== 'TEXTAREA') continue;
-        } else if (isSkippedElement(e)) {
-          continue;
+        } else {
+          if (skippedEl === null) skippedEl = isSkippedElement(e);
+          if (skippedEl) continue;
         }
         var val = e.getAttribute(name);
         if (!val || !isTranslatableText(val) || isInTargetLang(e)) continue;
@@ -354,7 +376,11 @@
   function applyResult(job, translated) {
     if (job.type === 'text') {
       var node = job.node;
-      if (!node.parentNode || node.nodeValue !== job.text) return;
+      // 必须查 isConnected 而非只看 parentNode:祖先被移除时文本节点自身的 parentNode 仍非空,
+      // 若放行就会给一个已不在文档里的节点写记录 —— 而移除那一刻的清理早已跑过(当时还没有这条记录),
+      // 于是成为永久失效记录(实测表现为 textRecords 失效数缓慢攀升)。属性分支本就查了 isConnected。
+      // 节点若稍后被重新插回,它不在 processedText 里,下一轮扫描会重新翻译,不会漏译。
+      if (!node.isConnected || node.nodeValue !== job.text) return;
       var rec;
       if (state.mode === 'bilingual') {
         // 双语对照:保留原文,在原文后追加含 <br> 的译文块(span 打标记避免被重译/触发重扫)
@@ -417,6 +443,36 @@
     targetVersion++;
   }
 
+  // 页面回收 DOM 时清掉对应记录:文本/属性记录都是强引用 Map,条目只增不减会让长会话页面
+  // (信息流、虚拟列表、SPA 路由切换)里已脱离文档的节点无法回收,记录数随时间无上限增长。
+  // 判定放在 mutation 回调内(DOM 已结算):被"移动"的节点此时仍然 isConnected,所以不会被误清,
+  // 也就不会重复翻译;真正被移除的节点则连同 processedText 一起清掉——只清记录不清 processedText
+  // 会留下"译过、却再也译不了也还原不了"的死节点。
+  // (loadingSpinners/inFlight/failedAttrs 等不在此列:前两个随请求结算而清理、有并发上限,
+  //  后三个是 WeakMap,都不会把已脱离节点长期钉住。)
+  function purgeDetachedRecords(removedRoots) {
+    if (!textRecords.size && !attrRecords.size) return;
+    for (var i = 0; i < removedRoots.length; i++) {
+      var root = removedRoots[i];
+      if (!root || root.isConnected) continue;   // 已移回文档(移动而非移除),整棵子树都还在
+      var stack = [root];
+      while (stack.length) {
+        var n = stack.pop();
+        // 逐个节点判断:框架可能把被移除子树的子节点重新插回文档(移动/Fragment 搬运),
+        // 这些节点仍然连着,清了会导致重复翻译
+        if (!n.isConnected) {
+          if (n.nodeType === 3) {
+            if (textRecords.has(n)) textRecords.delete(n);
+            processedText.delete(n);
+          } else if (n.nodeType === 1 && attrRecords.has(n)) {
+            attrRecords.delete(n);
+          }
+        }
+        for (var c = n.firstChild; c; c = c.nextSibling) stack.push(c);
+      }
+    }
+  }
+
 
   // 开始翻译:安装监听、重建缓存并启动扫描
   function startTranslate() {
@@ -461,6 +517,7 @@
     mutationObserver = new MutationObserver(function (records) {
 
       var meaningful = false;
+      var removedRoots = [];   // 本轮被移除的子树根,待判定确有脱离后清理其记录
       for (var i = 0; i < records.length; i++) {
         var r = records[i];
         if (r.type === 'characterData') {
@@ -471,7 +528,12 @@
           var onlySelfInserted = true;
           var affected = [];
           if (r.addedNodes) { for (var a = 0; a < r.addedNodes.length; a++) affected.push(r.addedNodes[a]); }
-          if (r.removedNodes) { for (var b = 0; b < r.removedNodes.length; b++) affected.push(r.removedNodes[b]); }
+          if (r.removedNodes) {
+            for (var b = 0; b < r.removedNodes.length; b++) {
+              affected.push(r.removedNodes[b]);
+              removedRoots.push(r.removedNodes[b]);
+            }
+          }
           for (var k = 0; k < affected.length; k++) {
             var n = affected[k];
             var selfInserted = n && n.nodeType === 1 && n.getAttribute &&
@@ -482,6 +544,8 @@
         }
       }
       if (!meaningful) return;
+      // 只处理自身增删(加载图标/译文块)时上面已返回,那时不会有记录失效;真正有页面增删时才清理
+      purgeDetachedRecords(removedRoots);
       cachesDirty = true;
       scheduleScan();
     });
@@ -493,6 +557,7 @@
   // 移除全部监听器
   function tearDownObservers() {
     if (mutationObserver) { mutationObserver.disconnect(); mutationObserver = null; }
+    observedShadowRoots = new WeakSet();   // observer 已断开,重新安装时需重新 observe
     window.removeEventListener('scroll', onScroll, true);
     window.removeEventListener('resize', onScroll);
   }
@@ -503,6 +568,8 @@
   var ballDown = false;     // 指针是否按下
   var ballDragged = false;  // 本次按下是否实际拖动(移动超过阈值),拖动结束不触发开关
   var dragOffset = null;
+  var dragDownAt = null;    // 按下时的指针坐标(判定拖动阈值用,避免每次移动读布局)
+  var dragBounds = null;    // 按下时缓存的球体尺寸与活动范围(避免拖动中反复读 offsetWidth 触发同步布局)
 
   // 读取 i18n 文案
   function getMsg(key) {
@@ -526,20 +593,23 @@
       if (e.button !== 0) return;
       ballDown = true;
       ballDragged = false;
+      // 尺寸与活动范围只在按下时读一次:pointermove 里读 offsetWidth 会因为上一帧刚写过 style.left/top
+      // 而强制同步布局,拖动期间每个事件都要重排一次
+      var w = ballEl.offsetWidth, h = ballEl.offsetHeight;
+      dragBounds = { maxX: window.innerWidth - w, maxY: window.innerHeight - h };
+      dragDownAt = { x: e.clientX, y: e.clientY };
       dragOffset = { x: e.clientX - ballEl.offsetLeft, y: e.clientY - ballEl.offsetTop };
       try { ballEl.setPointerCapture(e.pointerId); } catch (err) {}
       e.preventDefault();
     });
     ballEl.addEventListener('pointermove', function (e) {
       if (!ballDown) return;
-      // 移动超过阈值判定为拖动,之后的点击不切换开关
+      // 移动超过阈值判定为拖动,之后的点击不切换开关(与按下时的指针坐标比较,不读布局)
       if (!ballDragged) {
-        var dx = Math.abs(e.clientX - (ballEl.offsetLeft + dragOffset.x));
-        var dy = Math.abs(e.clientY - (ballEl.offsetTop + dragOffset.y));
-        if (dx + dy > 3) ballDragged = true;
+        if (Math.abs(e.clientX - dragDownAt.x) + Math.abs(e.clientY - dragDownAt.y) > 3) ballDragged = true;
       }
-      var x = Math.min(Math.max(0, e.clientX - dragOffset.x), window.innerWidth - ballEl.offsetWidth);
-      var y = Math.min(Math.max(0, e.clientY - dragOffset.y), window.innerHeight - ballEl.offsetHeight);
+      var x = Math.min(Math.max(0, e.clientX - dragOffset.x), dragBounds.maxX);
+      var y = Math.min(Math.max(0, e.clientY - dragOffset.y), dragBounds.maxY);
       ballEl.style.left = x + 'px';
       ballEl.style.top = y + 'px';
       ballEl.style.right = 'auto';

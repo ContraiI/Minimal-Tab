@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const b = parseInt(accent.slice(5, 7), 16);
     document.body.style.setProperty('--accent', accent);
     document.body.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+    // 按亮度选对比文字色,与 newtab(script.js) 和翻译边栏(translation.js) 保持一致;
+    // 否则把主题色设成浅色时,弹窗按钮会是白字浅底,看不清
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    document.body.style.setProperty('--accent-text', lum > 0.55 ? '#1a1a1a' : '#ffffff');
   }
   // 应用主题模式(系统/浅色/深色)
   const mode = localStorage.getItem('themeMode') || 'system';

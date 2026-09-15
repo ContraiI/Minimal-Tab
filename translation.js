@@ -782,6 +782,22 @@
       renderStylePreviews();
     }
 
+    // 拖动取色器时的 live 回调频率可达 60~120 次/秒,每次都写 storage 会让所有打开页面的
+    // chrome.storage.onChanged 连续触发(并可能带动整页重涂),故这里节流到约 7 次/秒;
+    // 抬手/取消/确认走 flushSavePageTrans() 立即补写终值,保证最终状态精确。
+    var pageTransSaveTimer = null;
+    function scheduleSavePageTrans() {
+      if (pageTransSaveTimer) return;
+      pageTransSaveTimer = setTimeout(function () {
+        pageTransSaveTimer = null;
+        savePageTrans();
+      }, 150);
+    }
+    function flushSavePageTrans() {
+      if (pageTransSaveTimer) { clearTimeout(pageTransSaveTimer); pageTransSaveTimer = null; }
+      savePageTrans();
+    }
+
     var pageTargetDropdown = buildDropdown(
       document.getElementById('pageTargetSelect'),
       document.getElementById('pageTargetList'),
@@ -922,20 +938,27 @@
         updateFromPicker();
       }
 
+      // 拖动收尾:鼠标可能在本窗口之外松开(拖到屏幕边缘时很常见),那时 document 收不到 mouseup,
+      // mousemove 监听器会永久残留,之后"未按键的鼠标移动"也会继续改颜色。故:注册前先清旧引用,
+      // 用同一个具名 handler 作 mouseup(同名同参的重复注册会被浏览器忽略,不会累加),并在窗口失焦时兜底清理。
+      function endPickerDrag() {
+        document.removeEventListener('mousemove', onPaletteMove);
+        document.removeEventListener('mousemove', onHueMove);
+      }
+      window.addEventListener('blur', endPickerDrag);
+
       palette.addEventListener('mousedown', function (e) {
         onPaletteMove(e);
+        document.removeEventListener('mousemove', onPaletteMove);
         document.addEventListener('mousemove', onPaletteMove);
-        document.addEventListener('mouseup', function () {
-          document.removeEventListener('mousemove', onPaletteMove);
-        }, { once: true });
+        document.addEventListener('mouseup', endPickerDrag, { once: true });
       });
 
       hueBar.addEventListener('mousedown', function (e) {
         onHueMove(e);
+        document.removeEventListener('mousemove', onHueMove);
         document.addEventListener('mousemove', onHueMove);
-        document.addEventListener('mouseup', function () {
-          document.removeEventListener('mousemove', onHueMove);
-        }, { once: true });
+        document.addEventListener('mouseup', endPickerDrag, { once: true });
       });
 
       hexInput.addEventListener('input', function () {
@@ -967,7 +990,7 @@
           panel.classList.remove('open');
           preview(origColor);
           highlight(origColor);
-          if (active) { active = false; live(origColor); }
+          if (active) { active = false; live(origColor, true); }
           return;
         }
         panel.classList.add('open');
@@ -992,7 +1015,7 @@
           panel.classList.remove('open');
           preview(origColor);
           highlight(origColor);
-          if (active) { active = false; live(origColor); }
+          if (active) { active = false; live(origColor, true); }
         }
       };
     }
@@ -1022,10 +1045,14 @@
       confirmBtn: document.getElementById('pageTransFontConfirm'),
       trigger: document.getElementById('pageTransFontColorTrigger'),
       getColor: function () { return pageTransState.fontColor; },
-      setColor: function (hex) { pageTransState.fontColor = hex; savePageTrans(); },
+      setColor: function (hex) { pageTransState.fontColor = hex; flushSavePageTrans(); },
       preview: fontRowRender,
       highlight: fontRowRender,
-      live: function (hex) { pageTransState.fontColor = hex; savePageTrans(); }
+      // immediate=true 用于取消/关闭时恢复原色,需立即落盘;拖动时走节流
+      live: function (hex, immediate) {
+        pageTransState.fontColor = hex;
+        if (immediate) flushSavePageTrans(); else scheduleSavePageTrans();
+      }
     });
 
     // 边框颜色(绑定当前样式,各样式颜色独立)
@@ -1049,10 +1076,13 @@
       confirmBtn: document.getElementById('pageTransLineConfirm'),
       trigger: document.getElementById('pageTransLineColorTrigger'),
       getColor: lineColorCurrent,
-      setColor: function (hex) { pageTransState.lineColor = hex; savePageTrans(); },
+      setColor: function (hex) { pageTransState.lineColor = hex; flushSavePageTrans(); },
       preview: lineRowRender,
       highlight: lineRowRender,
-      live: function (hex) { pageTransState.lineColor = hex; savePageTrans(); }
+      live: function (hex, immediate) {
+        pageTransState.lineColor = hex;
+        if (immediate) flushSavePageTrans(); else scheduleSavePageTrans();
+      }
     });
 
     // 带线条的样式开启时显示边框颜色块,切换样式时刷新该样式独立的颜色

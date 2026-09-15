@@ -6,31 +6,51 @@ window.addEventListener('load', () => {
 });
 
 // 数字时钟:每秒刷新时间显示
+// 元素引用缓存一次(原先每秒 getElementById 一次);名称与设置区内的 clockEl 区分,避免遮蔽
+const clockTextEl = document.getElementById('digital-clock');
+let clockTicker = null;
+
 function updateDigitalClock() {
+  if (!clockTextEl) return;
   const now = new Date();
   const h = String(now.getHours()).padStart(2, '0');
   const m = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
-  document.getElementById('digital-clock').textContent = `${h}:${m}:${s}`;
+  clockTextEl.textContent = `${h}:${m}:${s}`;
+}
+
+// 只在时钟真正可见时走定时器:隐藏期间(搜索框聚焦时、或时钟开关关闭时)直接停表,
+// 不再每秒做一次看不见的 DOM 写入;重新显示时立刻补一次当前时间,显示不会是旧值。
+// 因此时钟的显隐必须一律走 showDigitalClock()/hideDigitalClock() 这两个入口。
+function startClockTicker() {
+  if (clockTicker) return;
+  updateDigitalClock();
+  clockTicker = setInterval(updateDigitalClock, 1000);
+}
+
+function stopClockTicker() {
+  if (clockTicker) { clearInterval(clockTicker); clockTicker = null; }
 }
 
 // 隐藏/显示数字时钟
 function hideDigitalClock() {
-  const clock = document.getElementById('digital-clock');
-  if (clock) { clock.style.opacity = '0'; clock.style.visibility = 'hidden'; }
+  stopClockTicker();
+  if (clockTextEl) { clockTextEl.style.opacity = '0'; clockTextEl.style.visibility = 'hidden'; }
 }
 
 function showDigitalClock() {
-  if (!isClockVisible()) return;
-  const clock = document.getElementById('digital-clock');
-  if (clock) { clock.style.opacity = '1'; clock.style.visibility = 'visible'; }
+  if (!isClockVisible()) { stopClockTicker(); return; }
+  if (clockTextEl) { clockTextEl.style.opacity = '1'; clockTextEl.style.visibility = 'visible'; }
+  startClockTicker();
 }
 
-updateDigitalClock();
-setInterval(updateDigitalClock, 1000);
+updateDigitalClock();   // 首帧先写上时间;定时器由初始化路径按开关状态启停
 
 let toastTimer = null;
 let suggestionTimer = null;
+// 建议请求序号:每次取消/发起新请求都自增,响应回来时序号不符即丢弃
+// (否则乱序响应会用旧前缀的建议覆盖新的,失焦后到达的响应还会把下拉重新弹出)
+let suggestionSeq = 0;
 let dropdownSelectedIndex = -1;
 // 底部提示气泡,自动消失,可指定成功/错误样式
 function showToast(message, duration = 2000, type = '') {
@@ -203,12 +223,14 @@ function clearSearchHistory() {
 
 function cancelSuggestions() {
   if (suggestionTimer) { clearTimeout(suggestionTimer); suggestionTimer = null; }
+  suggestionSeq++;   // 作废在途请求的渲染权(失焦、清空输入、发起新请求都会走到这里)
 }
 
 // 按提供商拉取搜索建议(百度/谷歌/必应)
 function fetchSuggestions(query) {
   cancelSuggestions();
   if (!query || !isSuggestionEnabled()) { renderHistoryList(query); return; }
+  var seq = suggestionSeq;   // 本次请求的序号;期间若输入变化或失焦,序号会被 cancelSuggestions 推高
 
   var provider = getSuggestionProvider();
   var url;
@@ -239,6 +261,7 @@ function fetchSuggestions(query) {
         text = data;
       }
       var suggestions = [];
+      if (seq !== suggestionSeq) return;   // 过期响应:输入已变或已失焦,丢弃不渲染
       if (provider === 'baidu') {
         var m = text.match(/s\s*:\s*(\[[\s\S]*?\])/);
         if (m) {
@@ -253,6 +276,7 @@ function fetchSuggestions(query) {
       renderSuggestionsList(suggestions);
     })
     .catch(function() {
+      if (seq !== suggestionSeq) return;   // 过期请求失败同样不动作,避免清掉新的建议列表
       renderSuggestionsList([]);
     });
 }
@@ -1030,7 +1054,6 @@ if (engineSelectorEl && engineListEl) {
     window._sugOptions = options;
     window._sugTrigger = trigger;
     window._sugList = list;
-    window._selectSuggestionProvider = selectProvider;
   })();
 
   // 时钟设置相关 DOM 与存储键
@@ -1774,20 +1797,27 @@ if (engineSelectorEl && engineListEl) {
       updateFromPicker();
     }
 
+    // 拖动收尾:鼠标可能在本窗口之外松开(拖到屏幕边缘时很常见),那时 document 收不到 mouseup,
+    // mousemove 监听器会永久残留,之后"未按键的鼠标移动"也会继续改颜色。故:注册前先清旧引用,
+    // 用同一个具名 handler 作 mouseup(同名同参的重复注册会被浏览器忽略,不会累加),并在窗口失焦时兜底清理。
+    function endPickerDrag() {
+      document.removeEventListener('mousemove', onPaletteMove);
+      document.removeEventListener('mousemove', onHueMove);
+    }
+    window.addEventListener('blur', endPickerDrag);
+
     palette.addEventListener('mousedown', function(e) {
       onPaletteMove(e);
+      document.removeEventListener('mousemove', onPaletteMove);
       document.addEventListener('mousemove', onPaletteMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onPaletteMove);
-      }, {once: true});
+      document.addEventListener('mouseup', endPickerDrag, {once: true});
     });
 
     hueBar.addEventListener('mousedown', function(e) {
       onHueMove(e);
+      document.removeEventListener('mousemove', onHueMove);
       document.addEventListener('mousemove', onHueMove);
-      document.addEventListener('mouseup', function() {
-        document.removeEventListener('mousemove', onHueMove);
-      }, {once: true});
+      document.addEventListener('mouseup', endPickerDrag, {once: true});
     });
 
     hexInput.addEventListener('input', function() {
@@ -2925,33 +2955,65 @@ if (engineSelectorEl && engineListEl) {
     showToast(ceEditingId ? t('toastUpdateSuccess', { name: name }) : t('toastAddSuccess', { name: name }), 2000, 'success');
   });
 
-  // 配置导出/导入(JSON 备份还原全部 localStorage)
+  // 配置导出/导入(JSON 备份:localStorage 全部键 + chrome.storage.local 的翻译模块设置)
   const exportConfigBtn = document.getElementById('exportConfigBtn');
   const importConfigBtn = document.getElementById('importConfigBtn');
   const importConfigInput = document.getElementById('importConfigInput');
+  const exportSecretsToggle = document.getElementById('exportSecretsToggle');
+  // 敏感凭证:默认不写入备份,仅当用户勾选「导出时包含密钥」时导出
   const SENSITIVE_CONFIG_KEYS = new Set([
     'trans.msKey',
-    // 腾讯云引擎已移除,但保留其密钥为敏感键:防止老版本残留凭证被导出到备份
+    'trans.custom.key',
+    // 腾讯云引擎已于 v1.4.2 移除、实现代码已清空,这两个键只可能以历史残留形式留在老用户本地;
+    // 但残留的仍是真凭证,继续登记,避免默认(不含密钥)导出时被带出
     'trans.tencent.secretId',
-    'trans.tencent.secretKey',
-    'trans.custom.key'
+    'trans.tencent.secretKey'
   ]);
+  // 上述开关的记忆键(记住选择,避免每次导出都要重设)
+  const EXPORT_SECRETS_KEY = 'exportIncludeSecrets';
+  // 备份 JSON 中承载 chrome.storage.local 设置的保留节名
+  const CHROME_STORE_SECTION = '__chromeStorage';
+  // 只存于 chrome.storage.local 的翻译模块键前缀(网页翻译设置,localStorage 里没有)
+  const CHROME_STORE_PREFIXES = ['pageTrans.'];
+  // 运行态/临时键,不属于可备份配置
+  const NON_BACKUP_KEYS = new Set(['pageTrans.tabs', '__mtSettingsReset']);
+
+  if (exportSecretsToggle) {
+    exportSecretsToggle.checked = localStorage.getItem(EXPORT_SECRETS_KEY) === 'true';
+    exportSecretsToggle.addEventListener('change', () => {
+      localStorage.setItem(EXPORT_SECRETS_KEY, exportSecretsToggle.checked ? 'true' : 'false');
+    });
+  }
 
   if (exportConfigBtn) {
     exportConfigBtn.addEventListener('click', () => {
+      // 以持久化偏好为准(而非 DOM 勾选态),避免界面状态意外不同步时把密钥写进备份
+      var includeSecrets = localStorage.getItem(EXPORT_SECRETS_KEY) === 'true';
       var data = {};
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
-        if (!SENSITIVE_CONFIG_KEYS.has(key)) data[key] = localStorage.getItem(key);
+        if (!includeSecrets && SENSITIVE_CONFIG_KEYS.has(key)) continue;
+        data[key] = localStorage.getItem(key);
       }
-      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'minimal-tab-backup-' + new Date().toISOString().slice(0, 10) + '.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(t('toastExportSuccess'), 2000, 'success');
+      // 网页翻译设置只存于 chrome.storage.local,localStorage 里没有,需单独合并进备份
+      chrome.storage.local.get(null, function (all) {
+        var mirrored = {};
+        Object.keys(all).forEach(function (k) {
+          if (NON_BACKUP_KEYS.has(k)) return;
+          if (!CHROME_STORE_PREFIXES.some(function (p) { return k.indexOf(p) === 0; })) return;
+          mirrored[k] = all[k];
+        });
+        if (Object.keys(mirrored).length) data[CHROME_STORE_SECTION] = mirrored;
+
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'minimal-tab-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast(t('toastExportSuccess'), 2000, 'success');
+      });
     });
   }
 
@@ -2965,8 +3027,11 @@ if (engineSelectorEl && engineListEl) {
         try {
           var data = JSON.parse(reader.result);
           if (typeof data !== 'object' || Array.isArray(data)) throw new Error();
+          var mirrored = data[CHROME_STORE_SECTION];
           for (var k in data) {
-            if (data.hasOwnProperty(k)) localStorage.setItem(k, data[k]);
+            // 保留节属于 chrome.storage.local,不写进 localStorage
+            if (!data.hasOwnProperty(k) || k === CHROME_STORE_SECTION) continue;
+            localStorage.setItem(k, data[k]);
           }
           var mode = data.themeMode || 'system';
           if (mode === 'system') {
@@ -2974,8 +3039,17 @@ if (engineSelectorEl && engineListEl) {
           } else {
             applyTheme(mode === 'dark');
           }
-          showToast(t('toastImportSuccess'), 2000, 'success');
-          setTimeout(function() { location.reload(); }, 400);
+          // 网页翻译设置只存于 chrome.storage.local,需显式写回;写完后才刷新,避免边栏读到旧值
+          var done = function () {
+            showToast(t('toastImportSuccess'), 2000, 'success');
+            setTimeout(function() { location.reload(); }, 400);
+          };
+          // 旧版本备份没有保留节,此时按原逻辑直接刷新
+          if (mirrored && typeof mirrored === 'object' && !Array.isArray(mirrored)) {
+            chrome.storage.local.set(mirrored, done);
+          } else {
+            done();
+          }
         } catch (e) {
           showToast(t('toastImportFailed'), 3000);
         }
@@ -2992,7 +3066,9 @@ if (engineSelectorEl && engineListEl) {
       e.stopPropagation();
       if (!confirm(t('confirmReset'))) return;
 
-
+      // 只清存储,界面交给随后的整页刷新重建:重置后的存储状态等同于全新安装(仅保留 language),
+      // 由初始化路径推导出的界面必然与之自洽,故不再逐个手工复位控件——那类复位需要人工维护,
+      // 漏一个就会出现「存储已清空、界面还是旧状态」的不一致(时钟锁定、折叠分区等都曾中招)
       const PRESERVE_ON_RESET = new Set(['language']);
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -3002,93 +3078,21 @@ if (engineSelectorEl && engineListEl) {
       keysToRemove.forEach((k) => localStorage.removeItem(k));
 
       // 翻译模块设置会同步一份到 chrome.storage(整页翻译/后台引擎读取),重置需一并清掉;
-      // 清完再发重置标记,避免已打开的侧栏抢先重载读到未清完的旧配置
+      // 删除 pageTrans.mode 还会触发后台 background.js 的 resetAllTabs(),关闭所有标签页的整页翻译,
+      // 所以这段清理不可省略。清完再发重置标记,避免已打开的翻译侧栏抢先重载读到未清完的旧配置
       chrome.storage.local.get(null, (all) => {
         const stale = Object.keys(all).filter((k) => k.indexOf('trans.') === 0 || k.indexOf('pageTrans.') === 0);
         const done = () => {
           chrome.storage.local.set({ '__mtSettingsReset': Date.now() }, () => {
             chrome.storage.local.remove('__mtSettingsReset');
+            // 刷新必须等两处存储都清完:chrome.storage 的删除是异步的,提前刷新会读到未清完的旧配置
+            showToast(t('toastSettingsReset'));
+            setTimeout(function() { location.reload(); }, 400);
           });
         };
         if (stale.length) chrome.storage.local.remove(stale, done);
         else done();
       });
-
-      setWallpaperSource('none');
-      sidebarOverlaySlider.value = '0.3';
-      sidebarOverlayVal.textContent = '30%';
-      document.body.style.setProperty('--overlay-opacity', '0.3');
-      updateSliderTrack(sidebarOverlaySlider);
-      sidebarBlurSlider.value = '0';
-      sidebarBlurVal.textContent = '0px';
-      document.body.style.setProperty('--blur-px', '0px');
-      syncBlurBleed('0');
-      updateSliderTrack(sidebarBlurSlider);
-      sidebarOpacitySlider.value = '1';
-      applySidebarOpacity('1');
-      sidebarOpacityVal.textContent = '100%';
-      updateSliderTrack(sidebarOpacitySlider);
-      sidebarBlurSlider2.value = '0';
-      sidebarBlurVal2.textContent = '0px';
-      document.body.style.setProperty('--sidebar-blur', '0');
-      updateSliderTrack(sidebarBlurSlider2);
-      document.documentElement.style.setProperty('--search-offset-y', '0px');
-      document.documentElement.style.setProperty('--search-offset-x', '0px');
-      document.documentElement.style.setProperty('--search-width', '800px');
-      document.documentElement.style.setProperty('--search-radius', '25px');
-      const sySlider = document.getElementById('searchOffsetYSlider');
-      const sxSlider = document.getElementById('searchOffsetXSlider');
-      const swSlider = document.getElementById('searchWidthSlider');
-      const srSlider = document.getElementById('searchRadiusSlider');
-      if (sySlider) { sySlider.value = '0'; document.getElementById('searchOffsetYVal').textContent = '0px'; updateSliderTrack(sySlider); }
-      if (sxSlider) { sxSlider.value = '0'; document.getElementById('searchOffsetXVal').textContent = '0px'; updateSliderTrack(sxSlider); }
-      if (swSlider) { swSlider.value = '800'; document.getElementById('searchWidthVal').textContent = '800px'; updateSliderTrack(swSlider); }
-      if (srSlider) { srSlider.value = '25'; document.getElementById('searchRadiusVal').textContent = '25px'; updateSliderTrack(srSlider); }
-      if (document.getElementById('searchBoxToggle')) {
-        document.getElementById('searchBoxToggle').checked = true;
-        document.getElementById('searchBoxControls').classList.remove('hidden');
-        const sc = document.querySelector('.search-container');
-        if (sc) sc.classList.remove('hidden');
-      }
-      updateWallpaperThumb();
-      applyAccent('#2563eb');
-      highlightSwatch('#2563eb');
-      applyClockColor('#ffffff');
-      highlightClockSwatch('#ffffff');
-      applySearchColor('#ffffff');
-      highlightSearchSwatch('#ffffff');
-      setLinkState(true);
-
-      if (historyToggle) historyToggle.checked = true;
-      if (newTabToggle) newTabToggle.checked = true;
-      hideHistoryDropdown();
-
-      if (clockToggle) clockToggle.checked = true;
-      showDigitalClock();
-      applyClockCustomPos('center');
-      applyClockPosition('below');
-      if (clockFollowToggle) { clockFollowToggle.checked = true; applyClockFollow(true); }
-      updateClockCascade();
-
-      setThemeMode('system');
-
-      if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
-      injectCustomEngines();
-
-      const bingItem = document.querySelector('.engine-item[data-engine="bing"]');
-      if (bingItem) {
-        document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
-        bingItem.classList.add('active');
-        currentEngine = 'bing';
-        currentEngineIcon = bingItem.dataset.default;
-        currentEngineIconMask = iconMaskOf(bingItem);
-        if (typeof updateEngineIcon === 'function') updateEngineIcon();
-      }
-
-      selectRotation('off');
-      if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
-      if (window._selectSuggestionProvider) window._selectSuggestionProvider('off');
-      showToast(t('toastSettingsReset'));
     });
   }
 

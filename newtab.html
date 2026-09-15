@@ -481,6 +481,11 @@
             </button>
             <input type="file" id="importConfigInput" accept=".json" style="display:none">
           </div>
+          <label class="backup-check">
+            <input type="checkbox" id="exportSecretsToggle">
+            <span class="backup-check-box"></span>
+            <span data-i18n="backupIncludeSecrets">导出时包含密钥</span>
+          </label>
           <div class="sidebar-section-label" style="margin-top:12px" data-i18n="moreReset">重置</div>
           <button id="sidebarResetBtn" class="sidebar-action-btn danger" style="width:100%" data-i18n="btnResetAll">初始化设置</button>
         </div>
