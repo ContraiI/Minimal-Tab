@@ -96,6 +96,29 @@ const LS_CUSTOM_ENGINES = 'customEngines';
 const MAX_WALLPAPER_HISTORY = 12;
 const MAX_HISTORY_ITEMS = 20;
 
+// 已移除引擎的本地残留键:引擎实现删掉不等于存储键会消失——存量用户的设备上仍留着这些键
+// (腾讯云 TMT 于 v1.4.2 移除)。其中 secretId/secretKey 仍是真凭证,却已没有任何消费者(界面里也没有删除入口),
+// 不该继续躺在设备上,故在每次初始化时幂等清掉。新增/移除翻译引擎时须在此登记其存储键。
+// 刻意不用"一次性标记位":①配置导入是合并语义,会把旧备份里的这些键原样写回 localStorage;
+// ②「恢复默认设置」只保留 language,会把标记位一并清掉。二者都会让标记位失效,幂等执行反而更简单可靠。
+// 两处存储都要清:localStorage 是主副本,chrome.storage.local 只是侧栏 syncTransToStorage() 的 trans.* 镜像,
+// 只清后者会被侧栏下次打开时按 trans. 前缀重新灌回来。
+const REMOVED_ENGINE_KEYS = [
+  'trans.tencent.secretId',
+  'trans.tencent.secretKey',
+  'trans.tencent.region',
+  'ui.trans.locked.tencent'
+];
+
+// 删除不存在的键既不产生 chrome.storage.onChanged 事件(后台不会因此重载引擎配置),也无写入配额限制,
+// 故每次打开新标签页无条件执行,不给"是否残留过"留任何判断分支
+(function purgeRemovedEngineKeys() {
+  REMOVED_ENGINE_KEYS.forEach((k) => localStorage.removeItem(k));
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    chrome.storage.local.remove(REMOVED_ENGINE_KEYS);
+  }
+})();
+
 // 搜索历史:保存、读取、开关控制(最多 20 条,去重)
 function saveSearchHistory(keyword) {
   if (!isSearchHistoryEnabled() || !keyword.trim()) return;
@@ -113,14 +136,8 @@ function readJsonArray(key) {
   } catch (e) { return []; }
 }
 
-// hex 颜色(#rrggbb)转 {r,g,b}(0-255)
-function hexToRgb(hex) {
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16)
-  };
-}
+// hex 颜色换算统一走 color-utils.js(共享模块,与翻译边栏、扩展弹窗同一份),此处只留同名别名,调用点不变
+const hexToRgb = ColorUtils.hexToRgb;
 
 function getSearchHistory() {
   return readJsonArray(LS_SEARCH_HISTORY);
@@ -1438,14 +1455,13 @@ if (engineSelectorEl && engineListEl) {
   // 主题模式(系统/浅色/深色)
   const themeModeSeg = document.getElementById('themeModeSeg');
   const LS_THEME_MODE = 'themeMode';
-  const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  // 系统深浅色与「系统主题切换」订阅统一走 dom-utils.js(共享模块):整个页面只建一次 MediaQueryList
+  const getSystemDark = DomUtils.getSystemDark;
 
   function applyTheme(isDark) {
     sidebar.classList.toggle('light', !isDark);
     document.body.classList.toggle('light-mode', !isDark);
   }
-
-  function getSystemDark() { return darkModeQuery.matches; }
 
   function setThemeMode(mode) {
     themeModeSeg.querySelectorAll('.theme-mode-opt').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
@@ -1461,7 +1477,7 @@ if (engineSelectorEl && engineListEl) {
     const savedMode = localStorage.getItem(LS_THEME_MODE) || 'system';
     setThemeMode(savedMode);
 
-    darkModeQuery.addEventListener('change', () => {
+    DomUtils.onSystemThemeChange(() => {
       if (localStorage.getItem(LS_THEME_MODE) === 'system') {
         applyTheme(getSystemDark());
       }
@@ -1561,17 +1577,11 @@ if (engineSelectorEl && engineListEl) {
     localStorage.setItem(LS_ACCENT, hex);
   }
 
-  // 预览主题色:设置 CSS 变量并计算对比文字色
+  // 预览主题色:CSS 变量与对比文字色的口径统一走 color-utils.js(与翻译边栏、扩展弹窗同一份)。
+  // 取色器确认按钮的文字色不再需要内联设置——color-picker.css 里 .picker-confirm-btn 用的就是 var(--accent-text),
+  // 而 --accent-text 已由 applyAccentVars 写在 body 上(原先靠 id 查那个按钮,面板改由 JS 生成后已无此 id)
   function previewAccent(hex) {
-    const { r, g, b } = hexToRgb(hex);
-    document.body.style.setProperty('--accent', hex);
-    document.body.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
-
-    var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    var textColor = lum > 0.55 ? '#1a1a1a' : '#ffffff';
-    document.body.style.setProperty('--accent-text', textColor);
-    var cb = document.getElementById('pickerConfirmBtn');
-    if (cb) cb.style.color = textColor;
+    ColorUtils.applyAccentVars(hex);
   }
 
   // 时钟颜色:保存,若与搜索框联动则一并更新
@@ -1629,7 +1639,9 @@ if (engineSelectorEl && engineListEl) {
 
   themeColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
     s.addEventListener('click', function() {
-      if (s.id === 'colorPickerTrigger') return;
+      // 触发色块不是预设色:跳过(它由取色器自己接管点击)。按 class 判断而不是 id——触发色块现在由 JS 生成,
+      // 且生成时机在本段之后,这里按类名守卫,即使将来调整初始化顺序也不会误给它挂上预设的点击逻辑
+      if (s.classList.contains('picker-trigger')) return;
       const hex = s.dataset.color;
       applyAccent(hex);
       highlightSwatch(hex);
@@ -1653,7 +1665,7 @@ if (engineSelectorEl && engineListEl) {
   if (clockColorRow) {
     clockColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
       s.addEventListener('click', function() {
-        if (s.id === 'clockColorPickerTrigger') return;
+        if (s.classList.contains('picker-trigger')) return;
         const hex = s.dataset.color;
         applyClockColor(hex);
         highlightClockSwatch(hex);
@@ -1678,7 +1690,7 @@ if (engineSelectorEl && engineListEl) {
   if (searchColorRow) {
     searchColorRow.querySelectorAll('.theme-color-swatch').forEach(s => {
       s.addEventListener('click', function() {
-        if (s.id === 'searchColorPickerTrigger') return;
+        if (s.classList.contains('picker-trigger')) return;
         const hex = s.dataset.color;
         applySearchColor(hex);
         highlightSearchSwatch(hex);
@@ -1691,238 +1703,52 @@ if (engineSelectorEl && engineListEl) {
   // 主题色拾色器(HSV 画板 + 色相条)
   // ---- 取色器通用实现(主题/时钟/搜索三套共用) ----
 
-  // HSV 颜色换算辅助函数(色盘按 HSV 布局:横=饱和度,竖=明度)
-  function hsvToRgb(h, s, v) {
-    s = s / 100; v = v / 100;
-    var c = v * s;
-    var hh = (h / 60) % 6;
-    var x = c * (1 - Math.abs(hh % 2 - 1));
-    var m = v - c;
-    var r0, g0, b0;
-    if (hh < 1) { r0 = c; g0 = x; b0 = 0; }
-    else if (hh < 2) { r0 = x; g0 = c; b0 = 0; }
-    else if (hh < 3) { r0 = 0; g0 = c; b0 = x; }
-    else if (hh < 4) { r0 = 0; g0 = x; b0 = c; }
-    else if (hh < 5) { r0 = x; g0 = 0; b0 = c; }
-    else { r0 = c; g0 = 0; b0 = x; }
-    return { r: Math.round((r0 + m) * 255), g: Math.round((g0 + m) * 255), b: Math.round((b0 + m) * 255) };
-  }
+  // HSV 颜色换算统一走 color-utils.js(共享模块,与翻译边栏同一份),此处只留同名别名,调用点不变
+  const hsvToRgb = ColorUtils.hsvToRgb;
+  const rgbToHsv = ColorUtils.rgbToHsv;
 
-  function rgbToHsv(r, g, b) {
-    r = r / 255; g = g / 255; b = b / 255;
-    var max = Math.max(r, g, b), min = Math.min(r, g, b);
-    var d = max - min;
-    var h = 0;
-    if (d !== 0) {
-      if (max === r) h = ((g - b) / d) % 6;
-      else if (max === g) h = (b - r) / d + 2;
-      else h = (r - g) / d + 4;
-      h *= 60;
-      if (h < 0) h += 360;
-    }
-    return { h: h, s: max === 0 ? 0 : (d / max) * 100, v: max * 100 };
-  }
+  // 取色器工厂统一走 color-picker.js(共享模块,与翻译边栏同一份实现),
+  // 此处只留同名别名,三套实例与外部对 isOpen/close/setFromHex 的调用都不用改
+  const createColorPicker = ColorPicker.create;
 
-  // 拾色器工厂:画板/色相条/hex 输入/确认/触发器逻辑,三套共用
-  function createColorPicker(cfg) {
-    const { panel, palette, hueBar, hexInput, confirmBtn, trigger, savedKey, defaultColor, preview, apply, highlight } = cfg;
-    if (!panel || !palette || !hueBar) return null;
-    const pctx = palette.getContext('2d');
-    const hctx = hueBar.getContext('2d');
-    let hue = 0, sat = 100, val = 100, size = 160, origColor = '';
+  // 时钟/搜索框行末的联动按钮:取色器的触发色块要插在它之前(保持"预设色块 → 取色器 → 联动按钮"的顺序),
+  // 故先取好引用;联动逻辑在本段之后
+  var clockLinkBtn = document.getElementById('clockLinkBtn');
+  var searchLinkBtn = document.getElementById('searchLinkBtn');
 
-    function drawHueBar() {
-      for (var y = 0; y < size; y++) {
-        var rgb = hsvToRgb(y / size * 360, 100, 100);
-        hctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-        hctx.fillRect(0, y, 20, 1);
-      }
-      var hy = Math.round(hue / 360 * size);
-      var irgb = hsvToRgb(hue, 100, 100);
-      var l = (0.299 * irgb.r + 0.587 * irgb.g + 0.114 * irgb.b) / 255;
-      hctx.fillStyle = l > 0.65 ? '#333' : '#fff';
-      hctx.fillRect(0, hy - 3, 20, 5);
-    }
-
-    function drawPalette() {
-      var prgb = hsvToRgb(hue, 100, 100);
-      pctx.clearRect(0, 0, size, size);
-      var gradW = pctx.createLinearGradient(0, 0, size, 0);
-      gradW.addColorStop(0, '#ffffff');
-      gradW.addColorStop(1, 'rgb(' + prgb.r + ',' + prgb.g + ',' + prgb.b + ')');
-      pctx.fillStyle = gradW;
-      pctx.fillRect(0, 0, size, size);
-      var gradB = pctx.createLinearGradient(0, 0, 0, size);
-      gradB.addColorStop(0, 'transparent');
-      gradB.addColorStop(1, '#000000');
-      pctx.fillStyle = gradB;
-      pctx.fillRect(0, 0, size, size);
-      var px = Math.round(sat / 100 * size);
-      var py = Math.round((100 - val) / 100 * size);
-      var crgb = hsvToRgb(hue, sat, val);
-      var plum = (0.299 * crgb.r + 0.587 * crgb.g + 0.114 * crgb.b) / 255;
-      pctx.strokeStyle = plum > 0.55 ? '#333' : '#fff';
-      pctx.lineWidth = 2;
-      pctx.beginPath();
-      pctx.arc(px, py, 3.5, 0, Math.PI * 2);
-      pctx.stroke();
-    }
-
-    function updateFromPicker() {
-      var rgb = hsvToRgb(hue, sat, val);
-      var hex = '#' + ((1 << 24) | (rgb.r << 16) | (rgb.g << 8) | rgb.b).toString(16).slice(1);
-      hexInput.value = hex;
-      preview(hex);
-    }
-
-    function onPaletteMove(e) {
-      var rect = palette.getBoundingClientRect();
-      var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      x = Math.max(0, Math.min(size, x));
-      y = Math.max(0, Math.min(size, y));
-      sat = Math.round(x / size * 100);
-      val = Math.round(100 - y / size * 100);
-      drawPalette();
-      updateFromPicker();
-    }
-
-    function onHueMove(e) {
-      var rect = hueBar.getBoundingClientRect();
-      var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
-      y = Math.max(0, Math.min(size, y));
-      hue = Math.round(y / size * 360);
-      drawPalette();
-      drawHueBar();
-      updateFromPicker();
-    }
-
-    // 拖动收尾:鼠标可能在本窗口之外松开(拖到屏幕边缘时很常见),那时 document 收不到 mouseup,
-    // mousemove 监听器会永久残留,之后"未按键的鼠标移动"也会继续改颜色。故:注册前先清旧引用,
-    // 用同一个具名 handler 作 mouseup(同名同参的重复注册会被浏览器忽略,不会累加),并在窗口失焦时兜底清理。
-    function endPickerDrag() {
-      document.removeEventListener('mousemove', onPaletteMove);
-      document.removeEventListener('mousemove', onHueMove);
-    }
-    window.addEventListener('blur', endPickerDrag);
-
-    palette.addEventListener('mousedown', function(e) {
-      onPaletteMove(e);
-      document.removeEventListener('mousemove', onPaletteMove);
-      document.addEventListener('mousemove', onPaletteMove);
-      document.addEventListener('mouseup', endPickerDrag, {once: true});
-    });
-
-    hueBar.addEventListener('mousedown', function(e) {
-      onHueMove(e);
-      document.removeEventListener('mousemove', onHueMove);
-      document.addEventListener('mousemove', onHueMove);
-      document.addEventListener('mouseup', endPickerDrag, {once: true});
-    });
-
-    hexInput.addEventListener('input', function() {
-      var hex = hexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        var c = hexToRgb(hex), hsv = rgbToHsv(c.r, c.g, c.b);
-        hue = hsv.h; sat = hsv.s; val = hsv.v;
-        drawPalette();
-        drawHueBar();
-        preview(hex.toLowerCase());
-      }
-    });
-
-    confirmBtn.addEventListener('click', function() {
-      var hex = hexInput.value.trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        apply(hex.toLowerCase());
-        highlight(hex.toLowerCase());
-        panel.classList.add('hidden');
-      }
-    });
-
-    trigger.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var isHidden = panel.classList.contains('hidden');
-      if (isHidden) {
-        panel.classList.remove('hidden');
-        origColor = localStorage.getItem(savedKey) || defaultColor;
-        var row = panel.querySelector('.picker-row');
-        var available = row ? row.clientWidth - 26 : 160;
-        size = available;
-        palette.width = available; palette.height = available;
-        hueBar.height = available;
-        var c = hexToRgb(origColor), hsv = rgbToHsv(c.r, c.g, c.b);
-        hue = hsv.h; sat = hsv.s; val = hsv.v;
-        drawPalette();
-        drawHueBar();
-        updateFromPicker();
-      } else {
-        panel.classList.add('hidden');
-        preview(origColor);
-        highlight(origColor);
-      }
-    });
-
-    return {
-      isOpen: function() { return !panel.classList.contains('hidden'); },
-      close: function() { panel.classList.add('hidden'); preview(origColor); highlight(origColor); },
-      setFromHex: function(hex) {
-        var c = hexToRgb(hex), hsv = rgbToHsv(c.r, c.g, c.b);
-        hue = hsv.h; sat = hsv.s; val = hsv.v;
-        hexInput.value = hex.toLowerCase();
-        drawPalette();
-        drawHueBar();
-      }
-    };
-  }
-
-  // 主题色拾色器
+  // 主题色拾色器:触发色块与面板都由 color-picker.js 生成(分别插在/追加到 themeColorRow)
   var themePicker = createColorPicker({
-    panel: document.getElementById('colorPickerPanel'),
-    palette: document.getElementById('pickerPalette'),
-    hueBar: document.getElementById('pickerHueBar'),
-    hexInput: document.getElementById('pickerHexInput'),
-    confirmBtn: document.getElementById('pickerConfirmBtn'),
-    trigger: document.getElementById('colorPickerTrigger'),
-    savedKey: LS_ACCENT,
+    anchor: themeColorRow,
+    // 返回具体色值而不是 ''(本页没有"跟随默认"的语义):取消时要回滚到这个色,highlightSwatch 也要照常高亮对应色块
+    getColor: function () { return localStorage.getItem(LS_ACCENT) || '#2563eb'; },
     defaultColor: '#2563eb',
     preview: previewAccent,
-    apply: applyAccent,
+    setColor: applyAccent,
     highlight: highlightSwatch
   });
 
-  // 时钟色拾色器
+  // 时钟色拾色器:触发色块插在行末联动按钮之前,面板插在 clockColorRow 之后
   var clockPicker = createColorPicker({
-    panel: document.getElementById('clockColorPickerPanel'),
-    palette: document.getElementById('clockPickerPalette'),
-    hueBar: document.getElementById('clockPickerHueBar'),
-    hexInput: document.getElementById('clockPickerHexInput'),
-    confirmBtn: document.getElementById('clockPickerConfirmBtn'),
-    trigger: document.getElementById('clockColorPickerTrigger'),
-    savedKey: LS_CLOCK_COLOR,
+    anchor: clockColorRow,
+    triggerBefore: clockLinkBtn,
+    getColor: function () { return localStorage.getItem(LS_CLOCK_COLOR) || '#ffffff'; },
     defaultColor: '#ffffff',
     preview: previewClockColor,
-    apply: applyClockColor,
+    setColor: applyClockColor,
     highlight: highlightClockSwatch
   });
 
-  // 搜索色拾色器
+  // 搜索色拾色器:触发色块插在行末联动按钮之前,面板插在 searchColorRow 之后
   var searchPicker = createColorPicker({
-    panel: document.getElementById('searchColorPickerPanel'),
-    palette: document.getElementById('searchPickerPalette'),
-    hueBar: document.getElementById('searchPickerHueBar'),
-    hexInput: document.getElementById('searchPickerHexInput'),
-    confirmBtn: document.getElementById('searchPickerConfirmBtn'),
-    trigger: document.getElementById('searchColorPickerTrigger'),
-    savedKey: LS_SEARCH_COLOR,
+    anchor: searchColorRow,
+    triggerBefore: searchLinkBtn,
+    getColor: function () { return localStorage.getItem(LS_SEARCH_COLOR) || '#ffffff'; },
     defaultColor: '#ffffff',
     preview: previewSearchColor,
-    apply: applySearchColor,
+    setColor: applySearchColor,
     highlight: highlightSearchSwatch
   });
 
-  var clockLinkBtn = document.getElementById('clockLinkBtn');
-  var searchLinkBtn = document.getElementById('searchLinkBtn');
   var isClockSearchLinked = localStorage.getItem(LS_CLOCK_SEARCH_LINK) !== 'false';
 
   // 时钟/搜索颜色联动开关
@@ -2965,7 +2791,9 @@ if (engineSelectorEl && engineListEl) {
     'trans.msKey',
     'trans.custom.key',
     // 腾讯云引擎已于 v1.4.2 移除、实现代码已清空,这两个键只可能以历史残留形式留在老用户本地;
-    // 但残留的仍是真凭证,继续登记,避免默认(不含密钥)导出时被带出
+    // 但残留的仍是真凭证,继续登记,避免默认(不含密钥)导出时被带出。
+    // 本机残留由文件顶部的 REMOVED_ENGINE_KEYS 自动清除,但那不能替代这里的登记:
+    // 导入一份含密钥的旧备份会把它们重新写回本机,登记在,默认导出才不会把它们再带出去
     'trans.tencent.secretId',
     'trans.tencent.secretKey'
   ]);
@@ -3035,7 +2863,7 @@ if (engineSelectorEl && engineListEl) {
           }
           var mode = data.themeMode || 'system';
           if (mode === 'system') {
-            applyTheme(window.matchMedia('(prefers-color-scheme: dark)').matches);
+            applyTheme(getSystemDark());
           } else {
             applyTheme(mode === 'dark');
           }

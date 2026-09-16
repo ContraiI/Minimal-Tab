@@ -1,0 +1,114 @@
+/* 取色器共享样式(newtab 三套 + 翻译边栏两套)
+   面板与触发色块由 color-picker.js 生成,两边类名一致,故样式只此一份。
+   展开态统一用 .open —— 不要改用 .hidden:翻译边栏的 .hidden 是 display:none !important 的通用工具类,
+   会把 max-height 的展开过渡直接压掉 */
+.color-picker-panel {
+  margin-top: 0;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease, padding 0.25s ease;
+}
+.color-picker-panel.open {
+  margin-top: 8px;
+  padding: 8px;
+  max-height: 400px;
+  opacity: 1;
+}
+
+.picker-row {
+  display: flex;
+  gap: 6px;
+}
+
+.picker-palette {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  border-radius: 4px;
+  cursor: crosshair;
+  display: block;
+}
+
+.picker-hue-bar {
+  width: 20px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  cursor: ns-resize;
+  display: block;
+}
+
+.picker-input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.picker-hex-input {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  /* newtab 原为写死的 #fff、翻译边栏用 --trans-text(该页有此变量);统一成带兜底的写法,两页取值都不变 */
+  color: var(--trans-text, #fff);
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.picker-hex-input:focus { border-color: var(--accent); }
+
+.picker-confirm-btn {
+  padding: 4px 14px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-text, #fff);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.picker-confirm-btn:hover { opacity: 0.85; }
+
+/* 预设色块 / 触发色块(取色器色块组):两个页面共用这一份
+   —— 翻译边栏的 HTML 里没有预设色块列表,它的 .theme-color-swatch 实际只作用于由 JS 生成的触发色块;
+   .active(当前选中色的白色描边)只在 newtab 侧命中,翻译边栏没有预设色块故不会匹配 */
+.theme-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.theme-color-swatch:hover { transform: scale(1.15); }
+.theme-color-swatch.active { border-color: #fff; }
+
+/* 触发色块(彩虹渐变)。它只是"打开取色器"的按钮,没有选中态:
+   原 style.css 里还有一条 .picker-trigger.active,但全项目没有任何代码给触发器加 active,属永不生效的样式,已随本次合并删除 */
+.theme-color-swatch.picker-trigger {
+  border: none;
+  box-shadow: 0 0 0 2px transparent;
+  background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+}
+
+/* 浅色模式:两侧历史挂钩不同(newtab 用 .sidebar.light 与 body.light-mode,翻译边栏用 body.light)。
+   合并成一组选择器——newtab 上 .sidebar.light 与 body.light-mode 由 script.js 同时切换、彼此等价,
+   翻译边栏既没有 .sidebar 元素也不设 light-mode,故三个选择器合并不改变任何一侧的实际命中结果 */
+.sidebar.light .color-picker-panel,
+body.light-mode .color-picker-panel,
+body.light .color-picker-panel {
+  background: rgba(0, 0, 0, 0.03);
+}
+.sidebar.light .picker-hex-input,
+body.light-mode .picker-hex-input,
+body.light .picker-hex-input {
+  color: #333;
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.04);
+}

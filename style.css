@@ -910,27 +910,8 @@ body.light-mode .sidebar-content {
 .sidebar.light .sidebar-section-label { color: rgb(var(--sidebar-label-rgb, 136, 136, 136)); border-top-color: rgba(0, 0, 0, 0.08); }
 
 /* 可折叠分区(展开/收起动画) */
-.section-collapse-header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.section-collapse-header::after {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  background: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  opacity: 0.5;
-  transition: transform 0.25s ease;
-}
-.section-collapse.collapsed .section-collapse-header::after {
-  transform: rotate(-90deg);
-}
+/* 折叠标题(.section-collapse-header)与折叠箭头的样式已在共享的 collapse.css,两个页面各留一份;
+   下面只留标签页自己的内容区动画(max-height)与相邻分区的间距/分割线 */
 .section-collapse.collapsed .section-collapse-body {
   max-height: 0;
   opacity: 0;
@@ -1020,28 +1001,10 @@ body.light-mode .sidebar-content {
   flex-wrap: wrap;
 }
 
-.theme-color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.2s, transform 0.15s;
-  flex-shrink: 0;
-}
+/* 取色器色块组(.theme-color-swatch 基础/:hover/:active)与取色器触发色块、面板的样式
+   均已在共享的 color-picker.css,两个页面各留一份 */
 
-.theme-color-swatch:hover { transform: scale(1.15); }
-.theme-color-swatch.active { border-color: #fff; }
-
-/* 取色器触发色块(彩虹渐变) */
-.theme-color-swatch.picker-trigger {
-  border: none;
-  box-shadow: 0 0 0 2px transparent;
-  background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-}
-.theme-color-swatch.picker-trigger.active {
-  box-shadow: 0 0 0 2px #fff;
-}
+/* 取色器触发色块与面板的样式已移到共享的 color-picker.css(两个页面的取色器结构与类名一致) */
 
 /* 时钟/搜索框颜色联动按钮 */
 .color-link-btn {
@@ -1102,85 +1065,7 @@ body.light-mode .sidebar-content {
 #wallpaperOverlayGroup.hidden { display: none; }
 #wallpaperRotateGroup.hidden { display: none; }
 
-/* 取色器面板(色盘 + 色相条 + hex 输入) */
-.color-picker-panel {
-  margin-top: 0;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: rgba(255,255,255,0.05);
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease, padding 0.25s ease;
-}
-.color-picker-panel:not(.hidden) {
-  margin-top: 8px;
-  padding: 8px;
-  max-height: 400px;
-  opacity: 1;
-}
-
-.picker-row {
-  display: flex;
-  gap: 6px;
-}
-
-.picker-palette {
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  max-width: 100%;
-  border-radius: 4px;
-  cursor: crosshair;
-  display: block;
-}
-
-.picker-hue-bar {
-  width: 20px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  cursor: ns-resize;
-  display: block;
-}
-
-.picker-input-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.picker-hex-input {
-  flex: 1;
-  padding: 4px 8px;
-  font-size: 12px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 4px;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-family: monospace;
-  outline: none;
-}
-.picker-hex-input:focus { border-color: var(--accent); }
-
-.picker-confirm-btn {
-  padding: 4px 14px;
-  font-size: 12px;
-  border: none;
-  border-radius: 4px;
-  background: var(--accent);
-  color: var(--accent-text, #fff);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.picker-confirm-btn:hover { opacity: 0.85; }
-
-.sidebar.light .picker-hex-input {
-  color: #333;
-  border-color: rgba(0,0,0,0.15);
-  background: rgba(0,0,0,0.04);
-}
-.sidebar.light .color-picker-panel {
-  background: rgba(0,0,0,0.03);
-}
+/* 取色器面板样式已移到共享的 color-picker.css(两页共用,展开态统一为 .open) */
 
 /* 侧边栏滑杆组(标签 + 滑杆 + 数值) */
 .sidebar-slider-group {

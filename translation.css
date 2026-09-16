@@ -787,26 +787,7 @@ body.light .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
 /* ===== 译文样式(双语对照,样式与标签页设置保持一致) ===== */
 
 /* 可折叠分区:展开/收起动画 */
-.section-collapse-header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.section-collapse-header::after {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-  background: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  opacity: 0.5;
-  transition: transform 0.25s ease;
-}
-.section-collapse.collapsed .section-collapse-header::after { transform: rotate(-90deg); }
+/* 折叠标题(.section-collapse-header)与折叠箭头的样式已在共享的 collapse.css(与 newtab 的折叠标题同一份) */
 /* 区块按模式显隐(仅译文隐藏 / 双语对照显示):height+opacity 过渡,参考标签页时钟条件行;
    interpolate-size 使 height:0↔auto 平滑动画(calc-size(auto) 在 Chrome 151 不受支持) */
 .section-collapse {
@@ -863,12 +844,9 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   padding: 0 0 0 16px;
   border-left: 2px solid var(--trans-border);
 }
+/* 标题的排版(cursor / display / flex 对齐 / 间距)与折叠箭头都在共享的 collapse.css,
+   这里只留本子菜单特有的字号、颜色与上下边距 */
 .style-group-header {
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   font-size: 11px;
   color: var(--trans-muted);
   text-transform: uppercase;
@@ -876,19 +854,6 @@ body.light .section-collapse.mode-show:not(.collapsed) {
   margin: 10px 0 4px 0;
   padding: 0;
 }
-.style-group-header::after {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-  background: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6z'/%3E%3C/svg%3E") center/contain no-repeat;
-  opacity: 0.5;
-  transition: transform 0.25s ease;
-}
-.style-group.collapsed .style-group-header::after { transform: rotate(-90deg); }
 .style-group-body {
   height: 0;
   opacity: 0;
@@ -1048,88 +1013,8 @@ body.light .section-collapse.mode-show:not(.collapsed) {
 
 .style-color-block { margin-bottom: 2px; }
 
-.theme-color-swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.2s, transform 0.15s;
-  flex-shrink: 0;
-}
-.theme-color-swatch:hover { transform: scale(1.15); }
-.theme-color-swatch.picker-trigger {
-  border: none;
-  box-shadow: 0 0 0 2px transparent;
-  background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-}
-
-/* 取色器面板(色盘 + 色相条 + hex 输入) */
-.color-picker-panel {
-  margin-top: 0;
-  padding: 0 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease, padding 0.25s ease;
-}
-.color-picker-panel.open {
-  margin-top: 8px;
-  padding: 8px;
-  max-height: 400px;
-  opacity: 1;
-}
-.picker-row { display: flex; gap: 6px; }
-.picker-palette {
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  max-width: 100%;
-  border-radius: 4px;
-  cursor: crosshair;
-  display: block;
-}
-.picker-hue-bar {
-  width: 20px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  cursor: ns-resize;
-  display: block;
-}
-.picker-input-row { display: flex; gap: 6px; margin-top: 6px; }
-.picker-hex-input {
-  flex: 1;
-  padding: 4px 8px;
-  font-size: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--trans-text);
-  font-family: monospace;
-  outline: none;
-  transition: border-color 0.2s;
-}
-.picker-hex-input:focus { border-color: var(--accent); }
-.picker-confirm-btn {
-  padding: 4px 14px;
-  font-size: 12px;
-  border: none;
-  border-radius: 4px;
-  background: var(--accent);
-  color: var(--accent-text, #fff);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.picker-confirm-btn:hover { opacity: 0.85; }
-
-/* 浅色模式适配 */
-body.light .color-picker-panel { background: rgba(0, 0, 0, 0.03); }
-body.light .picker-hex-input {
-  color: #333;
-  border-color: rgba(0, 0, 0, 0.15);
-  background: rgba(0, 0, 0, 0.04);
-}
+/* 取色器色块组(.theme-color-swatch 基础/:hover)、触发色块与面板样式均已移到共享的 color-picker.css
+   (展开态统一为 .open);本页没有预设色块列表,色块组样式实际只作用于由 JS 生成的触发色块 */
 
 /* 细滚动条(设置区 / 结果区):深色下浅色滑块、浅色下深色滑块,保证可见;
    用 WebKit 6px(设 scrollbar-width 会使其失效并占用 10px);

@@ -339,11 +339,9 @@
     el.setAttribute(attr, translated);
   }
 
-  // 写入内联 CSS 变量,空值则移除(让 CSS 回退到默认)
-  function setStyleVar(el, name, value) {
-    if (value) el.style.setProperty(name, value);
-    else el.style.removeProperty(name);
-  }
+  // 写入内联 CSS 变量由共享模块承担(翻译边栏里那份同样的实现也走它;内容脚本与扩展页面上下文隔离,
+  // 故 dom-utils.js 同时列在 manifest 的 content_scripts 里),此处只留同名别名
+  var setStyleVar = DomUtils.setStyleVar;
 
   // 全部译文样式类(下划线 + 边框)
   var BILINGUAL_STYLE_CLASSES = ['pt-underlineA', 'pt-underlineB', 'pt-underlineC', 'pt-borderA', 'pt-borderB'];

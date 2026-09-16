@@ -1,9 +1,11 @@
 
-/* 网页翻译悬浮球(右下角,可拖拽) */
+/* 网页翻译悬浮球(默认右上角,可拖拽) */
+/* 默认位置只在这里定义:拖拽过后由 JS 写入内联 left/top 并把 right/bottom 置 auto,
+   因此改这里的默认值只影响从未拖过悬浮球的用户,已拖过的保留自己保存的位置(pageTrans.ballPos) */
 #pageTransBall {
   position: fixed;
   right: 16px;
-  bottom: 16px;
+  top: 16px;
   z-index: 2147483647;
   width: 32px;
   height: 32px;

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title data-i18n="transTitle">翻译</title>
   <link rel="stylesheet" href="translation.css">
+  <link rel="stylesheet" href="color-picker.css">
+  <link rel="stylesheet" href="collapse.css">
 </head>
 <body>
 
@@ -160,19 +162,9 @@
                 <button type="button" class="color-default-btn" id="pageTransFontColorDefault" data-i18n-title="pageTransColorReset" title="恢复默认">
                   <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                 </button>
-                <span class="theme-color-swatch picker-trigger" id="pageTransFontColorTrigger" data-i18n-title="colorPicker" title="取色器"></span>
               </div>
             </div>
-            <div id="pageTransFontColorPanel" class="color-picker-panel">
-              <div class="picker-row">
-                <canvas id="pageTransFontPalette" class="picker-palette" width="160" height="160"></canvas>
-                <canvas id="pageTransFontHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
-              </div>
-              <div class="picker-input-row">
-                <input type="text" id="pageTransFontHex" class="picker-hex-input" placeholder="#000000" maxlength="7">
-                <button id="pageTransFontConfirm" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
-              </div>
-            </div>
+            <!-- 字体色取色器触发色块与面板由 color-picker.js 生成(触发色块追加到上方 .color-actions 末尾),样式见 color-picker.css -->
 
             <!-- 边框颜色:仅带线条样式时显示,所有带线条样式共用 -->
             <div id="pageTransLineColorBlock" class="style-color-block" hidden>
@@ -182,19 +174,9 @@
                   <button type="button" class="color-default-btn" id="pageTransLineColorDefault" data-i18n-title="pageTransColorReset" title="恢复默认">
                     <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
                   </button>
-                  <span class="theme-color-swatch picker-trigger" id="pageTransLineColorTrigger" data-i18n-title="colorPicker" title="取色器"></span>
                 </div>
               </div>
-              <div id="pageTransLineColorPanel" class="color-picker-panel">
-                <div class="picker-row">
-                  <canvas id="pageTransLinePalette" class="picker-palette" width="160" height="160"></canvas>
-                  <canvas id="pageTransLineHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
-                </div>
-                <div class="picker-input-row">
-                  <input type="text" id="pageTransLineHex" class="picker-hex-input" placeholder="#000000" maxlength="7">
-                  <button id="pageTransLineConfirm" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
-                </div>
-              </div>
+              <!-- 边框色取色器触发色块与面板由 color-picker.js 生成(触发色块追加到上方 .color-actions 末尾),样式见 color-picker.css -->
             </div>
 
             <label class="setting-toggle">
@@ -221,6 +203,9 @@
 
   <script src="lang.js"></script>
   <script src="translate-engine.js"></script>
+  <script src="color-utils.js"></script>
+  <script src="color-picker.js"></script>
+  <script src="dom-utils.js"></script>
   <script src="translation.js"></script>
 </body>
 </html>

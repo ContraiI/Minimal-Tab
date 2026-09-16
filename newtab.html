@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title data-i18n="pageTitle">Minimal Tab</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="color-picker.css">
+  <link rel="stylesheet" href="collapse.css">
 </head>
 <body>
   
@@ -183,19 +185,8 @@
             <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
             <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
             <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
-            <span class="theme-color-swatch picker-trigger" id="colorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
           </div>
-          <!-- 主题色取色器面板 -->
-          <div id="colorPickerPanel" class="color-picker-panel hidden">
-            <div class="picker-row">
-              <canvas id="pickerPalette" class="picker-palette" width="160" height="160"></canvas>
-              <canvas id="pickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
-            </div>
-            <div class="picker-input-row">
-              <input type="text" id="pickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
-              <button id="pickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
-            </div>
-          </div>
+          <!-- 取色器触发色块与面板由 color-picker.js 生成(插在本行之后),样式见 color-picker.css -->
           <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
           <!-- 壁纸来源选择(无 / 本地 / Bing) -->
           <div class="theme-mode-seg" id="wallpaperSourceSeg" style="margin-bottom:10px">
@@ -263,7 +254,6 @@
             <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
             <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
             <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
-            <span class="theme-color-swatch picker-trigger" id="clockColorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
             <span class="color-link-btn active" id="clockLinkBtn" title="联动时钟与搜索框颜色">
               <svg viewBox="0 0 24 24">
                 <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
@@ -271,17 +261,7 @@
               </svg>
             </span>
           </div>
-          <!-- 时钟色取色器面板 -->
-          <div id="clockColorPickerPanel" class="color-picker-panel hidden">
-            <div class="picker-row">
-              <canvas id="clockPickerPalette" class="picker-palette" width="160" height="160"></canvas>
-              <canvas id="clockPickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
-            </div>
-            <div class="picker-input-row">
-              <input type="text" id="clockPickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
-              <button id="clockPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
-            </div>
-          </div>
+          <!-- 时钟色取色器触发色块与面板由 color-picker.js 生成(触发色块插在上方联动按钮之前),样式见 color-picker.css -->
           <!-- 数字时钟开关 / 跟随搜索框 / 位置 -->
           <label class="sidebar-toggle">
             <span data-i18n="digitalClock">数字时钟</span>
@@ -351,7 +331,6 @@
               <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
               <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
               <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
-              <span class="theme-color-swatch picker-trigger" id="searchColorPickerTrigger" data-i18n-title="colorPicker" title="取色器"></span>
               <span class="color-link-btn active" id="searchLinkBtn" title="联动时钟与搜索框颜色">
                 <svg viewBox="0 0 24 24">
                   <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
@@ -359,17 +338,7 @@
                 </svg>
               </span>
             </div>
-            <!-- 搜索色取色器面板 -->
-            <div id="searchColorPickerPanel" class="color-picker-panel hidden">
-              <div class="picker-row">
-                <canvas id="searchPickerPalette" class="picker-palette" width="160" height="160"></canvas>
-                <canvas id="searchPickerHueBar" class="picker-hue-bar" width="20" height="160"></canvas>
-              </div>
-              <div class="picker-input-row">
-                <input type="text" id="searchPickerHexInput" class="picker-hex-input" placeholder="#000000" maxlength="7">
-                <button id="searchPickerConfirmBtn" class="picker-confirm-btn" data-i18n="btnConfirm">确定</button>
-              </div>
-            </div>
+            <!-- 搜索色取色器触发色块与面板由 color-picker.js 生成(触发色块插在上方联动按钮之前),样式见 color-picker.css -->
             <!-- 搜索框垂直/水平偏移、宽度、圆角滑块 -->
             <div class="sidebar-slider-group">
               <span data-i18n="searchOffsetY">垂直偏移</span>
@@ -515,6 +484,9 @@
   
   <script src="pinyin-match.js"></script>
   <script src="lang.js"></script>
+  <script src="color-utils.js"></script>
+  <script src="color-picker.js"></script>
+  <script src="dom-utils.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
