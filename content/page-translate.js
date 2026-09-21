@@ -291,7 +291,10 @@
     return p.then(function (resp) {
       if (!state.enabled || version !== targetVersion) return;
       if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'translate failed');
-      if (resp.text) applyResult(job, resp.text);
+      // 命中后台缓存时立刻收掉加载图标:这次实际没有等待,图标会一闪而过
+      if (resp.cached) removeLoadingSpinner(job.node, spinner);
+      // 属性任务没有加载图标,其空译文判空照旧(与 cached 标记无关)
+      if (job.type !== 'text' || resp.text) applyResult(job, resp.text);
       else markSkipped(job); // 空译文:不算失败,仅标记已处理避免反复重扫提交
     }).catch(function () {
       if (state.enabled && version === targetVersion) markFailed(job);
@@ -568,18 +571,109 @@
   var dragOffset = null;
   var dragDownAt = null;    // 按下时的指针坐标(判定拖动阈值用,避免每次移动读布局)
   var dragBounds = null;    // 按下时缓存的球体尺寸与活动范围(避免拖动中反复读 offsetWidth 触发同步布局)
+  var ballBtn = null;       // 右键展开的「清除缓存」按钮(球的子元素)
 
-  // 读取 i18n 文案
-  function getMsg(key) {
-    try { return chrome.i18n.getMessage(key) || key; } catch (e) { return key; }
+  // 读取 i18n 文案(subs 为占位符替换值数组,对应 messages.json 里的 $1)
+  function getMsg(key, subs) {
+    try { return chrome.i18n.getMessage(key, subs) || key; } catch (e) { return key; }
   }
 
-  // 创建悬浮球并绑定点击/拖拽事件
+  // 页面内轻提示(清缓存结果):固定定位挂在 documentElement 上,2 秒后淡出移除
+  var toastEl = null;
+  var toastTimer = null;
+  function showPageToast(text) {
+    if (!document.documentElement) return;
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.className = 'page-trans-toast';   // 外观见 content/page-translate.css
+      document.documentElement.appendChild(toastEl);
+    }
+    toastEl.textContent = text;
+    toastEl.style.opacity = '1';   // 淡出只改内联 opacity,过渡写在 .page-trans-toast 里
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      if (!toastEl) return;
+      toastEl.style.opacity = '0';
+      // 等过渡(0.2s)走完再摘节点;这期间又来一条提示会被上面的 clearTimeout 取消并复用本节点
+      toastTimer = setTimeout(function () {
+        if (toastEl && toastEl.parentNode) toastEl.parentNode.removeChild(toastEl);
+        toastEl = null;
+      }, 220);
+    }, 2000);
+  }
+
+  // 清缓存的结果提示:悬浮球的刷子按钮与侧边栏设置里的「清除缓存」共用同一条
+  // (文案按本页翻译开关取:开着是"已清除 N 条译文缓存,正在重新翻译",关着只说清掉多少条)
+  function showClearCacheToast(cleared) {
+    showPageToast(getMsg(state.enabled ? 'ballMenuClear' : 'toastCacheClearedKeep', [String(cleared)]));
+  }
+
+  // 清除译文缓存并重译当前页:入口是右键展开的刷子按钮(见 background 的 PAGE_TRANSLATE_RESET_CACHE)
+  function resetCacheAndRetranslate() {
+    var done = function (resp) {
+      // 后台回报本次清掉的条数(缓存全局共用,这个数包含所有标签页)
+      showClearCacheToast(resp && typeof resp.cleared === 'number' ? resp.cleared : 0);
+      if (!state.enabled) return;   // 翻译没开时只清缓存:没有可重译的页面内容
+      revertAll();
+      scheduleScan();
+    };
+    try {
+      chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_RESET_CACHE' }, function (resp) {
+        // 扩展上下文刚失效时 sendMessage 会以 runtime.lastError 结束,此时不做任何界面动作
+        if (chrome.runtime.lastError) return;
+        done(resp);
+      });
+    } catch (e) {}
+  }
+
+  // 展开球下方的「清除缓存」按钮:独立元素,位置在这里按球的矩形算一次
+  function openBallMenu() {
+    if (!ballEl || !ballBtn) return;
+    // 布局只在展开这一刻读一次(按钮此时 visibility:hidden,仍有布局尺寸)
+    var r = ballEl.getBoundingClientRect();
+    var h = ballBtn.offsetHeight;
+    // 与球同宽同轴,直接对齐球左缘;默认贴在球下方 6px,球贴近视口底部时翻到球正上方
+    var up = window.innerHeight - r.bottom < h + 12;
+    ballBtn.style.left = Math.round(r.left) + 'px';
+    ballBtn.style.top = Math.round(up ? r.top - 6 - h : r.bottom + 6) + 'px';
+    ballBtn.classList.toggle('page-trans-open-up', up);
+    ballBtn.classList.add('page-trans-open');
+  }
+
+  function closeBallMenu() {
+    if (ballBtn) ballBtn.classList.remove('page-trans-open');
+  }
+
+  // 创建悬浮球并绑定点击/右键/拖拽事件
   function createBall() {
     if (ballEl || !isTop) return;
     ballEl = document.createElement('div');
     ballEl.id = 'pageTransBall';
     ballEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
+    // 右键展开的「清除缓存」按钮:与球同规格的圆形刷子按钮。
+    // 它是 documentElement 上的独立元素(不是球的子元素),位置由 openBallMenu() 算好,
+    // 因此球的不透明度/悬停/按下都不会波及它,反之亦然;球只在展开这一刻提供坐标
+    ballBtn = document.createElement('button');
+    ballBtn.type = 'button';
+    ballBtn.id = 'pageTransBallBtn';
+    ballBtn.className = 'page-trans-ball-btn';
+    ballBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>';
+    var ballBtnLabel = getMsg('ballClearCache');
+    ballBtn.title = ballBtnLabel;
+    ballBtn.setAttribute('aria-label', ballBtnLabel);
+    ballBtn.addEventListener('click', function () {
+      closeBallMenu();
+      resetCacheAndRetranslate();
+    });
+    document.documentElement.appendChild(ballBtn);
+
+    // 右键 = 展开/收回下方的刷子按钮(球上的右键不弹网页原生菜单)
+    ballEl.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      if (ballBtn && ballBtn.classList.contains('page-trans-open')) closeBallMenu();
+      else openBallMenu();
+    });
+
     ballEl.addEventListener('click', function () {
       // 仅未发生拖动时视为点击切换;拖动结束不触发开关
       if (ballDragged) return;
@@ -589,6 +683,7 @@
 
     ballEl.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
+      closeBallMenu();
       ballDown = true;
       ballDragged = false;
       // 尺寸与活动范围只在按下时读一次:pointermove 里读 offsetWidth 会因为上一帧刚写过 style.left/top
@@ -621,6 +716,9 @@
     ballEl.addEventListener('pointerup', endDrag);
     ballEl.addEventListener('pointercancel', endDrag);
     document.documentElement.appendChild(ballEl);
+    // 视口尺寸一变,球可能被浏览器重新摆放(默认位置贴着右缘),按钮的固定坐标就不再对齐:
+    // 直接收回,下次右键重新算。closeBallMenu 是具名函数,多次注册会被浏览器忽略
+    window.addEventListener('resize', closeBallMenu);
   }
 
   // 恢复悬浮球保存的位置
@@ -637,11 +735,12 @@
     });
   }
 
-  // 更新悬浮球的开关样式与提示
+  // 更新悬浮球的开关样式与无障碍名称
   function updateBallVisual() {
     if (!ballEl) return;
     ballEl.classList.toggle('page-trans-off', !state.enabled);
-    ballEl.title = state.enabled ? getMsg('ballCancel') : getMsg('ballTranslate');
+    // 用 aria-label 而非 title:原生 tooltip 悬停约 1 秒后弹出,正好压在右键展开的按钮上
+    ballEl.setAttribute('aria-label', state.enabled ? getMsg('ballCancel') : getMsg('ballTranslate'));
   }
 
   // 显示/隐藏悬浮球
@@ -650,7 +749,9 @@
       if (isTop) { createBall(); applyBallPos(); updateBallVisual(); }
     } else {
       if (ballEl && ballEl.parentNode) ballEl.parentNode.removeChild(ballEl);
+      if (ballBtn && ballBtn.parentNode) ballBtn.parentNode.removeChild(ballBtn);
       ballEl = null;
+      ballBtn = null;
     }
   }
 
@@ -787,6 +888,15 @@
       });
       chrome.runtime.onMessage.addListener(function (msg) {
         if (msg && msg.type === 'PAGE_TRANSLATE_STATE') onEnabledMsg(msg.enabled);
+        // 侧边栏设置里的「清除缓存」:缓存已由后台清空,这里弹出与悬浮球完全相同的那条结果提示,
+        // 翻译开着时再还原并重扫(悬浮球那颗刷子是自己清、自己重扫,不走这条消息)
+        else if (msg && msg.type === 'PAGE_TRANSLATE_RESCAN') {
+          showClearCacheToast(typeof msg.cleared === 'number' ? msg.cleared : 0);
+          if (state.enabled) {
+            revertAll();
+            scheduleScan();
+          }
+        }
       });
     }
   }

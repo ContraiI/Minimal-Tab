@@ -214,6 +214,7 @@ window.I18N_DATA = {
     pageTransStyleBorderB: '直线边框',
     pageTransStyleGroupStyle: '线条样式',
     pageTransColorReset: '恢复默认',
+    pageTransClearCache: '清除缓存',
 
     langZhCn: '中文',
     langZhTw: '繁体中文',
@@ -473,6 +474,7 @@ window.I18N_DATA = {
     pageTransStyleBorderB: 'Solid Border',
     pageTransStyleGroupStyle: 'Line Style',
     pageTransColorReset: 'Reset to Default',
+    pageTransClearCache: 'Clear Cache',
 
     langZhCn: 'Chinese',
     langZhTw: 'Traditional Chinese',

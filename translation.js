@@ -774,6 +774,25 @@
       savePageTrans();
     });
 
+    // 「清除缓存」:清空网页翻译的译文缓存(全局,后台内存),并让当前标签页重译一遍。
+    // 侧边栏不在某个标签页里,故先取当前窗口的活动标签页,把它的 id 交给后台;
+    // 结果提示不在这里显示——后台会把清掉的条数带给那个标签页,由内容脚本弹出与悬浮球
+    // 那颗刷子完全相同的那条提示(同文案、同位置、同 2 秒淡出)
+    var clearCacheBtn = document.getElementById('pageTransClearCache');
+    if (clearCacheBtn) {
+      clearCacheBtn.addEventListener('click', function () {
+        try {
+          chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+            var tabId = tabs && tabs[0] ? tabs[0].id : null;
+            chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_RESET_CACHE', tabId: tabId }, function () {
+              // 只关心副作用;扩展刚重载过时读一下 lastError 避免控制台报未处理错误
+              if (chrome.runtime.lastError) return;
+            });
+          });
+        } catch (e) {}
+      });
+    }
+
     var pageModeSelect = document.getElementById('pageModeSelect');
     var pageModeOptions = [].slice.call(pageModeSelect.querySelectorAll('.theme-mode-opt'));
     pageModeOptions.forEach(function (btn) {

@@ -10,5 +10,24 @@
   },
   "ballCancel": {
     "message": "Cancel translation"
+  },
+  "ballClearCache": {
+    "message": "Clear cache"
+  },
+  "toastCacheClearedKeep": {
+    "message": "Cleared $count$ cached translations",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "ballMenuClear": {
+    "message": "Cleared $count$ cached translations, retranslating",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   }
 }

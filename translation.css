@@ -653,6 +653,28 @@ body.light .settings-body .lang-option.active { color: #333; }
 
 .settings-body .model-hint { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
 
+/* 纯文字操作(设置里的「清除缓存」):不带按钮框,悬停只加下划线。
+   颜色全部走主题变量(--accent),浅色模式无需另写覆盖。
+   结果提示不在这里:它由当前标签页的内容脚本弹出(与悬浮球的刷子按钮同一条 .page-trans-toast) */
+.settings-body .setting-text-action {
+  /* 与上面的 setting-toggle 行文字同一条左基准线(那一行的负外边距 + 内边距正好抵消) */
+  margin: 4px 0 2px;
+}
+
+.settings-body .text-action-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-body .text-action-btn:hover { text-decoration: underline; }
+.settings-body .text-action-btn:active { text-decoration: underline; }
+
 body.light .settings-body .setting-input {
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.7);

@@ -10,5 +10,24 @@
   },
   "ballCancel": {
     "message": "取消翻译"
+  },
+  "ballClearCache": {
+    "message": "清除缓存"
+  },
+  "toastCacheClearedKeep": {
+    "message": "已清除 $count$ 条译文缓存",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "ballMenuClear": {
+    "message": "已清除 $count$ 条译文缓存，正在重新翻译",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   }
 }

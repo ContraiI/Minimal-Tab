@@ -1,11 +1,12 @@
 
-/* 网页翻译悬浮球(默认右上角,可拖拽) */
+/* 网页翻译悬浮球(默认右上角偏下,可拖拽) */
 /* 默认位置只在这里定义:拖拽过后由 JS 写入内联 left/top 并把 right/bottom 置 auto,
    因此改这里的默认值只影响从未拖过悬浮球的用户,已拖过的保留自己保存的位置(pageTrans.ballPos) */
+/* top 由 16px 两度下移到 96px:避开多数站点顶部固定导航条,右键展开的按钮也有落点 */
 #pageTransBall {
   position: fixed;
   right: 16px;
-  top: 16px;
+  top: 96px;
   z-index: 2147483647;
   width: 32px;
   height: 32px;
@@ -18,13 +19,15 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   opacity: 0.92;
-  transition: opacity 0.15s, transform 0.1s, background 0.2s;
+  /* 球的不透明度恒为 0.92(悬停改的是底色),故这里不必过渡 opacity */
+  transition: transform 0.1s, background 0.2s;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
 }
 
-#pageTransBall:hover { opacity: 1; }
+/* 悬停:底色变浅(不改 opacity——0.92→1 会让球显得更实、更深) */
+#pageTransBall:hover { background: #4b8bf5; }
 #pageTransBall:active { transform: scale(0.94); }
 
 #pageTransBall svg {
@@ -37,6 +40,75 @@
 
 /* 翻译停用时悬浮球置灰 */
 #pageTransBall.page-trans-off { background: #5a5f6b; }
+/* 停用时悬停同样变浅(取值见下方刷子按钮那条注释:三者渲染出的明暗差对齐) */
+#pageTransBall.page-trans-off:hover { background: #8a909b; }
+
+
+/* 在球上点右键展开/收回的「清除缓存」按钮(JS 加 .page-trans-open)
+   与悬浮球同规格:一样大的 32px 圆形、同样的圆角/阴影/过渡,只是图标换成刷子;
+   底色固定为中性灰且比球更透明,不跟随翻译开关(球的蓝/灰)变色——它只做「清缓存」一件事。
+   它是 documentElement 上的独立固定元素(不是球的子元素),左/上坐标由 JS 展开时按球的矩形写入,
+   所以球的不透明度、悬停、按下都不会波及它,反之亦然 */
+#pageTransBallBtn {
+  position: fixed;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #5a5f6b;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  opacity: 0;
+  /* 关掉时仍占布局:JS 要读它的高度判断下方放不放得下 */
+  visibility: hidden;
+  transform: translateY(-4px) scale(0.94);
+  transform-origin: top center;
+  transition: opacity 0.16s, transform 0.16s, visibility 0.16s, background 0.2s;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 刷子图标与球上的图标同规格(16px、跟随文字色) */
+#pageTransBallBtn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+#pageTransBallBtn.page-trans-open {
+  /* 比球(0.92)更透明一些,不抢球的视觉 */
+  opacity: 0.7;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* 指向/按下都往浅色走(不是变暗)。
+   注意这里不能照抄球的悬停色:球是 0.92、刷子是 0.7,同一个色值画在更透明的元素上,
+   肉眼看到的"变浅幅度"会小一档(渲染出的明暗差 = 不透明度 × 底色差);但也不能折算过头——
+   刷子本来就透明,悬停色再抬到与球同等幅度(试过 #979da8)会显得"发飘"、像要淡出。
+   现取值让球约 +42、刷子约 +34:刷子略轻一档,但已与球在同一观感区间内 */
+#pageTransBallBtn:hover { background: #8b919c; }
+#pageTransBallBtn:active { background: #9096a1; }
+
+/* 球贴近视口底部时改为向上展开(JS 加 .page-trans-open-up),避免按钮落在视口外 */
+#pageTransBallBtn.page-trans-open-up {
+  transform: translateY(4px) scale(0.94);
+  transform-origin: bottom center;
+}
+#pageTransBallBtn.page-trans-open-up.page-trans-open { transform: none; }
 
 /* 双语对照模式:原文下方追加的译文块(弱化以区分原文) */
 .page-trans-bilingual {
@@ -102,4 +174,24 @@
 
 @keyframes page-trans-spin {
   to { transform: rotate(360deg); }
+}
+
+/* 页面内轻提示(清除译文缓存后报清掉条数用):内容脚本跑在别人页面上,故样式不依赖页面变量,
+   位置固定在顶部居中、层级与悬浮球同级,2 秒后由 JS 淡出移除 */
+.page-trans-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  opacity: 1;
+  transition: opacity 0.2s;
+  pointer-events: none;
 }
