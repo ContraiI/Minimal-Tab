@@ -2,9 +2,9 @@
 //
 // 目的:background.js 是经典 Service Worker,不能直接 import,故这里用 vm 造一个假 chrome 环境跑它,
 // 再通过 onMessage 监听器验证清缓存那条消息:PAGE_TRANSLATE_RESET_CACHE
-// (悬浮球的刷子按钮与侧边栏设置里的「清除缓存」都走它,后者带 tabId 时应补发 PAGE_TRANSLATE_RESCAN)。
+// (悬浮球的圆形按钮与侧边栏设置里的「清除缓存」都走它,后者带 tabId 时应补发 PAGE_TRANSLATE_RESCAN)。
 //
-// 覆盖不到的部分(需要真浏览器):content script 的悬浮球几何、悬停展开与拖动手势。
+// 覆盖不到的部分(需要真浏览器):content script 的悬浮球几何、右键开合与拖动手势。
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -116,7 +116,7 @@ console.log('3. 侧边栏发起清缓存:带 tabId 时把条数一并带给该�
   eq(tabMessages[0].id, 42, '发给指定的 tabId');
   eq(tabMessages[0].msg.type, 'PAGE_TRANSLATE_RESCAN', '消息类型为 PAGE_TRANSLATE_RESCAN');
   eq(tabMessages[0].msg.cleared, 1, '把清掉的条数带给页面(页面据此弹与悬浮球相同的那条提示)');
-  // 内容脚本(悬浮球刷子)自己发起时不带 tabId:它自己提示 + 还原重扫,后台不要再插手
+  // 内容脚本(悬浮球按钮)自己发起时不带 tabId:它自己提示 + 还原重扫,后台不要再插手
   tabMessages.length = 0;
   send({ type: 'PAGE_TRANSLATE_RESET_CACHE' }, { tab: { id: 7 } });
   eq(tabMessages.length, 0, '无 tabId 时(内容脚本自己发起)不发重扫通知');

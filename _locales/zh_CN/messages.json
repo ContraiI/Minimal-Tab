@@ -12,7 +12,7 @@
     "message": "取消翻译"
   },
   "ballClearCache": {
-    "message": "清除缓存"
+    "message": "清除缓存并重译"
   },
   "toastCacheClearedKeep": {
     "message": "已清除 $count$ 条译文缓存",

@@ -62,7 +62,7 @@ function invalidateCacheAndReloadEngine() {
   engineSettingsReady = loadEngineSettings();
 }
 
-// 用户主动重译:清空整份译文缓存(内容脚本以悬浮球下方悬停拉出的刷子按钮触发)。
+// 用户主动重译:清空整份译文缓存(内容脚本以悬浮球右键展开的圆形按钮触发)。
 // 先自增代号再清空:清空后仍在飞的请求若按旧代号写回,也不会被后续命中
 function clearTranslationCache() {
   TranslationCache.bumpGeneration();
@@ -206,7 +206,7 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
     tabEnabled(qId, function (enabled) { sendResponse({ enabled: enabled }); });
     return true;
   }
-  // 用户主动重译(悬浮球的刷子按钮 / 侧边栏设置里的「清除缓存」):清空缓存并回报清掉的条数。
+  // 用户主动重译(悬浮球的圆形按钮 / 侧边栏设置里的「清除缓存」):清空缓存并回报清掉的条数。
   // 缓存是全局的,故这一步影响所有标签页,只是当前页会立刻重译一遍。
   // 带 tabId 的是扩展页面(侧边栏)发来的:它自己不在页面里,由后台把条数带给那个标签页,
   // 让内容脚本弹出与悬浮球完全相同的那条结果提示并还原重扫;

@@ -63,11 +63,12 @@ const bodyEl = makeEl('body');
 htmlEl.appendChild(bodyEl);
 const docListeners = {};
 const timers = [];
+const intervals = [];   // 常驻定时器:目前只有内容脚本的"扩展生命周期哨兵"会注册
 const document = {
   documentElement: htmlEl, body: bodyEl, createElement: makeEl,
   createTreeWalker: () => ({ nextNode: () => null }),
   addEventListener(t, fn) { (docListeners[t] = docListeners[t] || []).push(fn); },
-  removeEventListener() {},
+  removeEventListener(t, fn) { const a = docListeners[t] || []; const i = a.indexOf(fn); if (i > -1) a.splice(i, 1); },
   querySelectorAll() { return []; }, querySelector() { return null; },
   getElementById(id) {
     const stack = [htmlEl];
@@ -100,7 +101,9 @@ function makeSandbox(isBackground) {
   const s = {
     console, document, Promise, Map, Set, WeakMap, WeakSet, Date, Math, JSON, String, Number, Array, Object, RegExp, Error,
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
-    clearTimeout: () => {}, setInterval: () => 0, clearInterval: () => {},
+    clearTimeout: () => {},
+    setInterval: (fn) => { intervals.push(fn); return intervals.length; },
+    clearInterval: (id) => { intervals[id - 1] = null; },
     requestAnimationFrame: (fn) => { fn(); return 1; }, cancelAnimationFrame: () => {},
     NodeFilter: { SHOW_TEXT: 4, SHOW_ELEMENT: 1 },
     MutationObserver: class { observe() {} disconnect() {} },
@@ -163,27 +166,77 @@ console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
   ok(!!ball, '初始化为顶层 frame 后建出了悬浮球');
   if (ball) {
     ok(ball.listeners.click && ball.listeners.click.length === 1, '悬浮球绑定了左键 click(开关翻译)');
-    ok(ball.listeners.contextmenu && ball.listeners.contextmenu.length === 1, '悬浮球绑定了 contextmenu(右键展开/收回清除缓存按钮)');
+    ok(ball.listeners.contextmenu && ball.listeners.contextmenu.length === 1, '悬浮球绑定了 contextmenu(右键展开/收回圆形图标按钮)');
     ok(ball.listeners.pointerdown && ball.listeners.pointermove && ball.listeners.pointerup, '悬浮球绑定了拖动所需的 pointer 事件');
     ok(!ball.listeners.mouseenter && !ball.listeners.mouseleave, '悬浮球不再靠悬停展开(改为右键)');
     ok(ball._html.indexOf('<svg') === 0, '悬浮球内含图标 SVG');
-    const ballBtn = document.getElementById('pageTransBallBtn');
-    ok(!!ballBtn, '页面里建出了右键展开的「清除缓存」按钮');
-    ok(!!ballBtn && !ball.children.some((c) => c === ballBtn), '清除缓存按钮是独立元素(不在球内,两者不透明度/悬停互不影响)');
-    ok(!!ballBtn && ballBtn._html.indexOf('<svg') === 0, '清除缓存按钮内含刷子图标 SVG');
-    if (ballBtn) {
+    // 尺寸兜底:样式表随扩展卸载被撤掉时,球不能被撑成巨型图标
+    ok(ball._html.indexOf('<svg width="18" height="18"') === 0, '悬浮球 SVG 自带显式 width/height(不依赖样式表)');
+    ok(/position:\s*fixed/.test(ball.style.cssText) && /width:\s*36px/.test(ball.style.cssText) &&
+       /height:\s*36px/.test(ball.style.cssText), '悬浮球几何已内联兜底(position:fixed + 36×36)');
+    // 内联优先级高于类选择器:这几个属性一旦内联,靠切类生效的开关配色/按下动画就会静默失效
+    ok(!/background|opacity|transform|transition/.test(ball.style.cssText),
+      '悬浮球未内联 background/opacity/transform/transition(否则 .page-trans-off 等类会失效)');
+    ok(ball.getAttribute('aria-controls') === 'pageTransMenu' && ball.getAttribute('aria-expanded') === 'false',
+      '悬浮球声明了 aria-controls 指向那个按钮,且 aria-expanded 有初始值');
+    const menu = document.getElementById('pageTransMenu');
+    ok(!!menu, '页面里建出了右键展开的圆形图标按钮');
+    ok(!!menu && !ball.children.some((c) => c === menu), '按钮是独立元素(不在球内,两者悬停/按下互不影响)');
+    ok(!!menu && menu.tagName === 'BUTTON', '按钮本体就是 <button>(不再是"面板里放一行菜单项")');
+    ok(!!menu && menu._html.indexOf('<svg') === 0, '按钮内含图标 SVG(Remix brush-2-line 线性刷子)');
+    ok(!!menu && menu._html.indexOf('<svg width="18" height="18"') === 0, '按钮 SVG 自带显式 width/height(不依赖样式表,与球内图标同规格)');
+    ok(!!menu && menu.children.length === 0, '按钮只由 innerHTML 写入图标、未插入文字节点(纯图标,不出现文字描述)');
+    ok(!!menu && String(menu.getAttribute('aria-label') || '').length > 0, '按钮文案走 aria-label(纯图标按钮必须有无障碍名)');
+    ok(!!menu && /width:\s*36px/.test(menu.style.cssText) && /height:\s*36px/.test(menu.style.cssText) &&
+       /border-radius:\s*50%/.test(menu.style.cssText), '按钮几何已内联兜底(与球同规格 36×36 圆形)');
+    if (menu) {
+      ok(/left:\s*-9999px/.test(menu.style.cssText), '按钮有屏幕外默认位置(不再靠静态位置碰巧隐藏)');
+      // 同理:展开靠 .page-trans-open 改这几个属性,内联会盖过类选择器让按钮永远展不开
+      ok(!/opacity|visibility|pointer-events|transform|background/.test(menu.style.cssText),
+        '按钮未内联 opacity/visibility/pointer-events/transform/background(否则 .page-trans-open 展不开)');
+      ok(!docListeners.pointerdown || docListeners.pointerdown.length === 0,
+        '未展开时 document 上没有常驻的收起监听器');
       // 右键展开 → 按球的位置定位 → 再右键收回
       ball.dispatch('contextmenu', { preventDefault() {} });
-      ok(ballBtn.classList.contains('page-trans-open'), '右键悬浮球后展开清除缓存按钮');
-      ok(ballBtn.style.left === '1264px' && ballBtn.style.top === '54px', '按钮按球的矩形定位(贴球正下方 6px)');
+      ok(menu.classList.contains('page-trans-open'), '右键悬浮球后展开圆形图标按钮');
+      ok(menu.style.left === '1240px' && menu.style.top === '56px', '按钮按球的矩形定位并夹进视口(右缘对齐球、贴球下缘 8px)');
+      ok(ball.getAttribute('aria-expanded') === 'true', '展开时 aria-expanded 翻成 true');
+      ok(docListeners.pointerdown && docListeners.pointerdown.length === 1 &&
+         docListeners.keydown && docListeners.keydown.length === 1,
+        '展开期间才挂上「点外部 / Esc 收起」的两个 document 监听器');
+      // 球本体必须被排除:否则右键球时"点外部收起"会先把按钮关掉,紧接着 contextmenu 又把它打开,
+      // 表现为右键永远收不回(真实浏览器里才暴露,假 DOM 不派发 pointerdown)
+      docListeners.pointerdown[0]({ target: ball });
+      ok(menu.classList.contains('page-trans-open'), '球上的 pointerdown 不触发"点外部收起"(否则右键收不回)');
+      const outside = makeEl('div');
+      docListeners.pointerdown[0]({ target: outside });
+      ok(!menu.classList.contains('page-trans-open'), '点按钮外的页面元素会收起按钮');
+      // Esc 收起
       ball.dispatch('contextmenu', { preventDefault() {} });
-      ok(!ballBtn.classList.contains('page-trans-open'), '再右键一次收回清除缓存按钮');
-      // 展开后点按钮:走通清缓存整条链路(showPageToast 曾缺失,这条断言能在 Node 侧兜住)
+      ok(menu.classList.contains('page-trans-open'), '再次右键重新展开');
+      docListeners.keydown[0]({ key: 'Escape' });
+      ok(!menu.classList.contains('page-trans-open'), '按 Esc 收起按钮');
+      // 收起 + 重新展开一轮,验证右键的"展开 ↔ 收回"是真正的取反
       ball.dispatch('contextmenu', { preventDefault() {} });
-      ballBtn.dispatch('click', {});
+      ok(menu.classList.contains('page-trans-open'), '重新展开成功');
+      ball.dispatch('contextmenu', { preventDefault() {} });
+      ok(!menu.classList.contains('page-trans-open'), '再右键一次收回按钮');
+      ok(docListeners.pointerdown.length === 0 && docListeners.keydown.length === 0,
+        '收起后两个 document 监听器都被摘掉(不常驻)');
+      // 展开后点按钮本体:走通清缓存整条链路(showPageToast 曾缺失,这条断言能在 Node 侧兜住)
+      ball.dispatch('contextmenu', { preventDefault() {} });
+      menu.dispatch('click', {});
       const toast = htmlEl.children.filter((c) => String(c.className || '').indexOf('page-trans-toast') > -1)[0];
-      ok(!!toast, '点刷子按钮清缓存后建出了结果提示(.page-trans-toast)');
+      ok(!!toast, '点按钮清缓存后建出了结果提示(.page-trans-toast)');
+      ok(!menu.classList.contains('page-trans-open'), '点按钮后按钮自动收起');
     }
+    // 扩展重载/更新/停用后自清理:哨兵发现 chrome.runtime.id 没了,就摘掉自己插进页面的节点
+    ok(intervals.length === 1, '建球时注册了 1 个扩展生命周期哨兵定时器(' + intervals.length + ')');
+    s.chrome.runtime.id = undefined;   // 模拟扩展被重载:残留内容脚本的 runtime.id 变成 undefined
+    if (intervals[0]) intervals[0]();
+    ok(document.getElementById('pageTransBall') === null, '扩展上下文失效后悬浮球节点已被自清理(不再残留裸节点)');
+    ok(document.getElementById('pageTransMenu') === null, '扩展上下文失效后圆形按钮节点已被自清理');
+    ok(document.getElementById('pageTransBallBtn') === null, '旧版刷子按钮 id 不再出现');
   }
 }
 

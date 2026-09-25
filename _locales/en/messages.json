@@ -12,7 +12,7 @@
     "message": "Cancel translation"
   },
   "ballClearCache": {
-    "message": "Clear cache"
+    "message": "Clear cache & retranslate"
   },
   "toastCacheClearedKeep": {
     "message": "Cleared $count$ cached translations",

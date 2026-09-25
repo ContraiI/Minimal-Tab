@@ -564,14 +564,14 @@
   }
 
 
-  // 页面上的翻译悬浮球:点击切换翻译,可拖动
+  // 页面上的翻译悬浮球:左键点击切换翻译,可拖动;右键展开一个圆形图标按钮
   var ballEl = null;
   var ballDown = false;     // 指针是否按下
   var ballDragged = false;  // 本次按下是否实际拖动(移动超过阈值),拖动结束不触发开关
   var dragOffset = null;
   var dragDownAt = null;    // 按下时的指针坐标(判定拖动阈值用,避免每次移动读布局)
   var dragBounds = null;    // 按下时缓存的球体尺寸与活动范围(避免拖动中反复读 offsetWidth 触发同步布局)
-  var ballBtn = null;       // 右键展开的「清除缓存」按钮(球的子元素)
+  var ballMenu = null;      // 右键展开的圆形图标按钮(球的独立兄弟元素,不在球内)
 
   // 读取 i18n 文案(subs 为占位符替换值数组,对应 messages.json 里的 $1)
   function getMsg(key, subs) {
@@ -602,13 +602,13 @@
     }, 2000);
   }
 
-  // 清缓存的结果提示:悬浮球的刷子按钮与侧边栏设置里的「清除缓存」共用同一条
+  // 清缓存的结果提示:悬浮球右键展开的圆形按钮与侧边栏设置里的「清除缓存」共用同一条
   // (文案按本页翻译开关取:开着是"已清除 N 条译文缓存,正在重新翻译",关着只说清掉多少条)
   function showClearCacheToast(cleared) {
     showPageToast(getMsg(state.enabled ? 'ballMenuClear' : 'toastCacheClearedKeep', [String(cleared)]));
   }
 
-  // 清除译文缓存并重译当前页:入口是右键展开的刷子按钮(见 background 的 PAGE_TRANSLATE_RESET_CACHE)
+  // 清除译文缓存并重译当前页:入口是右键展开的圆形按钮(见 background 的 PAGE_TRANSLATE_RESET_CACHE)
   function resetCacheAndRetranslate() {
     var done = function (resp) {
       // 后台回报本次清掉的条数(缓存全局共用,这个数包含所有标签页)
@@ -626,51 +626,130 @@
     } catch (e) {}
   }
 
-  // 展开球下方的「清除缓存」按钮:独立元素,位置在这里按球的矩形算一次
+  // 展开球下方那个圆形图标按钮:独立元素,位置在这里按球的矩形算一次
+  // (函数/变量仍沿用 ballMenu / openBallMenu 这些名字,形态已不是文字菜单,别被名字带偏)
   function openBallMenu() {
-    if (!ballEl || !ballBtn) return;
+    if (!ballEl || !ballMenu) return;
     // 布局只在展开这一刻读一次(按钮此时 visibility:hidden,仍有布局尺寸)
     var r = ballEl.getBoundingClientRect();
-    var h = ballBtn.offsetHeight;
-    // 与球同宽同轴,直接对齐球左缘;默认贴在球下方 6px,球贴近视口底部时翻到球正上方
-    var up = window.innerHeight - r.bottom < h + 12;
-    ballBtn.style.left = Math.round(r.left) + 'px';
-    ballBtn.style.top = Math.round(up ? r.top - 6 - h : r.bottom + 6) + 'px';
-    ballBtn.classList.toggle('page-trans-open-up', up);
-    ballBtn.classList.add('page-trans-open');
+    var w = ballMenu.offsetWidth;
+    var h = ballMenu.offsetHeight;
+    var gap = 8;   // 按钮与球之间的空隙
+    var pad = 8;   // 与视口边缘至少留出的间距
+    // 水平:按钮右缘对齐球的右缘(两者同宽,故对齐即天然同轴),再夹进视口
+    var left = r.right - w;
+    var maxLeft = window.innerWidth - w - pad;
+    if (left > maxLeft) left = maxLeft;
+    if (left < pad) left = pad;
+    // 垂直:默认贴在球下缘 8px;下方放不下时翻到球正上方(JS 给它加 .page-trans-open-up)
+    var up = window.innerHeight - r.bottom < h + gap + pad;
+    var top = up ? r.top - gap - h : r.bottom + gap;
+    var maxTop = window.innerHeight - h - pad;
+    if (top > maxTop) top = maxTop;
+    if (top < pad) top = pad;
+    ballMenu.style.left = Math.round(left) + 'px';
+    ballMenu.style.top = Math.round(top) + 'px';
+    ballMenu.classList.toggle('page-trans-open-up', up);
+    ballMenu.classList.add('page-trans-open');
+    ballEl.setAttribute('aria-expanded', 'true');
+    // 下面两个监听器只在展开期间挂在 document 上(收起即摘),不常驻:页面上的每次指针按下
+    // 都要过一遍它们。捕获阶段注册是为了拿到最早的一次按下 —— 页面上任何 stopPropagation
+    // 都挡不住"点别处收起"这件事
+    document.addEventListener('pointerdown', onMenuOutsidePointerDown, true);
+    document.addEventListener('keydown', onMenuKeyDown, true);
+  }
+
+  // 点在按钮之外:收起。球本体要排除掉 —— 球上的按下由它自己的 pointerdown/contextmenu
+  // 处理(左键收起并拖动、右键收起),若这里也插一手,右键会先被关掉再被 contextmenu 重新打开,
+  // 表现为"右键永远收不回按钮"
+  function onMenuOutsidePointerDown(e) {
+    if (e.target === ballEl) return;
+    if (ballMenu && ballMenu.contains && ballMenu.contains(e.target)) return;
+    closeBallMenu();
+  }
+
+  // Esc 收起按钮
+  function onMenuKeyDown(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') closeBallMenu();
   }
 
   function closeBallMenu() {
-    if (ballBtn) ballBtn.classList.remove('page-trans-open');
+    if (!ballMenu || !ballMenu.classList.contains('page-trans-open')) return;
+    ballMenu.classList.remove('page-trans-open');
+    if (ballEl) ballEl.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', onMenuOutsidePointerDown, true);
+    document.removeEventListener('keydown', onMenuKeyDown, true);
   }
 
   // 创建悬浮球并绑定点击/右键/拖拽事件
   function createBall() {
     if (ballEl || !isTop) return;
+    // 上一次扩展实例可能留下同 id 的节点(扩展重载会撤掉注入的 CSS,却不会移除已插入的 DOM),
+    // 先摘干净再建,避免页面上叠出两个球(pageTransBallBtn 是旧版刷子按钮的 id,一并清掉)
+    ['pageTransBall', 'pageTransBallBtn', 'pageTransMenu'].forEach(function (id) {
+      var stale = document.getElementById(id);
+      if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+    });
     ballEl = document.createElement('div');
     ballEl.id = 'pageTransBall';
-    ballEl.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
-    // 右键展开的「清除缓存」按钮:与球同规格的圆形刷子按钮。
-    // 它是 documentElement 上的独立元素(不是球的子元素),位置由 openBallMenu() 算好,
-    // 因此球的不透明度/悬停/按下都不会波及它,反之亦然;球只在展开这一刻提供坐标
-    ballBtn = document.createElement('button');
-    ballBtn.type = 'button';
-    ballBtn.id = 'pageTransBallBtn';
-    ballBtn.className = 'page-trans-ball-btn';
-    ballBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 0 0 0-1.41z"/></svg>';
-    var ballBtnLabel = getMsg('ballClearCache');
-    ballBtn.title = ballBtnLabel;
-    ballBtn.setAttribute('aria-label', ballBtnLabel);
-    ballBtn.addEventListener('click', function () {
+    ballEl.setAttribute('role', 'button');
+    // 弹出的是一个纯图标按钮(不是菜单),故用 aria-controls 关联它,不写 aria-haspopup="menu"
+    ballEl.setAttribute('aria-controls', 'pageTransMenu');
+    // 展开态由 openBallMenu()/closeBallMenu() 翻转,这里先给个初始值,别让属性缺席
+    ballEl.setAttribute('aria-expanded', 'false');
+    // 几何属性在这里内联写死一份,不把"不被撑大"寄托在 content/page-translate.css 上:
+    // 那份 CSS 由浏览器注入,扩展一重载就被撤掉,而内容脚本插进 DOM 的节点还在,老标签页里于是
+    // 只剩一个裸 div —— position 退回 static、尺寸约束全丢,内联 SVG 又没有 width/height,
+    // 便按容器宽度铺开成两千像素、把页面撑出滚动的空白。
+    // 只内联几何:背景色/悬停/过渡/不透明度一律留给 CSS —— 内联优先级高于类选择器,
+    // 一旦把 background 写死,updateBallVisual() 靠 .page-trans-off 换灰底色就会静默失效。
+    // 默认位置(right/top)仍只由 CSS 定义,故这里刻意不写,避免默认值出现两个来源。
+    ballEl.style.cssText =
+      'position:fixed;width:36px;height:36px;border-radius:50%;' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'box-sizing:border-box;overflow:hidden;z-index:2147483647;';
+    // width/height 是兜底:CSS 在时由 #pageTransBall svg 覆盖(类/元素选择器优先于表现属性),
+    // CSS 没了也不至于让 24×24 的 viewBox 按容器宽度等比放大
+    ballEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
+    // 右键展开的「清除缓存并重译」:与球同款的圆形图标按钮,**只有图标、没有文字**
+    // (文案只存在于 aria-label 里,给读屏用)。它与球一样是 documentElement 上的独立固定元素
+    // (不是球的子元素),位置由 openBallMenu() 按球的矩形算好,因此球的悬停/按下/拖动
+    // 都不会波及它,反之亦然
+    ballMenu = document.createElement('button');
+    ballMenu.type = 'button';
+    ballMenu.id = 'pageTransMenu';
+    ballMenu.className = 'page-trans-menu';
+    ballMenu.setAttribute('aria-label', getMsg('ballClearCache'));
+    // 与球同理的几何内联兜底(同尺寸、同圆形、同居中);另外给一个明确的屏幕外默认位置:
+    // CSS 里它只有 position:fixed,没有 left/top,展开前停在"静态位置"(跟在 <body> 之后,
+    // 短页面上可能落进视口),只靠 CSS 的 visibility:hidden 遮住属碰巧不出事。
+    // 展开时 openBallMenu() 会用内联 left/top 覆盖这里的默认值,故这样写不影响展开定位。
+    // 特别注意:opacity / visibility / transform / background **不能**内联 ——
+    // 展开靠 CSS 类 .page-trans-open 改前三个,内联会盖过类选择器让按钮永远不出现。
+    // 同理不要把面板式菜单那套 padding/margin/圆角/渐变"重置"抄进来:内联优先级高于类选择器。
+    ballMenu.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:36px;height:36px;border-radius:50%;' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'box-sizing:border-box;overflow:hidden;z-index:2147483647;';
+    // 图标 18px,与球内图标同规格(CSS 在时由 #pageTransMenu svg 覆盖,不在时也不放大)。
+    // 图形是 Remix Icon 的 `brush-2-line`(Apache-2.0),来源见 icons/RiBrush2Line.svg ——
+    // 那份 SVG **运行时不被引用**,路径是**内联**在这里的:内容脚本不能用 <img> 加载
+    // chrome-extension:// 资源(manifest 没开 web_accessible_resources),而且只有内联才能在
+    // 样式表失效时靠 <svg width/height> 属性兜底。**改图标要同步改这两处**
+    // ⚠️ 它是**线性空心**风格,线宽按 24px 设计,缩到 18px 约 0.75px,比球上那个实心图标细一档;
+    // 想加粗就给这个 path 再挂 stroke="currentColor" stroke-width="0.6"(实测 18px 下最清楚)。
+    // 不要再改回自绘图形、也不要换成别的图标
+    ballMenu.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="m16.536 15.947l2.121-2.122l-3.182-3.182l3.536-3.535l-2.122-2.122l-3.535 3.536l-3.182-3.182L8.05 7.46zM15.12 17.36L6.637 8.875l-2.828 2.829l8.485 8.485zM13.355 5.693l2.828-2.828a1 1 0 0 1 1.414 0l3.536 3.536a1 1 0 0 1 0 1.414l-2.829 2.828l2.475 2.475a1 1 0 0 1 0 1.414L13 22.311a1 1 0 0 1-1.414 0l-9.9-9.9a1 1 0 0 1 0-1.414l7.779-7.778a1 1 0 0 1 1.414 0z"/></svg>';
+    ballMenu.addEventListener('click', function () {
       closeBallMenu();
       resetCacheAndRetranslate();
     });
-    document.documentElement.appendChild(ballBtn);
+    document.documentElement.appendChild(ballMenu);
 
-    // 右键 = 展开/收回下方的刷子按钮(球上的右键不弹网页原生菜单)
+    // 右键 = 展开/收回下方那个圆形图标按钮(球上的右键不弹网页原生菜单)
     ballEl.addEventListener('contextmenu', function (e) {
       e.preventDefault();
-      if (ballBtn && ballBtn.classList.contains('page-trans-open')) closeBallMenu();
+      if (ballMenu && ballMenu.classList.contains('page-trans-open')) closeBallMenu();
       else openBallMenu();
     });
 
@@ -699,7 +778,10 @@
       if (!ballDown) return;
       // 移动超过阈值判定为拖动,之后的点击不切换开关(与按下时的指针坐标比较,不读布局)
       if (!ballDragged) {
-        if (Math.abs(e.clientX - dragDownAt.x) + Math.abs(e.clientY - dragDownAt.y) > 3) ballDragged = true;
+        if (Math.abs(e.clientX - dragDownAt.x) + Math.abs(e.clientY - dragDownAt.y) > 3) {
+          ballDragged = true;
+          ballEl.classList.add('page-trans-dragging');   // 外观见 content/page-translate.css
+        }
       }
       var x = Math.min(Math.max(0, e.clientX - dragOffset.x), dragBounds.maxX);
       var y = Math.min(Math.max(0, e.clientY - dragOffset.y), dragBounds.maxY);
@@ -711,11 +793,13 @@
     var endDrag = function () {
       if (!ballDown) return;
       ballDown = false;
+      ballEl.classList.remove('page-trans-dragging');
       if (ballDragged) setStore({ 'pageTrans.ballPos': { x: ballEl.offsetLeft, y: ballEl.offsetTop } });
     };
     ballEl.addEventListener('pointerup', endDrag);
     ballEl.addEventListener('pointercancel', endDrag);
     document.documentElement.appendChild(ballEl);
+    watchExtensionLifetime();
     // 视口尺寸一变,球可能被浏览器重新摆放(默认位置贴着右缘),按钮的固定坐标就不再对齐:
     // 直接收回,下次右键重新算。closeBallMenu 是具名函数,多次注册会被浏览器忽略
     window.addEventListener('resize', closeBallMenu);
@@ -743,16 +827,40 @@
     ballEl.setAttribute('aria-label', state.enabled ? getMsg('ballCancel') : getMsg('ballTranslate'));
   }
 
-  // 显示/隐藏悬浮球
+  // 显示/隐藏悬浮球(连同它右键展开的圆形按钮)
   function toggleBall(show) {
     if (show) {
       if (isTop) { createBall(); applyBallPos(); updateBallVisual(); }
     } else {
+      closeBallMenu();   // 先收起:它会摘掉展开期间挂在 document 上的两个监听器
       if (ballEl && ballEl.parentNode) ballEl.parentNode.removeChild(ballEl);
-      if (ballBtn && ballBtn.parentNode) ballBtn.parentNode.removeChild(ballBtn);
+      if (ballMenu && ballMenu.parentNode) ballMenu.parentNode.removeChild(ballMenu);
       ballEl = null;
-      ballBtn = null;
+      ballMenu = null;
     }
+  }
+
+  // 扩展上下文失效(重载/更新/停用/卸载)后的自清理哨兵
+  //
+  // 为什么需要:content/page-translate.css 由浏览器按 manifest 注入,扩展一重载就被撤掉;
+  // 而内容脚本插进 DOM 的节点属于页面,不会被回收 —— 老标签页于是永远停在一个没有样式的裸球上
+  // (position 退回 static → 按容器宽度铺开,把页面撑出可滚动的两千像素空白)。
+  // 内容脚本只在页面加载时注入一次,扩展重载后不会有人来收拾这个残局,所以必须自己盯着。
+  //
+  // 为什么用轮询而不是 runtime.connect 的 onDisconnect:MV3 下一条常开的长连接会拖住后台
+  // Service Worker 不让它休眠,而这只是个收尾用的哨兵;更关键的是 SW 正常休眠同样会触发
+  // onDisconnect,那条路会把**还活着**的球误删。轮询读的是 chrome.runtime.id 是否真的没了,
+  // 不会误判。后台标签页里定时器会被节流,漏判的代价只是晚清几秒 —— 而单元级的内联几何兜底
+  // 已经保证这几秒里页面也不会被撑坏。
+  var lifeTimer = null;
+  function watchExtensionLifetime() {
+    if (lifeTimer !== null) return;   // 只在第一次建球时开一个:扩展开关来回切、或重建球都不重复注册
+    lifeTimer = setInterval(function () {
+      if (alive()) return;
+      clearInterval(lifeTimer);
+      lifeTimer = null;
+      toggleBall(false);              // 摘掉自己插的球与圆形按钮,页面恢复原样
+    }, 2000);
   }
 
 
@@ -889,7 +997,7 @@
       chrome.runtime.onMessage.addListener(function (msg) {
         if (msg && msg.type === 'PAGE_TRANSLATE_STATE') onEnabledMsg(msg.enabled);
         // 侧边栏设置里的「清除缓存」:缓存已由后台清空,这里弹出与悬浮球完全相同的那条结果提示,
-        // 翻译开着时再还原并重扫(悬浮球那颗刷子是自己清、自己重扫,不走这条消息)
+        // 翻译开着时再还原并重扫(悬浮球那颗按钮是自己清、自己重扫,不走这条消息)
         else if (msg && msg.type === 'PAGE_TRANSLATE_RESCAN') {
           showClearCacheToast(typeof msg.cleared === 'number' ? msg.cleared : 0);
           if (state.enabled) {

@@ -655,7 +655,7 @@ body.light .settings-body .lang-option.active { color: #333; }
 
 /* 纯文字操作(设置里的「清除缓存」):不带按钮框,悬停只加下划线。
    颜色全部走主题变量(--accent),浅色模式无需另写覆盖。
-   结果提示不在这里:它由当前标签页的内容脚本弹出(与悬浮球的刷子按钮同一条 .page-trans-toast) */
+   结果提示不在这里:它由当前标签页的内容脚本弹出(与悬浮球的圆形按钮同一条 .page-trans-toast) */
 .settings-body .setting-text-action {
   /* 与上面的 setting-toggle 行文字同一条左基准线(那一行的负外边距 + 内边距正好抵消) */
   margin: 4px 0 2px;
