@@ -166,12 +166,14 @@ console.log('1. 背景脚本(经典 SW:importScripts 两个共享模块 + backgr
   ok(reg.storageChanged === 1, '注册了 storage.onChanged 监听(' + reg.storageChanged + ')');
 }
 
-console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
+console.log('2. 内容脚本(dom-utils.js → page-trans-spec.js → content/page-translate.js)');
 {
   const s = makeSandbox(false);
   load(s, 'dom-utils.js', { asClassicScript: true });
+  load(s, 'page-trans-spec.js', { asClassicScript: true });
   load(s, 'content/page-translate.js');
   ok(typeof s.DomUtils === 'object' && typeof s.DomUtils.setStyleVar === 'function', 'DomUtils 已挂到全局(内容脚本依赖它)');
+  ok(typeof s.PageTransSpec === 'object' && Array.isArray(s.PageTransSpec.KEYS), 'PageTransSpec 已挂到全局(整页翻译设置的单一来源)');
   // 内容脚本把 init 排在定时器里,跑一遍排队的定时器
   let n = 0;
   while (timers.length && n++ < 30) timers.shift()();
@@ -277,8 +279,8 @@ console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
 console.log('3. 扩展页面(translation.html 的经典 <script> 顺序)');
 {
   const s = makeSandbox(false);
-  // translation.html 的顺序:lang.js → translate-engine.js → color-utils.js → color-picker.js → dom-utils.js → translation.js
-  for (const f of ['lang.js', 'translate-engine.js', 'color-utils.js', 'color-picker.js', 'dom-utils.js']) {
+  // translation.html 的顺序:lang.js → translate-engine.js → color-utils.js → color-picker.js → dom-utils.js → page-trans-spec.js → translation.js
+  for (const f of ['lang.js', 'translate-engine.js', 'color-utils.js', 'color-picker.js', 'dom-utils.js', 'page-trans-spec.js']) {
     load(s, f, { asClassicScript: true });
   }
   ok(typeof s.TranslateEngine === 'object', 'translate-engine.js 以经典脚本方式仍挂全局(不是 ESM)');

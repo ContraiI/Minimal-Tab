@@ -10,26 +10,25 @@
   var isTop = window === window.top;
 
 
+  // 整页翻译设置:键名与默认值的唯一来源是 page-trans-spec.js(与侧栏共用同一份文件),
+  // 这里不再另抄一份默认值与键清单 —— 新增设置项只需改那一处
+  var PT = window.PageTransSpec;
+
   // 运行时状态与常量配置
   var state = {
     enabled: false,
-    ball: true,
-    target: 'zh-CN',
+    target: 'zh-CN',   // 已解析出的翻译目标语言(注意:与侧栏设置里那个 pageTrans.target 语义不同)
     engine: 'google',
-    mode: 'replace',
-    fontColor: '',
-    lineColor: '',
-    italic: false,
-    bold: false,
-    style: 'none'
+    ball: PT.value(null, 'pageTrans.ball'),
+    mode: PT.value(null, 'pageTrans.mode'),
+    fontColor: PT.value(null, 'pageTrans.fontColor'),
+    lineColor: PT.value(null, 'pageTrans.lineColor'),
+    italic: PT.value(null, 'pageTrans.italic'),
+    bold: PT.value(null, 'pageTrans.bold'),
+    style: PT.value(null, 'pageTrans.style')
   };
 
-  var ENGINE_CONFIG_KEYS = [
-    'trans.msKey', 'trans.msRegion',
-    'trans.custom.url', 'trans.custom.key', 'trans.custom.model', 'trans.custom.prompt'
-  ];
-  var RELEVANT_KEYS = ['pageTrans.ball', 'pageTrans.target', 'pageTrans.mode', 'trans.engine', 'trans.targetLang',
-    'pageTrans.fontColor', 'pageTrans.lineColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style'];
+  var WATCH_KEYS = PT.WATCH_KEYS;
   var ATTR_NAMES = ['title', 'placeholder', 'alt', 'aria-label'];
   var CONCURRENCY = 6;      // 本页并发翻译数(全局另有后台限流)
   var SCAN_DEBOUNCE = 150;  // 扫描防抖毫秒数
@@ -704,14 +703,14 @@
     // 只内联几何:背景色/悬停/过渡/不透明度一律留给 CSS —— 内联优先级高于类选择器,
     // 一旦把 background 写死,updateBallVisual() 靠 .page-trans-off 换灰底色就会静默失效。
     // 默认位置(right/top)仍只由 CSS 定义,故这里刻意不写,避免默认值出现两个来源。
+    // corner-shape 同样必须内联:宿主页面若给全站设超椭圆圆角(如 DSH Web 界面的
+    // *,:before,:after{corner-shape:superellipse(1.5)}),50% 的正圆会被画成"方圆",
+    // 而这条只有内联才抢得过页面自己的 * 规则。
     ballEl.style.cssText =
       'position:fixed;width:36px;height:36px;border-radius:50%;corner-shape:round;' +
       'display:flex;align-items:center;justify-content:center;' +
       'box-sizing:border-box;overflow:hidden;z-index:2147483647;';
     // width/height 是兜底:CSS 在时由 #pageTransBall svg 覆盖(类/元素选择器优先于表现属性),
-    // corner-shape 同样必须内联:宿主页面若给全站设超椭圆圆角(如 DSH Web 界面的
-    // *,:before,:after{corner-shape:superellipse(1.5)}),50% 的正圆会被画成"方圆",
-    // 而这条只有内联才抢得过页面自己的 * 规则。
     // CSS 没了也不至于让 24×24 的 viewBox 按容器宽度等比放大
     ballEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
     // 右键展开的「清除缓存并重译」:与球同款的圆形图标按钮,**只有图标、没有文字**
@@ -797,7 +796,7 @@
       if (!ballDown) return;
       ballDown = false;
       ballEl.classList.remove('page-trans-dragging');
-      if (ballDragged) setStore({ 'pageTrans.ballPos': { x: ballEl.offsetLeft, y: ballEl.offsetTop } });
+      if (ballDragged) setStore({ [PT.BALL_POS_KEY]: { x: ballEl.offsetLeft, y: ballEl.offsetTop } });
     };
     ballEl.addEventListener('pointerup', endDrag);
     ballEl.addEventListener('pointercancel', endDrag);
@@ -810,9 +809,9 @@
 
   // 恢复悬浮球保存的位置
   function applyBallPos() {
-    getStore(['pageTrans.ballPos'], function (cfg) {
+    getStore([PT.BALL_POS_KEY], function (cfg) {
       if (!ballEl) return;
-      var p = cfg['pageTrans.ballPos'];
+      var p = cfg[PT.BALL_POS_KEY];
       if (p && typeof p.x === 'number') {
         ballEl.style.left = p.x + 'px';
         ballEl.style.top = p.y + 'px';
@@ -869,20 +868,18 @@
 
   // 计算实际翻译目标语言(跟随侧边栏或独立指定)
   function resolveTarget(cfg) {
-
-    return (cfg['pageTrans.target'] || 'sidebar') === 'sidebar'
-      ? (cfg['trans.targetLang'] || 'zh-CN')
-      : cfg['pageTrans.target'];
+    var pref = PT.value(cfg, 'pageTrans.target');
+    return pref === 'sidebar' ? (cfg['trans.targetLang'] || 'zh-CN') : pref;
   }
 
   // 读取译文样式配置
   function styleOf(cfg) {
     return {
-      fontColor: cfg['pageTrans.fontColor'] || '',
-      lineColor: cfg['pageTrans.lineColor'] || '',
-      italic: !!cfg['pageTrans.italic'],
-      bold: !!cfg['pageTrans.bold'],
-      style: cfg['pageTrans.style'] || 'none'
+      fontColor: PT.value(cfg, 'pageTrans.fontColor'),
+      lineColor: PT.value(cfg, 'pageTrans.lineColor'),
+      italic: PT.value(cfg, 'pageTrans.italic'),
+      bold: PT.value(cfg, 'pageTrans.bold'),
+      style: PT.value(cfg, 'pageTrans.style')
     };
   }
 
@@ -902,10 +899,10 @@
 
   // 依据最新配置切换翻译/悬浮球状态(enabled 由后台消息驱动,不在 storage 里)
   function onState(cfg) {
-    var newBall = cfg['pageTrans.ball'] !== false;
+    var newBall = PT.value(cfg, 'pageTrans.ball');
     var newTarget = resolveTarget(cfg);
     var newEngine = cfg['trans.engine'] || 'google';
-    var newMode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
+    var newMode = PT.value(cfg, 'pageTrans.mode');
     var newStyle = styleOf(cfg);
 
     var modeChanged = newMode !== state.mode;
@@ -965,11 +962,11 @@
       if (configReady && enabledReady && state.enabled) startTranslate();
     }
 
-    getStore(RELEVANT_KEYS, function (cfg) {
+    getStore(WATCH_KEYS, function (cfg) {
       state.target = resolveTarget(cfg);
       state.engine = cfg['trans.engine'] || 'google';
-      state.mode = cfg['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
-      state.ball = cfg['pageTrans.ball'] !== false;
+      state.mode = PT.value(cfg, 'pageTrans.mode');
+      state.ball = PT.value(cfg, 'pageTrans.ball');
       applyStyleState(styleOf(cfg));
       toggleBall(state.ball);
       configReady = true;
@@ -989,10 +986,15 @@
       chrome.storage.onChanged.addListener(function (changes, area) {
         if (area !== 'local') return;
         var keys = Object.keys(changes);
-        var hit = keys.some(function (k) { return RELEVANT_KEYS.indexOf(k) > -1; });
-        if (hit) getStore(RELEVANT_KEYS, onState);
-        var engineConfigChanged = keys.some(function (k) { return ENGINE_CONFIG_KEYS.indexOf(k) > -1; });
-        if (engineConfigChanged && state.enabled) {
+        // 设置类键变化:重读配置交给 onState(它按需还原重扫 / 重涂译文样式 / 开关悬浮球)
+        if (keys.some(function (k) { return WATCH_KEYS.indexOf(k) > -1; })) getStore(WATCH_KEYS, onState);
+        // 引擎配置字段(凭证/区域/模型/提示词…)变化:不必重读配置,直接还原重扫。
+        // "哪些键算引擎字段"由 page-trans-spec.js 按 trans.* 前缀认定(权威口径在后台的 isEngineKey,
+        // 它从 TranslateEngine.ENGINES 派生),故引擎新增字段时这里与侧栏都不用跟着改
+        var engineFieldChanged = keys.some(function (k) {
+          return PT.isEngineFieldKey(k) && WATCH_KEYS.indexOf(k) === -1;
+        });
+        if (engineFieldChanged && state.enabled) {
           revertAll();
           scheduleScan();
         }

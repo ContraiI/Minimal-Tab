@@ -174,18 +174,8 @@
             </div>
           </div>
           <div class="sidebar-section-label" data-i18n="sectionAccentColor">主题色</div>
-          <!-- 主题色预设色块 + 取色器 -->
-          <div class="theme-color-row" id="themeColorRow">
-            <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
-            <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
-            <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
-            <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
-            <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
-            <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
-            <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
-            <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
-            <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
-          </div>
+          <!-- 主题色预设色块(由 script.js 按 COLOR_PRESETS 渲染,三行共用那份色板) + 取色器 -->
+          <div class="theme-color-row" id="themeColorRow"></div>
           <!-- 取色器触发色块与面板由 color-picker.js 生成(插在本行之后),样式见 color-picker.css -->
           <div class="sidebar-section-label" data-i18n="sectionWallpaper">壁纸</div>
           <!-- 壁纸来源选择(无 / 本地 / Bing) -->
@@ -245,15 +235,6 @@
           <div class="sidebar-section-label" data-i18n="sectionClock">时钟</div>
           <!-- 时钟颜色预设 + 取色器 + 与搜索色联动 -->
           <div class="theme-color-row" id="clockColorRow" style="padding:0 4px 8px;">
-            <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
-            <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
-            <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
-            <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
-            <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
-            <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
-            <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
-            <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
-            <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
             <span class="color-link-btn active" id="clockLinkBtn" title="联动时钟与搜索框颜色">
               <svg viewBox="0 0 24 24">
                 <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
@@ -322,15 +303,6 @@
           <div id="searchBoxControls">
             <!-- 搜索框颜色预设 + 取色器 + 与时钟色联动 -->
             <div class="theme-color-row" id="searchColorRow" style="padding:0 4px 8px;">
-              <span class="theme-color-swatch" data-color="#2563eb" style="background:#2563eb"></span>
-              <span class="theme-color-swatch" data-color="#24a0ed" style="background:#24a0ed"></span>
-              <span class="theme-color-swatch" data-color="#16a34a" style="background:#16a34a"></span>
-              <span class="theme-color-swatch" data-color="#7c3aed" style="background:#7c3aed"></span>
-              <span class="theme-color-swatch" data-color="#ea580c" style="background:#ea580c"></span>
-              <span class="theme-color-swatch" data-color="#eab308" style="background:#eab308"></span>
-              <span class="theme-color-swatch" data-color="#db2777" style="background:#db2777"></span>
-              <span class="theme-color-swatch" data-color="#dc2626" style="background:#dc2626"></span>
-              <span class="theme-color-swatch" data-color="#374151" style="background:#374151"></span>
               <span class="color-link-btn active" id="searchLinkBtn" title="联动时钟与搜索框颜色">
                 <svg viewBox="0 0 24 24">
                   <path class="link-loop" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>

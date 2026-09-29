@@ -97,25 +97,29 @@ const MAX_WALLPAPER_HISTORY = 12;
 const MAX_HISTORY_ITEMS = 20;
 
 // 已移除引擎的本地残留键:引擎实现删掉不等于存储键会消失——存量用户的设备上仍留着这些键
-// (腾讯云 TMT 于 v1.4.2 移除)。其中 secretId/secretKey 仍是真凭证,却已没有任何消费者(界面里也没有删除入口),
-// 不该继续躺在设备上,故在每次初始化时幂等清掉。新增/移除翻译引擎时须在此登记其存储键。
+// (腾讯云 TMT 于 v1.4.2 移除)。secret: true 的仍是真凭证:除了清理,它还必须继续算作"敏感键"
+// (见下方 SENSITIVE_CONFIG_KEYS),否则默认(不含密钥)导出会把旧备份回灌进来的凭证再带出去。
+// **引擎再被移除时只改这一张表** —— 清理与敏感登记都从它派生,不会再出现"只登记了一处"的漏。
 // 刻意不用"一次性标记位":①配置导入是合并语义,会把旧备份里的这些键原样写回 localStorage;
 // ②「恢复默认设置」只保留 language,会把标记位一并清掉。二者都会让标记位失效,幂等执行反而更简单可靠。
-// 两处存储都要清:localStorage 是主副本,chrome.storage.local 只是侧栏 syncTransToStorage() 的 trans.* 镜像,
-// 只清后者会被侧栏下次打开时按 trans. 前缀重新灌回来。
 const REMOVED_ENGINE_KEYS = [
-  'trans.tencent.secretId',
-  'trans.tencent.secretKey',
-  'trans.tencent.region',
-  'ui.trans.locked.tencent'
+  { key: 'trans.tencent.secretId', secret: true },
+  { key: 'trans.tencent.secretKey', secret: true },
+  { key: 'trans.tencent.region' },
+  { key: 'ui.trans.locked.tencent' }
 ];
+// 清理用:全部残留键;敏感登记用:其中的凭证键
+const REMOVED_ENGINE_ALL = REMOVED_ENGINE_KEYS.map((e) => e.key);
+const REMOVED_ENGINE_SECRETS = REMOVED_ENGINE_KEYS.filter((e) => e.secret).map((e) => e.key);
 
 // 删除不存在的键既不产生 chrome.storage.onChanged 事件(后台不会因此重载引擎配置),也无写入配额限制,
-// 故每次打开新标签页无条件执行,不给"是否残留过"留任何判断分支
+// 故每次打开新标签页无条件执行,不给"是否残留过"留任何判断分支。
+// 两处存储都要清:localStorage 是主副本,chrome.storage.local 只是侧栏 syncTransToStorage() 的 trans.* 镜像,
+// 只清后者会被侧栏下次打开时按 trans. 前缀重新灌回来
 (function purgeRemovedEngineKeys() {
-  REMOVED_ENGINE_KEYS.forEach((k) => localStorage.removeItem(k));
+  REMOVED_ENGINE_ALL.forEach((k) => localStorage.removeItem(k));
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.remove(REMOVED_ENGINE_KEYS);
+    chrome.storage.local.remove(REMOVED_ENGINE_ALL);
   }
 })();
 
@@ -208,14 +212,13 @@ function injectCustomEngines() {
     if (key.startsWith('custom_')) delete engines[key];
   });
   const customEngines = getCustomEngines();
-  customEngines.forEach((ce, i) => {
+  customEngines.forEach((ce) => {
     engines[ce.id] = { url: ce.url };
     const item = document.createElement('div');
     item.className = 'engine-item custom';
     item.setAttribute('data-engine', ce.id);
     item.setAttribute('data-default', ce.iconDefault);
     if (ce.iconMask) item.setAttribute('data-mask', ce.iconMask);
-    item.setAttribute('data-index', 100 + i);
     const icon = document.createElement('img');
     icon.className = 'engine-icon sm';
     // 下拉列表里的图标被 CSS 强制染白(filter),不透明位图换成剪影才不会糊成白方块
@@ -1670,10 +1673,29 @@ if (engineSelectorEl && engineListEl) {
         applyClockColor(hex);
         highlightClockSwatch(hex);
         if (clockPicker && clockPicker.isOpen()) clockPicker.setFromHex(hex);
+  // 预设色板:主题色 / 时钟色 / 搜索色三行共用这一份 —— 新增一个预设色只改这里,
+  // 不要再去 newtab.html 里抄三遍(原先那三行各写 9 个色块、每个色值还写两遍)
+  const COLOR_PRESETS = ['#2563eb', '#24a0ed', '#16a34a', '#7c3aed', '#ea580c', '#eab308', '#db2777', '#dc2626', '#374151'];
+
+  // 把预设色块渲染进某一行。插在**行首**而不是行末:时钟/搜索那两行末尾还有「联动」按钮,
+  // 取色器的触发色块由 color-picker.js 稍后插到联动按钮之前,故插行首才能保持原有顺序
+  function renderPresetSwatches(row, presets) {
+    if (!row) return;
+    const first = row.firstChild;
+    presets.forEach((hex) => {
+      const s = document.createElement('span');
+      s.className = 'theme-color-swatch';
+      s.dataset.color = hex;
+      s.style.background = hex;
+      row.insertBefore(s, first);
+    });
+  }
+
       });
     });
   }
 
+  renderPresetSwatches(themeColorRow, COLOR_PRESETS);
   const searchColorRow = document.getElementById('searchColorRow');
   const savedSearchColor = localStorage.getItem(LS_SEARCH_COLOR) || '#ffffff';
   applySearchColor(savedSearchColor);
@@ -1696,6 +1718,7 @@ if (engineSelectorEl && engineListEl) {
         highlightSearchSwatch(hex);
         if (searchPicker && searchPicker.isOpen()) searchPicker.setFromHex(hex);
       });
+  renderPresetSwatches(clockColorRow, COLOR_PRESETS);
     });
   }
 
@@ -1721,6 +1744,7 @@ if (engineSelectorEl && engineListEl) {
     anchor: themeColorRow,
     // 返回具体色值而不是 ''(本页没有"跟随默认"的语义):取消时要回滚到这个色,highlightSwatch 也要照常高亮对应色块
     getColor: function () { return localStorage.getItem(LS_ACCENT) || '#2563eb'; },
+  renderPresetSwatches(searchColorRow, COLOR_PRESETS);
     defaultColor: '#2563eb',
     preview: previewAccent,
     setColor: applyAccent,
@@ -2786,17 +2810,14 @@ if (engineSelectorEl && engineListEl) {
   const importConfigBtn = document.getElementById('importConfigBtn');
   const importConfigInput = document.getElementById('importConfigInput');
   const exportSecretsToggle = document.getElementById('exportSecretsToggle');
-  // 敏感凭证:默认不写入备份,仅当用户勾选「导出时包含密钥」时导出
+  // 敏感凭证:默认不写入备份,仅当用户勾选「导出时包含密钥」时导出。
+  // 已移除引擎残留的凭证键由文件顶部那张表派生(REMOVED_ENGINE_SECRETS)——本机残留虽会被
+  // purgeRemovedEngineKeys() 清掉,但那不能替代这里的登记:导入一份含密钥的旧备份会把它们
+  // 重新写回本机,登记在,默认导出才不会把它们再带出去
   const SENSITIVE_CONFIG_KEYS = new Set([
     'trans.msKey',
-    'trans.custom.key',
-    // 腾讯云引擎已于 v1.4.2 移除、实现代码已清空,这两个键只可能以历史残留形式留在老用户本地;
-    // 但残留的仍是真凭证,继续登记,避免默认(不含密钥)导出时被带出。
-    // 本机残留由文件顶部的 REMOVED_ENGINE_KEYS 自动清除,但那不能替代这里的登记:
-    // 导入一份含密钥的旧备份会把它们重新写回本机,登记在,默认导出才不会把它们再带出去
-    'trans.tencent.secretId',
-    'trans.tencent.secretKey'
-  ]);
+    'trans.custom.key'
+  ].concat(REMOVED_ENGINE_SECRETS));
   // 上述开关的记忆键(记住选择,避免每次导出都要重设)
   const EXPORT_SECRETS_KEY = 'exportIncludeSecrets';
   // 备份 JSON 中承载 chrome.storage.local 设置的保留节名
@@ -2926,8 +2947,7 @@ if (engineSelectorEl && engineListEl) {
 
   // 渲染引擎管理列表(启用开关 + 自定义引擎编辑按钮)
   function populateEngineManager() {
-    const items = Array.from(document.querySelectorAll('.engine-item'))
-      .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+    const items = Array.from(document.querySelectorAll('.engine-item'));
     const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
     engineManager.innerHTML = '';
     items.forEach(it => {
@@ -2978,6 +2998,7 @@ if (engineSelectorEl && engineListEl) {
         row.appendChild(cb);
         row.appendChild(toggleSwitch);
       }
+  // 顺序即 DOM 顺序(静态引擎在前、自定义按创建顺序在后),不再需要 data-index 排序
       engineManager.appendChild(row);
     });
     const addBtn = document.createElement('button');
@@ -2991,8 +3012,7 @@ if (engineSelectorEl && engineListEl) {
   }
 
   function syncEngineManager() {
-    const items = Array.from(document.querySelectorAll('.engine-item'))
-      .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+    const items = Array.from(document.querySelectorAll('.engine-item'));
     const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
     const cbs = engineManager.querySelectorAll('input[type="checkbox"]');
     if (cbs.length !== items.length) { populateEngineManager(); return; }
@@ -3006,8 +3026,7 @@ if (engineSelectorEl && engineListEl) {
   function syncDefaultEngineManager() {
     const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
     const radios = defaultEngineManager.querySelectorAll('input[type="radio"]');
-    const items = Array.from(document.querySelectorAll('.engine-item'))
-      .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+    const items = Array.from(document.querySelectorAll('.engine-item'));
     const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
     const enabledKeys = items.map(it => it.getAttribute('data-engine') || '').filter(k => !disabled.has(k));
     if (radios.length !== enabledKeys.length) { populateDefaultEngineManager(); return; }
@@ -3193,8 +3212,7 @@ const defaultEngineManager = document.getElementById('sidebarDefaultEngineList')
 // 默认引擎管理:单选列表,切换时更新当前引擎
 function populateDefaultEngineManager() {
   if (!defaultEngineManager) return;
-  const items = Array.from(document.querySelectorAll('.engine-item'))
-    .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)));
+  const items = Array.from(document.querySelectorAll('.engine-item'));
   const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
   const def = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
   defaultEngineManager.innerHTML = '';

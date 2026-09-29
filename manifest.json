@@ -31,7 +31,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["dom-utils.js", "content/page-translate.js"],
+      "js": ["dom-utils.js", "page-trans-spec.js", "content/page-translate.js"],
       "css": ["content/page-translate.css"],
       "run_at": "document_idle",
       "all_frames": true

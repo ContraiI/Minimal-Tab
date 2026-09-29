@@ -714,29 +714,13 @@
     pageDropdowns.push(engineDropdown);
 
 
-    // 整页翻译设置(目标语言、悬浮球、呈现方式、译文样式)
-    var pageTransState = {
-      target: 'sidebar',
-      ball: true,
-      mode: 'replace',
-      fontColor: '',
-      lineColor: '',
-      italic: false,
-      bold: false,
-      style: 'none'
-    };
+    // 整页翻译设置(目标语言、悬浮球、呈现方式、译文样式)。
+    // 键名、默认值与归一化口径全部来自 page-trans-spec.js(与内容脚本共用同一份),
+    // 这里不再另写一份默认值 —— 新增设置项只需改那一处
+    var pageTransState = PageTransSpec.read(null);
 
     function savePageTrans() {
-      chrome.storage.local.set({
-        'pageTrans.target': pageTransState.target,
-        'pageTrans.ball': pageTransState.ball,
-        'pageTrans.mode': pageTransState.mode,
-        'pageTrans.fontColor': pageTransState.fontColor,
-        'pageTrans.lineColor': pageTransState.lineColor,
-        'pageTrans.italic': pageTransState.italic,
-        'pageTrans.bold': pageTransState.bold,
-        'pageTrans.style': pageTransState.style
-      });
+      chrome.storage.local.set(PageTransSpec.toStore(pageTransState));
       renderStylePreviews();
     }
 
@@ -980,20 +964,17 @@
 
     // 从 chrome.storage 恢复整页翻译设置
     function loadPageTransSettings() {
-      chrome.storage.local.get(['pageTrans.target', 'pageTrans.ball', 'pageTrans.mode', 'pageTrans.fontColor', 'pageTrans.lineColor', 'pageTrans.italic', 'pageTrans.bold', 'pageTrans.style', 'pageTrans.ballPos'], function (all) {
-        pageTransState.target = all['pageTrans.target'] || 'sidebar';
-        pageTransState.ball = all['pageTrans.ball'] !== false;
+      chrome.storage.local.get(PageTransSpec.KEYS.concat([PageTransSpec.BALL_POS_KEY]), function (all) {
+        // 键名→状态字段的映射、默认值与脏值归一都在 page-trans-spec.js 里(与内容脚本同一份)
+        var loaded = PageTransSpec.read(all);
+        Object.keys(loaded).forEach(function (k) { pageTransState[k] = loaded[k]; });
         // 自愈:开关处于关闭状态却仍留着坐标(旧版本关闭时不清,或导入了旧备份),顺手清掉——
         // 否则重新开启会跳到旧位置,而按「关闭即恢复默认」这个键本就不该存在。
         // 放在侧栏加载时而不是只依赖开关的 change:存量用户正是「关着且带着旧坐标」的那批人,
         // 他们开启悬浮球前必然先打开本面板,于是这一步总能先于显示发生
-        if (!pageTransState.ball && all['pageTrans.ballPos']) chrome.storage.local.remove('pageTrans.ballPos');
-        pageTransState.mode = all['pageTrans.mode'] === 'bilingual' ? 'bilingual' : 'replace';
-        pageTransState.fontColor = all['pageTrans.fontColor'] || '';
-        pageTransState.lineColor = all['pageTrans.lineColor'] || '';
-        pageTransState.italic = !!all['pageTrans.italic'];
-        pageTransState.bold = !!all['pageTrans.bold'];
-        pageTransState.style = all['pageTrans.style'] || 'none';
+        if (!pageTransState.ball && all[PageTransSpec.BALL_POS_KEY]) {
+          chrome.storage.local.remove(PageTransSpec.BALL_POS_KEY);
+        }
         pageTargetDropdown.updateTrigger();
         pageBallToggle.checked = pageTransState.ball;
         pageModeOptions.forEach(function (b) {
