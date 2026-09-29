@@ -11,6 +11,9 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
+  /* 宿主页面可能给全站设 corner-shape(如 DSH Web 界面的 *,:before,:after{corner-shape:superellipse(1.5)}),
+     超椭圆圆角会把 50% 的正圆压成"方圆";这里钉死正圆,球在任何页面上都是圆的 */
+  corner-shape: round;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -101,6 +104,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
+  corner-shape: round; /* 同球:宿主页面全站改超椭圆圆角时,按钮也保持正圆 */
   appearance: none;
   -webkit-appearance: none;
   display: flex;

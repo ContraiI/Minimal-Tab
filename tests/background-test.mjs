@@ -21,7 +21,7 @@ function ok(cond, name) {
 function eq(a, b, name) { ok(a === b, name + ' (期望 ' + JSON.stringify(b) + ', 实际 ' + JSON.stringify(a) + ')'); }
 
 // ---- 假 chrome 环境 ----
-const calls = { storageSet: [] };
+const calls = { storageSet: [], storageRemove: [] };
 const messageListeners = [];
 const storageListeners = [];
 const tabMessages = [];   // 后台发给标签页的消息(断言侧边栏清缓存会通知当前页重扫)

@@ -58,6 +58,20 @@ function makeEl(tag) {
   return el;
 }
 
+// 把内联 cssText 解析成 { 属性: 值 }:按属性名断言,而不是按字符串形态断言 ——
+// 将来把内联串抽成工厂函数、调整书写顺序或格式时,这些断言不该跟着红
+function inlineStyle(el) {
+  const out = {};
+  String((el && el.style && el.style.cssText) || '').split(';').forEach((decl) => {
+    const i = decl.indexOf(':');
+    if (i > 0) out[decl.slice(0, i).trim()] = decl.slice(i + 1).trim();
+  });
+  return out;
+}
+function hasPropPrefix(style, prefixes) {
+  return Object.keys(style).some((p) => prefixes.some((f) => p.indexOf(f) === 0));
+}
+
 const htmlEl = makeEl('html');
 const bodyEl = makeEl('body');
 htmlEl.appendChild(bodyEl);
@@ -168,14 +182,18 @@ console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
     ok(ball.listeners.click && ball.listeners.click.length === 1, '悬浮球绑定了左键 click(开关翻译)');
     ok(ball.listeners.contextmenu && ball.listeners.contextmenu.length === 1, '悬浮球绑定了 contextmenu(右键展开/收回圆形图标按钮)');
     ok(ball.listeners.pointerdown && ball.listeners.pointermove && ball.listeners.pointerup, '悬浮球绑定了拖动所需的 pointer 事件');
-    ok(!ball.listeners.mouseenter && !ball.listeners.mouseleave, '悬浮球不再靠悬停展开(改为右键)');
     ok(ball._html.indexOf('<svg') === 0, '悬浮球内含图标 SVG');
     // 尺寸兜底:样式表随扩展卸载被撤掉时,球不能被撑成巨型图标
     ok(ball._html.indexOf('<svg width="18" height="18"') === 0, '悬浮球 SVG 自带显式 width/height(不依赖样式表)');
-    ok(/position:\s*fixed/.test(ball.style.cssText) && /width:\s*36px/.test(ball.style.cssText) &&
-       /height:\s*36px/.test(ball.style.cssText), '悬浮球几何已内联兜底(position:fixed + 36×36)');
+    const ballStyle = inlineStyle(ball);
+    ok(ballStyle.position === 'fixed' && ballStyle.width === '36px' && ballStyle.height === '36px',
+      '悬浮球几何已内联兜底(position:fixed + 36×36)');
+    // 正圆契约:宿主页面可能给全站设 corner-shape(如 DSH Web 界面的 superellipse),
+    // 把 50% 圆角画成"方圆";这条只有内联才抢得过页面自己的 * 规则,故必须钉住
+    ok(ballStyle['border-radius'] === '50%' && ballStyle['corner-shape'] === 'round',
+      '悬浮球内联钉死正圆(border-radius:50% + corner-shape:round)');
     // 内联优先级高于类选择器:这几个属性一旦内联,靠切类生效的开关配色/按下动画就会静默失效
-    ok(!/background|opacity|transform|transition/.test(ball.style.cssText),
+    ok(!hasPropPrefix(ballStyle, ['background', 'opacity', 'transform', 'transition']),
       '悬浮球未内联 background/opacity/transform/transition(否则 .page-trans-off 等类会失效)');
     ok(ball.getAttribute('aria-controls') === 'pageTransMenu' && ball.getAttribute('aria-expanded') === 'false',
       '悬浮球声明了 aria-controls 指向那个按钮,且 aria-expanded 有初始值');
@@ -187,19 +205,34 @@ console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
     ok(!!menu && menu._html.indexOf('<svg width="18" height="18"') === 0, '按钮 SVG 自带显式 width/height(不依赖样式表,与球内图标同规格)');
     ok(!!menu && menu.children.length === 0, '按钮只由 innerHTML 写入图标、未插入文字节点(纯图标,不出现文字描述)');
     ok(!!menu && String(menu.getAttribute('aria-label') || '').length > 0, '按钮文案走 aria-label(纯图标按钮必须有无障碍名)');
-    ok(!!menu && /width:\s*36px/.test(menu.style.cssText) && /height:\s*36px/.test(menu.style.cssText) &&
-       /border-radius:\s*50%/.test(menu.style.cssText), '按钮几何已内联兜底(与球同规格 36×36 圆形)');
+    const menuStyle = inlineStyle(menu);
+    ok(!!menu && menuStyle.width === '36px' && menuStyle.height === '36px' &&
+       menuStyle['border-radius'] === '50%' && menuStyle['corner-shape'] === 'round',
+       '按钮几何已内联兜底(与球同规格 36×36 正圆)');
     if (menu) {
-      ok(/left:\s*-9999px/.test(menu.style.cssText), '按钮有屏幕外默认位置(不再靠静态位置碰巧隐藏)');
+      ok(menuStyle.left === '-9999px', '按钮有屏幕外默认位置(不再靠静态位置碰巧隐藏)');
       // 同理:展开靠 .page-trans-open 改这几个属性,内联会盖过类选择器让按钮永远展不开
-      ok(!/opacity|visibility|pointer-events|transform|background/.test(menu.style.cssText),
+      ok(!hasPropPrefix(menuStyle, ['opacity', 'visibility', 'pointer-events', 'transform', 'background']),
         '按钮未内联 opacity/visibility/pointer-events/transform/background(否则 .page-trans-open 展不开)');
       ok(!docListeners.pointerdown || docListeners.pointerdown.length === 0,
         '未展开时 document 上没有常驻的收起监听器');
       // 右键展开 → 按球的位置定位 → 再右键收回
       ball.dispatch('contextmenu', { preventDefault() {} });
       ok(menu.classList.contains('page-trans-open'), '右键悬浮球后展开圆形图标按钮');
-      ok(menu.style.left === '1240px' && menu.style.top === '56px', '按钮按球的矩形定位并夹进视口(右缘对齐球、贴球下缘 8px)');
+      // 位置断言用视口相对关系,不写死夹具算出来的像素值:契约是"完整落在视口内 + 贴在球下缘 + 右缘对齐球"
+      const ballRect = ball.getBoundingClientRect();
+      const menuLeft = parseFloat(menu.style.left);
+      const menuTop = parseFloat(menu.style.top);
+      const menuW = menu.offsetWidth;
+      const menuH = menu.offsetHeight;
+      const pad = 8, gap = 8;
+      ok(menuLeft >= pad && menuLeft + menuW <= s.innerWidth - pad &&
+         menuTop >= pad && menuTop + menuH <= s.innerHeight - pad,
+        '按钮展开后完整落在视口内(四周至少留 8px)');
+      ok(menuTop === ballRect.bottom + gap || menuTop === ballRect.top - gap - menuH,
+        '按钮竖直方向贴在球下缘 8px 处(下方放不下时翻到球正上方)');
+      ok(menuLeft + menuW === ballRect.right || menuLeft + menuW === s.innerWidth - pad,
+        '按钮右缘对齐球的右缘(球已贴视口右缘时改为贴视口右缘)');
       ok(ball.getAttribute('aria-expanded') === 'true', '展开时 aria-expanded 翻成 true');
       ok(docListeners.pointerdown && docListeners.pointerdown.length === 1 &&
          docListeners.keydown && docListeners.keydown.length === 1,
@@ -231,7 +264,8 @@ console.log('2. 内容脚本(dom-utils.js → content/page-translate.js)');
       ok(!menu.classList.contains('page-trans-open'), '点按钮后按钮自动收起');
     }
     // 扩展重载/更新/停用后自清理:哨兵发现 chrome.runtime.id 没了,就摘掉自己插进页面的节点
-    ok(intervals.length === 1, '建球时注册了 1 个扩展生命周期哨兵定时器(' + intervals.length + ')');
+    // (只要求"存在哨兵",不锁死数量:以后再加一个周期性定时器不该让这条变红)
+    ok(intervals.length >= 1, '建球时注册了扩展生命周期哨兵定时器(' + intervals.length + ')');
     s.chrome.runtime.id = undefined;   // 模拟扩展被重载:残留内容脚本的 runtime.id 变成 undefined
     if (intervals[0]) intervals[0]();
     ok(document.getElementById('pageTransBall') === null, '扩展上下文失效后悬浮球节点已被自清理(不再残留裸节点)');

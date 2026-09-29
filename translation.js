@@ -94,7 +94,8 @@
     var s = String(code || '');
     if (status === 429 || s === 'HTTP_429' ||
         /RequestLimitExceeded|LimitExceeded|TooManyRequests|RateLimit|QPS/i.test(s)) return 'transErrBusy';
-    if (/(AuthFailure|UnauthorizedOperation|InvalidCredential|InvalidAccessKey|SignatureFailure)/.test(s)) return 'transErrAuth';
+    // 认证类失败不再单列:唯一会产出 AuthFailure/SignatureFailure 这类专有码的腾讯云 TMT 已于 v1.4.2 移除,
+    // 现存引擎的 401/403 一律由下面按 HTTP 状态归类(与删除该分支前的实际行为一致)
     if (/^HTTP_5\d\d$/.test(s)) return 'transErrServer';
     if (/^HTTP_4\d\d$/.test(s)) return 'transErrRejected';
     if (status >= 500) return 'transErrServer';

@@ -2043,7 +2043,7 @@ if (engineSelectorEl && engineListEl) {
           addWallpaperToHistory(compressed);
           applyWallpaper(compressed);
           renderWallpaperGrid();
-          showToast(t('toastImportSuccess'), 2000, 'success');
+          showToast(t('toastImportWallpaper'), 2000, 'success');
         } catch (e) {
           showToast(t('toastStorageFull'), 3000);
         }

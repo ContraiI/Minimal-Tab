@@ -705,10 +705,13 @@
     // 一旦把 background 写死,updateBallVisual() 靠 .page-trans-off 换灰底色就会静默失效。
     // 默认位置(right/top)仍只由 CSS 定义,故这里刻意不写,避免默认值出现两个来源。
     ballEl.style.cssText =
-      'position:fixed;width:36px;height:36px;border-radius:50%;' +
+      'position:fixed;width:36px;height:36px;border-radius:50%;corner-shape:round;' +
       'display:flex;align-items:center;justify-content:center;' +
       'box-sizing:border-box;overflow:hidden;z-index:2147483647;';
     // width/height 是兜底:CSS 在时由 #pageTransBall svg 覆盖(类/元素选择器优先于表现属性),
+    // corner-shape 同样必须内联:宿主页面若给全站设超椭圆圆角(如 DSH Web 界面的
+    // *,:before,:after{corner-shape:superellipse(1.5)}),50% 的正圆会被画成"方圆",
+    // 而这条只有内联才抢得过页面自己的 * 规则。
     // CSS 没了也不至于让 24×24 的 viewBox 按容器宽度等比放大
     ballEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>';
     // 右键展开的「清除缓存并重译」:与球同款的圆形图标按钮,**只有图标、没有文字**
@@ -728,7 +731,7 @@
     // 展开靠 CSS 类 .page-trans-open 改前三个,内联会盖过类选择器让按钮永远不出现。
     // 同理不要把面板式菜单那套 padding/margin/圆角/渐变"重置"抄进来:内联优先级高于类选择器。
     ballMenu.style.cssText =
-      'position:fixed;left:-9999px;top:0;width:36px;height:36px;border-radius:50%;' +
+      'position:fixed;left:-9999px;top:0;width:36px;height:36px;border-radius:50%;corner-shape:round;' +
       'display:flex;align-items:center;justify-content:center;' +
       'box-sizing:border-box;overflow:hidden;z-index:2147483647;';
     // 图标 18px,与球内图标同规格(CSS 在时由 #pageTransMenu svg 覆盖,不在时也不放大)。
