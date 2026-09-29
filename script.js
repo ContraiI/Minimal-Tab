@@ -644,7 +644,7 @@ searchInput.addEventListener('blur', function() {
   setTimeout(hideHistoryDropdown, 150);
   showDigitalClock();
 });
-// 键盘控制:回车搜索,上下键选下拉项,Esc 关闭
+// 键盘控制:回车搜索,上下键选下拉项,Tab 把选中项填进输入框(不搜索),Esc 关闭
 searchInput.addEventListener('keydown', function(e) {
   const dd = document.getElementById('history-dropdown');
   const isOpen = dd && dd.classList.contains('show');
@@ -663,6 +663,19 @@ searchInput.addEventListener('keydown', function(e) {
   }
 
   if (!isOpen) return;
+
+  // Tab:把选中的那一条填进输入框,但不搜索 —— 留出"先改几个字再搜"的余地。
+  // 没有选中项时不拦截,保留 Tab 默认的"移出输入框"行为。
+  if (e.key === 'Tab') {
+    const items = dd.querySelectorAll('.history-item');
+    const selected = items[dropdownSelectedIndex];
+    if (!selected) return;
+    e.preventDefault();  // 不拦的话焦点会移出输入框,下拉也随之收起
+    searchInput.value = selected.querySelector('.history-text').textContent;
+    toggleBtns();        // 直接赋值不会触发 input 事件,按钮显隐得手动同步
+    hideHistoryDropdown();
+    return;
+  }
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
