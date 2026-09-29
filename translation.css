@@ -32,7 +32,7 @@ body {
 }
 
 /* 浅色模式配色 */
-body.light {
+body.light-mode {
   --trans-bg: #f6f6f8;
   --trans-panel: #ffffff;
   --trans-text: #1c1c1f;
@@ -481,16 +481,16 @@ body.light {
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-body.light .settings-body .lang-trigger {
+body.light-mode .settings-body .lang-trigger {
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.65);
 }
 
-body.light .settings-body .lang-trigger:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
+body.light-mode .settings-body .lang-trigger:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
 
-body.light .settings-body .lang-option { color: rgba(0, 0, 0, 0.5); }
-body.light .settings-body .lang-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
-body.light .settings-body .lang-option.active { color: #333; }
+body.light-mode .settings-body .lang-option { color: rgba(0, 0, 0, 0.5); }
+body.light-mode .settings-body .lang-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+body.light-mode .settings-body .lang-option.active { color: #333; }
 
 .setting-label {
   display: block;
@@ -675,25 +675,25 @@ body.light .settings-body .lang-option.active { color: #333; }
 .settings-body .text-action-btn:hover { text-decoration: underline; }
 .settings-body .text-action-btn:active { text-decoration: underline; }
 
-body.light .settings-body .setting-input {
+body.light-mode .settings-body .setting-input {
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.7);
 }
 
-body.light .settings-body .setting-input:focus { background: rgba(0, 0, 0, 0.08); }
-body.light .settings-body .setting-input::placeholder { color: rgba(0, 0, 0, 0.3); }
+body.light-mode .settings-body .setting-input:focus { background: rgba(0, 0, 0, 0.08); }
+body.light-mode .settings-body .setting-input::placeholder { color: rgba(0, 0, 0, 0.3); }
 
-body.light .settings-body .setting-fetch-btn {
+body.light-mode .settings-body .setting-fetch-btn {
   background: rgba(0, 0, 0, 0.06);
   color: rgba(0, 0, 0, 0.55);
 }
 
-body.light .settings-body .setting-fetch-btn:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
+body.light-mode .settings-body .setting-fetch-btn:hover { background: rgba(0, 0, 0, 0.1); color: #000; }
 
-body.light .settings-body .model-option { color: rgba(0, 0, 0, 0.5); }
-body.light .settings-body .model-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
-body.light .settings-body .model-option.active { color: #333; }
-body.light .settings-body .model-hint { color: rgba(0, 0, 0, 0.5); }
+body.light-mode .settings-body .model-option { color: rgba(0, 0, 0, 0.5); }
+body.light-mode .settings-body .model-option:hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+body.light-mode .settings-body .model-option.active { color: #333; }
+body.light-mode .settings-body .model-hint { color: rgba(0, 0, 0, 0.5); }
 
 /* 呈现方式二元选择器(仅译文 / 双语对照),样式与标签页设置 theme-mode-seg 一致 */
 .settings-body .theme-mode-seg {
@@ -725,9 +725,9 @@ body.light .settings-body .model-hint { color: rgba(0, 0, 0, 0.5); }
   color: #fff;
 }
 
-body.light .settings-body .theme-mode-seg { background: rgba(0, 0, 0, 0.08); }
-body.light .settings-body .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
-body.light .settings-body .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
+body.light-mode .settings-body .theme-mode-seg { background: rgba(0, 0, 0, 0.08); }
+body.light-mode .settings-body .theme-mode-opt { color: rgba(0, 0, 0, 0.5); }
+body.light-mode .settings-body .theme-mode-opt:not(.active):hover { background: rgba(0, 0, 0, 0.06); color: #333; }
 
 /* 堆叠设置行:标签在上、控件拉满 */
 .settings-body .setting-row-stacked {
@@ -791,11 +791,11 @@ body.light .settings-body .theme-mode-opt:not(.active):hover { background: rgba(
   color: var(--accent-text);
 }
 .engine-save-btn:hover { opacity: 0.88; }
-body.light .engine-test-btn {
+body.light-mode .engine-test-btn {
   background: rgba(0, 0, 0, 0.06);
   color: var(--trans-text);
 }
-body.light .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
+body.light-mode .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
 
 /* 引擎配置锁定态:输入框/模型按钮/区域下拉不可编辑 */
 .settings-body .setting-input:disabled,
@@ -834,7 +834,7 @@ body.light .engine-test-btn:hover { background: rgba(0, 0, 0, 0.1); }
 .section-collapse.mode-show:not(.collapsed) {
   background: rgba(255, 255, 255, 0.05);
 }
-body.light .section-collapse.mode-show:not(.collapsed) {
+body.light-mode .section-collapse.mode-show:not(.collapsed) {
   background: rgba(0, 0, 0, 0.045);
 }
 /* 折叠内容高度随内容自适应(色盘展开时不再遮挡);
@@ -1062,12 +1062,12 @@ body.light .section-collapse.mode-show:not(.collapsed) {
 .result-area::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
-body.light .settings-body::-webkit-scrollbar-thumb,
-body.light .result-area::-webkit-scrollbar-thumb {
+body.light-mode .settings-body::-webkit-scrollbar-thumb,
+body.light-mode .result-area::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.30);
 }
-body.light .settings-body::-webkit-scrollbar-thumb:hover,
-body.light .result-area::-webkit-scrollbar-thumb:hover {
+body.light-mode .settings-body::-webkit-scrollbar-thumb:hover,
+body.light-mode .result-area::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.5);
 }
 

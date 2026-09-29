@@ -9,9 +9,7 @@
 :root {
   --p-bg: #17181c;
   --p-text: #e8e8ea;
-  --p-muted: #9a9aa3;
   --p-border: rgba(255, 255, 255, 0.09);
-  --p-hover: rgba(255, 255, 255, 0.07);
 }
 
 /* 弹窗基础样式,注入主题色 */
@@ -28,12 +26,10 @@ body {
 }
 
 /* 浅色模式配色 */
-body.light {
+body.light-mode {
   --p-bg: #f6f6f8;
   --p-text: #1c1c1f;
-  --p-muted: #6b6b74;
   --p-border: rgba(0, 0, 0, 0.10);
-  --p-hover: rgba(0, 0, 0, 0.06);
 }
 
 /* 品牌标识区 */

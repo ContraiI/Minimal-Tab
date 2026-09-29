@@ -141,12 +141,8 @@ body::before {
   transition: background 0.2s ease 0.1s, color 0.3s, border-radius 0.1s ease 0.1s;
 }
 
-.search-input:-webkit-autofill {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
-  box-shadow: 0 0 0px 1000px transparent inset !important;
-  background-color: transparent !important;
-}
+/* 自动填充的兜底样式(原先这里另有一份 .search-input 专用版:1000px inset 与下面全局版的 30px 不同,
+   但搜索框高 45px,30px 的 spread 已足以盖满,故两份合一,只留下面这份全局的) */
 
 .search-input::placeholder {
   color: rgba(var(--search-color-rgb, 255,255,255), 0.8);
@@ -307,8 +303,10 @@ body::before {
 .search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 0; }
 .search-input:focus ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 1; }
 
-.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 1 !important; }
-.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 0 !important; }
+/* 这两条与上面 :focus 那两条特异性相同(同为 0,4,0)且状态互斥(:focus 与 :not(:focus)),
+   同一时刻只有一条能命中,故不需要 !important */
+.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.white { opacity: 1; }
+.search-input:not(:focus) ~ .search-btns-wrap .clear-btn .clear-icon.black { opacity: 0; }
 
 .search-btn {
   height: 32px;
@@ -333,15 +331,16 @@ body::before {
   transition: fill 0.3s;
 }
 
-.search-input:focus ~ .search-btns-wrap .search-btn { background-color: var(--accent) !important; }
+/* 下面两条状态规则特异性(0,4,0)/(0,5,0)远高于 .search-btn 的基础底色(0,1,0),彼此又状态互斥
+   (聚焦 / 有内容且未聚焦),故不需要 !important */
+.search-input:focus ~ .search-btns-wrap .search-btn { background-color: var(--accent); }
 
-.search-input:not(:focus):not(:placeholder-shown) ~ .search-btns-wrap .search-btn { background-color: transparent !important; }
+.search-input:not(:focus):not(:placeholder-shown) ~ .search-btns-wrap .search-btn { background-color: transparent; }
 
-/* 悬停背景取「主题色深一档」而非写死的蓝,主题色任意都正确。
-   注意:上面 :focus / :not(:focus):not(:placeholder-shown) 两条 !important 规则权重更高
-   (0,4,0)/(0,5,0) > (0,2,0),所以当前各可见状态下本行都被压住、并不生效——保留它是为了
-   将来那两条若被改动时,这里生效的也是正确颜色。放大镜图标悬停不再变暗(保持纯白)。 */
-.search-btn:hover { background-color: color-mix(in srgb, var(--accent) 85%, #000) !important; }
+/* 悬停不再单独给底色(原有一条 .search-btn:hover 已删除):搜索/清空按钮只在**有输入内容**时才显示
+   (script.js 的 toggleBtns 按 value.trim() 决定 display),而那时下面 :not(:focus):not(:placeholder-shown)
+   那条(0,5,0)必然命中并把底色设为透明,聚焦态则由 :focus 那条(0,4,0)接管 —— 无论怎么写,
+   hover 规则都轮不到生效,留着只会让人以为它在管事。放大镜图标悬停也不变暗(保持纯白)。 */
 
 /* 搜索历史/建议下拉 */
 .history-dropdown {
@@ -2282,7 +2281,8 @@ body.light-mode .clock-menu-lock svg {
   color: #fff;
 }
 
-/* 全局禁用浏览器自动填充样式 */
+/* 全局禁用浏览器自动填充样式:本页所有输入框(含搜索框,它高 45px,30px 的 spread 足以盖满)都靠这一条。
+   自动填充背景是浏览器写在元素**行内**的 UA 样式,故这些 !important 是必需的,不是可以合并的重复 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {

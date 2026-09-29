@@ -97,17 +97,13 @@
   background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
 }
 
-/* 浅色模式:两侧历史挂钩不同(newtab 用 .sidebar.light 与 body.light-mode,翻译边栏用 body.light)。
-   合并成一组选择器——newtab 上 .sidebar.light 与 body.light-mode 由 script.js 同时切换、彼此等价,
-   翻译边栏既没有 .sidebar 元素也不设 light-mode,故三个选择器合并不改变任何一侧的实际命中结果 */
-.sidebar.light .color-picker-panel,
-body.light-mode .color-picker-panel,
-body.light .color-picker-panel {
+/* 浅色模式:三个扩展页面(新标签页 / 翻译边栏 / 弹窗)统一在 body 上挂 .light-mode
+   (newtab 侧栏内部另有 .sidebar.light,那是给侧栏自己的规则用的作用域,与共享组件无关)——
+   故这里只需要一个选择器,不必再按页面各写一支 */
+body.light-mode .color-picker-panel {
   background: rgba(0, 0, 0, 0.03);
 }
-.sidebar.light .picker-hex-input,
-body.light-mode .picker-hex-input,
-body.light .picker-hex-input {
+body.light-mode .picker-hex-input {
   color: #333;
   border-color: rgba(0, 0, 0, 0.15);
   background: rgba(0, 0, 0, 0.04);

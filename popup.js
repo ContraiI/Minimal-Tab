@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const isDark = mode === 'system'
     ? DomUtils.getSystemDark()
     : mode === 'dark';
-  document.body.classList.toggle('light', !isDark);
+  // 浅色模式统一挂 .light-mode(三个扩展页面同一套挂钩,共享组件才不用按页面各写一支选择器)
+  document.body.classList.toggle('light-mode', !isDark);
 
   // 点击后打开翻译侧边栏并关闭弹窗
   const btn = document.getElementById('openPanelBtn');

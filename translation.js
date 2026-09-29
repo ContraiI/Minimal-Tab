@@ -22,7 +22,7 @@
   function applyThemeMode() {
     var mode = localStorage.getItem('themeMode') || 'system';
     var isDark = mode === 'system' ? getSystemDark() : mode === 'dark';
-    document.body.classList.toggle('light', !isDark);
+    document.body.classList.toggle('light-mode', !isDark);
   }
 
   applyAccent(localStorage.getItem('accentColor'));
