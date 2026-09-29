@@ -153,27 +153,32 @@ function load(sandbox, file, { asClassicScript } = {}) {
   vm.runInContext(code, sandbox, { filename: file });
 }
 
-console.log('1. 背景脚本(经典 SW:importScripts 两个共享模块 + background.js)');
+console.log('1. 背景脚本(经典 SW:importScripts 三个共享模块 + background.js)');
 {
   const s = makeSandbox(true);
   s.importScripts = function () { for (const f of arguments) load(s, f, { asClassicScript: true }); };
   load(s, 'background.js');
   ok(typeof s.TranslateEngine === 'object', 'TranslateEngine 已挂到全局');
   ok(typeof s.TranslationCache === 'object', 'TranslationCache 已挂到全局');
+  ok(typeof s.MtDebug === 'object' && typeof s.MtDebug.warn === 'function', 'MtDebug 已挂到全局(background.js 顶部 importScripts 引入)');
   ok(typeof s.TranslationCache.keyOf === 'function' && typeof s.TranslationCache.check === 'function', '缓存的取键/查询接口存在');
   ok(typeof s.TranslateEngine.translateText === 'function', '引擎的 translateText 存在');
   ok(reg.bgMessage === 1, '注册了 1 个 runtime.onMessage 监听(' + reg.bgMessage + ')');
-  ok(reg.storageChanged === 1, '注册了 storage.onChanged 监听(' + reg.storageChanged + ')');
+  // 2 = background.js 自己那份 + 调试开关模块(mt-debug.js)监听开关变化的那份
+  ok(reg.storageChanged === 2, '注册了 2 个 storage.onChanged 监听(后台自己 + 调试开关),实际 ' + reg.storageChanged);
 }
 
-console.log('2. 内容脚本(dom-utils.js → page-trans-spec.js → content/page-translate.js)');
+console.log('2. 内容脚本(dom-utils.js → page-trans-spec.js → mt-debug.js → content/page-translate.js)');
 {
   const s = makeSandbox(false);
   load(s, 'dom-utils.js', { asClassicScript: true });
   load(s, 'page-trans-spec.js', { asClassicScript: true });
+  load(s, 'mt-debug.js', { asClassicScript: true });
   load(s, 'content/page-translate.js');
   ok(typeof s.DomUtils === 'object' && typeof s.DomUtils.setStyleVar === 'function', 'DomUtils 已挂到全局(内容脚本依赖它)');
   ok(typeof s.PageTransSpec === 'object' && Array.isArray(s.PageTransSpec.KEYS), 'PageTransSpec 已挂到全局(整页翻译设置的单一来源)');
+  ok(typeof s.MtDebug === 'object' && typeof s.MtDebug.warn === 'function', 'MtDebug 已挂到全局(默认关闭的调试开关)');
+  ok(s.MtDebug.isEnabled() === false, 'MtDebug 默认关闭(不加日志、零行为)');
   // 内容脚本把 init 排在定时器里,跑一遍排队的定时器
   let n = 0;
   while (timers.length && n++ < 30) timers.shift()();
@@ -279,8 +284,8 @@ console.log('2. 内容脚本(dom-utils.js → page-trans-spec.js → content/pag
 console.log('3. 扩展页面(translation.html 的经典 <script> 顺序)');
 {
   const s = makeSandbox(false);
-  // translation.html 的顺序:lang.js → translate-engine.js → color-utils.js → color-picker.js → dom-utils.js → page-trans-spec.js → translation.js
-  for (const f of ['lang.js', 'translate-engine.js', 'color-utils.js', 'color-picker.js', 'dom-utils.js', 'page-trans-spec.js']) {
+  // translation.html 的顺序:lang.js → translate-engine.js → color-utils.js → color-picker.js → dom-utils.js → page-trans-spec.js → mt-debug.js → translation.js
+  for (const f of ['lang.js', 'translate-engine.js', 'color-utils.js', 'color-picker.js', 'dom-utils.js', 'page-trans-spec.js', 'mt-debug.js']) {
     load(s, f, { asClassicScript: true });
   }
   ok(typeof s.TranslateEngine === 'object', 'translate-engine.js 以经典脚本方式仍挂全局(不是 ESM)');

@@ -13,6 +13,7 @@
   // 整页翻译设置:键名与默认值的唯一来源是 page-trans-spec.js(与侧栏共用同一份文件),
   // 这里不再另抄一份默认值与键清单 —— 新增设置项只需改那一处
   var PT = window.PageTransSpec;
+  var DBG = window.MtDebug;   // 默认关闭的调试开关(见 mt-debug.js):关着时所有调用立即返回
 
   // 运行时状态与常量配置
   var state = {
@@ -65,11 +66,11 @@
 
   // 封装 chrome.storage 读写,避免上下文失效时报错
   function setStore(obj) {
-    try { if (alive()) chrome.storage.local.set(obj); } catch (e) {}
+    try { if (alive()) chrome.storage.local.set(obj); } catch (e) { DBG.warn('写 storage 失败(这项配置不会生效)', e); }
   }
 
   function getStore(keys, cb) {
-    try { if (alive()) chrome.storage.local.get(keys, cb); } catch (e) {}
+    try { if (alive()) chrome.storage.local.get(keys, cb); } catch (e) { DBG.warn('读 storage 失败(沿用当前状态)', e); }
   }
 
 
@@ -295,8 +296,10 @@
       // 属性任务没有加载图标,其空译文判空照旧(与 cached 标记无关)
       if (job.type !== 'text' || resp.text) applyResult(job, resp.text);
       else markSkipped(job); // 空译文:不算失败,仅标记已处理避免反复重扫提交
-    }).catch(function () {
+    }).catch(function (err) {
+      // 失败不重试(避免死循环),但要在 debug 模式下看得见:否则表现是"整页静默缺译"
       if (state.enabled && version === targetVersion) markFailed(job);
+      DBG.warn('翻译失败,该节点已标记不再重试', job.type, err);
     }).finally(function () {
       if (job.type === 'text') {
         if (inFlight.get(job.node) === job) inFlight.delete(job.node);
@@ -619,10 +622,13 @@
     try {
       chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_RESET_CACHE' }, function (resp) {
         // 扩展上下文刚失效时 sendMessage 会以 runtime.lastError 结束,此时不做任何界面动作
-        if (chrome.runtime.lastError) return;
+        if (chrome.runtime.lastError) {
+          DBG.warn('清缓存消息未送达(扩展可能刚被重载)', chrome.runtime.lastError);
+          return;
+        }
         done(resp);
       });
-    } catch (e) {}
+    } catch (e) { DBG.warn('清缓存消息发送失败', e); }
   }
 
   // 展开球下方那个圆形图标按钮:独立元素,位置在这里按球的矩形算一次
@@ -759,7 +765,7 @@
       // 仅未发生拖动时视为点击切换;拖动结束不触发开关
       if (ballDragged) return;
       // 由后台按本标签页定位切换(per-tab,不影响其他标签页)
-      try { chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE' }); } catch (e) {}
+      try { chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE' }); } catch (e) { DBG.warn('切换翻译开关失败(扩展上下文可能已失效)', e); }
     });
 
     ballEl.addEventListener('pointerdown', function (e) {
@@ -980,7 +986,12 @@
         enabledReady = true;
         maybeStart();
       });
-    } catch (e) { enabledReady = true; }
+    } catch (e) {
+      // 查询失败只能按"翻译关闭"处理(否则整页不会启动),但要在 debug 模式下看得见,
+      // 否则用户会以为自己没开过翻译、而不是后台查询失败
+      DBG.warn('查询本页翻译开关失败,按关闭处理', e);
+      enabledReady = true;
+    }
 
     if (alive()) {
       chrome.storage.onChanged.addListener(function (changes, area) {

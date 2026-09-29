@@ -755,7 +755,7 @@
       pageTransState.ball = pageBallToggle.checked;
       // 关闭悬浮球＝放弃自定义位置:一并删掉拖拽保存的坐标,下次开启回到 CSS 默认位置(右上角)。
       // 不删的话「关掉再开启」会被记忆回旧位置,与「关闭即恢复默认」的语义不符
-      if (!pageTransState.ball) chrome.storage.local.remove('pageTrans.ballPos');
+      if (!pageTransState.ball) chrome.storage.local.remove(PageTransSpec.BALL_POS_KEY);
       savePageTrans();
     });
 
@@ -771,10 +771,13 @@
             var tabId = tabs && tabs[0] ? tabs[0].id : null;
             chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_RESET_CACHE', tabId: tabId }, function () {
               // 只关心副作用;扩展刚重载过时读一下 lastError 避免控制台报未处理错误
-              if (chrome.runtime.lastError) return;
+              if (chrome.runtime.lastError) {
+                MtDebug.warn('清除缓存消息未送达(扩展可能刚被重载)', chrome.runtime.lastError);
+                return;
+              }
             });
           });
-        } catch (e) {}
+        } catch (e) { MtDebug.warn('清除缓存消息发送失败(点了不会有任何反应)', e); }
       });
     }
 

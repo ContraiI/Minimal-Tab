@@ -116,6 +116,7 @@ window.I18N_DATA = {
 
     toastSwitchSuccess: '切换成功',
     toastWallpaperInUse: '该壁纸正在使用',
+    toastWallpaperFetchFailed: '获取壁纸失败，请检查网络后重试',
     toastRotateUpdated: '轮换列表已更新',
     toastImportWallpaper: '导入成功',
     toastStorageFull: '存储空间不足',
@@ -375,6 +376,7 @@ window.I18N_DATA = {
 
     toastSwitchSuccess: 'Switched successfully',
     toastWallpaperInUse: 'This wallpaper is currently in use',
+    toastWallpaperFetchFailed: 'Failed to fetch wallpapers. Check your connection',
     toastRotateUpdated: 'Rotation list updated',
     toastImportWallpaper: 'Import successful',
     toastStorageFull: 'Insufficient storage space',

@@ -473,13 +473,58 @@ function applyEngineMask(url) {
   engineIconWhite.style.webkitMaskImage = 'url(' + url + ')';
 }
 
+// 引擎显示/隐藏:把禁用项打上 .engine-hidden(由 style.css 的 .engine-item.engine-hidden
+// 用 display:none 收起来),并保证始终有一个可见且选中的引擎。
+//
+// ⚠️ 这里刻意**不搬 DOM 节点**:旧实现把禁用项搬进一个现造的隐藏容器 #engineArchive,
+// 于是"节点在哪个父节点下"就成了状态本身 —— 顺序要靠 data-index 反复重排,而且
+// engineListEl 作用域的查询会自动看不见禁用项、document 作用域的查询又看得见,
+// 两套语义必须各自记牢,漏一处就静默出错。现在状态就是类名:可见性归 CSS,顺序归 DOM 顺序
+// (静态四个在前、自定义引擎按创建顺序追加在后;data-index 那套顺序号已随之删除)。
+// 唯一需要记住的规矩:**engineListEl 作用域的查询一律带 `:not(.engine-hidden)`**。
+function applyEngineVisibility() {
+  if (!engineListEl) return;
+  const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
+
+  // 状态 → 类名
+  Array.from(document.querySelectorAll('.engine-item')).forEach((item) => {
+    item.classList.toggle('engine-hidden', disabled.has(item.getAttribute('data-engine') || ''));
+  });
+
+  // 选中的引擎被禁用(或根本没有可见的选中项)时,回退到默认引擎,再回退到第一个可见项
+  const active = engineListEl.querySelector('.engine-item.active:not(.engine-hidden)');
+  if (!active) {
+    var defEngine = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
+    var fallback = engineListEl.querySelector('.engine-item[data-engine="' + defEngine + '"]:not(.engine-hidden)')
+      || engineListEl.querySelector('.engine-item:not(.engine-hidden)');
+    if (fallback) {
+      document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
+      fallback.classList.add('active');
+      currentEngine = fallback.getAttribute('data-engine');
+      currentEngineIcon = fallback.getAttribute('data-default');
+      currentEngineIconMask = iconMaskOf(fallback);
+      if (engineIconWhite) applyEngineMask(currentEngineIconMask);
+      if (engineIconDefault) engineIconDefault.src = fallback.getAttribute('data-default') || engineIconDefault.src;
+    }
+  }
+
+  // 侧栏开着的时候,两个引擎列表要跟着刷新(它们由后定义的作用域提供,故按存在性调用)
+  const sidebarEl = document.getElementById('sidebar');
+  if (sidebarEl && sidebarEl.classList.contains('open')) {
+    if (typeof syncEngineManager === 'function') syncEngineManager();
+    if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();
+  }
+}
+
 // 从 DOM/存储恢复当前选中引擎
+// 注意:本函数在 applyEngineVisibility() 之前跑(那时还没有 .engine-hidden),这里带过滤只是贯彻
+// "engineListEl 作用域的查询一律看不见隐藏项"这条规矩,免得将来有人把这个调用挪到后面
 function initEngineFromDOM() {
   const saved = localStorage.getItem(LS_DEFAULT_ENGINE);
   if (saved) {
-    const el = engineListEl.querySelector(`.engine-item[data-engine="${saved}"]`);
+    const el = engineListEl.querySelector(`.engine-item[data-engine="${saved}"]:not(.engine-hidden)`);
     if (el) {
-      engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
+      engineListEl.querySelectorAll('.engine-item:not(.engine-hidden)').forEach(i => i.classList.remove('active'));
       el.classList.add('active');
       currentEngine = saved;
       currentEngineIcon = el.dataset.default;
@@ -487,7 +532,7 @@ function initEngineFromDOM() {
       return;
     }
   }
-  const active = engineListEl.querySelector('.engine-item.active');
+  const active = engineListEl.querySelector('.engine-item.active:not(.engine-hidden)');
   if (active) {
     currentEngine = active.dataset.engine;
     currentEngineIcon = active.dataset.default;
@@ -512,7 +557,7 @@ function updateEngineIcon() {
   }
   const focused = document.activeElement === searchInput || searchInput.matches(':focus');
   engineIconWrap.classList.toggle('focused', focused);
-  engineListEl.querySelectorAll('.engine-item').forEach(item => {
+  engineListEl.querySelectorAll('.engine-item:not(.engine-hidden)').forEach(item => {
     const icon = item.querySelector('.engine-icon');
     if (!icon) return;
     const target = item.dataset.mask || item.dataset.default;
@@ -667,7 +712,7 @@ if (engineSelectorEl && engineListEl) {
     const item = e.target.closest('.engine-item');
     if (!item) return;
     e.stopPropagation();
-    engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
+    engineListEl.querySelectorAll('.engine-item:not(.engine-hidden)').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
     currentEngine = item.dataset.engine;
     currentEngineIcon = item.dataset.default;
@@ -942,6 +987,7 @@ if (engineSelectorEl && engineListEl) {
       if (rl2) rl2.querySelectorAll('.rotate-option').forEach(function(o) { o.classList.toggle('active', o.getAttribute('data-value') === br); });
       fetchBingWallpapers(function(list) {
         if (!list || !list.length) {
+          MtDebug.warn('恢复 Bing 壁纸失败(拉取为空或失败),本次回退为无壁纸');   // 只记录,回退行为不变
           applyNoneWallpaper();
           return;
         }
@@ -1627,10 +1673,29 @@ if (engineSelectorEl && engineListEl) {
     }
   }
 
+  // 预设色板:主题色 / 时钟色 / 搜索色三行共用这一份 —— 新增一个预设色只改这里,
+  // 不要再去 newtab.html 里抄三遍(原先那三行各写 9 个色块、每个色值还写两遍)
+  const COLOR_PRESETS = ['#2563eb', '#24a0ed', '#16a34a', '#7c3aed', '#ea580c', '#eab308', '#db2777', '#dc2626', '#374151'];
+
+  // 把预设色块渲染进某一行。插在**行首**而不是行末:时钟/搜索那两行末尾还有「联动」按钮,
+  // 取色器的触发色块由 color-picker.js 稍后插到联动按钮之前,故插行首才能保持原有顺序
+  function renderPresetSwatches(row, presets) {
+    if (!row) return;
+    const first = row.firstChild;
+    presets.forEach((hex) => {
+      const s = document.createElement('span');
+      s.className = 'theme-color-swatch';
+      s.dataset.color = hex;
+      s.style.background = hex;
+      row.insertBefore(s, first);
+    });
+  }
+
   const savedAccent = localStorage.getItem(LS_ACCENT) || '#2563eb';
   applyAccent(savedAccent);
 
   const themeColorRow = document.getElementById('themeColorRow');
+  renderPresetSwatches(themeColorRow, COLOR_PRESETS);
 
   // 高亮当前主题色对应的预设色块
   function highlightSwatch(hex) {
@@ -1653,6 +1718,7 @@ if (engineSelectorEl && engineListEl) {
   });
 
   const clockColorRow = document.getElementById('clockColorRow');
+  renderPresetSwatches(clockColorRow, COLOR_PRESETS);
   const savedClockColor = localStorage.getItem(LS_CLOCK_COLOR) || '#ffffff';
   applyClockColor(savedClockColor);
 
@@ -1673,30 +1739,12 @@ if (engineSelectorEl && engineListEl) {
         applyClockColor(hex);
         highlightClockSwatch(hex);
         if (clockPicker && clockPicker.isOpen()) clockPicker.setFromHex(hex);
-  // 预设色板:主题色 / 时钟色 / 搜索色三行共用这一份 —— 新增一个预设色只改这里,
-  // 不要再去 newtab.html 里抄三遍(原先那三行各写 9 个色块、每个色值还写两遍)
-  const COLOR_PRESETS = ['#2563eb', '#24a0ed', '#16a34a', '#7c3aed', '#ea580c', '#eab308', '#db2777', '#dc2626', '#374151'];
-
-  // 把预设色块渲染进某一行。插在**行首**而不是行末:时钟/搜索那两行末尾还有「联动」按钮,
-  // 取色器的触发色块由 color-picker.js 稍后插到联动按钮之前,故插行首才能保持原有顺序
-  function renderPresetSwatches(row, presets) {
-    if (!row) return;
-    const first = row.firstChild;
-    presets.forEach((hex) => {
-      const s = document.createElement('span');
-      s.className = 'theme-color-swatch';
-      s.dataset.color = hex;
-      s.style.background = hex;
-      row.insertBefore(s, first);
-    });
-  }
-
       });
     });
   }
 
-  renderPresetSwatches(themeColorRow, COLOR_PRESETS);
   const searchColorRow = document.getElementById('searchColorRow');
+  renderPresetSwatches(searchColorRow, COLOR_PRESETS);
   const savedSearchColor = localStorage.getItem(LS_SEARCH_COLOR) || '#ffffff';
   applySearchColor(savedSearchColor);
 
@@ -1718,7 +1766,6 @@ if (engineSelectorEl && engineListEl) {
         highlightSearchSwatch(hex);
         if (searchPicker && searchPicker.isOpen()) searchPicker.setFromHex(hex);
       });
-  renderPresetSwatches(clockColorRow, COLOR_PRESETS);
     });
   }
 
@@ -1744,7 +1791,6 @@ if (engineSelectorEl && engineListEl) {
     anchor: themeColorRow,
     // 返回具体色值而不是 ''(本页没有"跟随默认"的语义):取消时要回滚到这个色,highlightSwatch 也要照常高亮对应色块
     getColor: function () { return localStorage.getItem(LS_ACCENT) || '#2563eb'; },
-  renderPresetSwatches(searchColorRow, COLOR_PRESETS);
     defaultColor: '#2563eb',
     preview: previewAccent,
     setColor: applyAccent,
@@ -2211,12 +2257,19 @@ if (engineSelectorEl && engineListEl) {
         midnight.setHours(24, 0, 0, 0);
         bingMidnightTimer = setTimeout(function() {
           fetchBingWallpapers(function(list) {
-            if (!list || !list.length) return;
+            // 用户在这期间切走了壁纸来源:不再排下一次(这是主动放弃,不是失败)
             if (localStorage.getItem(LS_WALLPAPER_SOURCE) !== 'bing') return;
-            applyBingWallpaper(list[0].url);
-            localStorage.setItem(LS_BING_URL, list[0].url);
-            renderBingList(list, list[0].url);
-            bingRotateIdx = 0;
+            if (list && list.length) {
+              applyBingWallpaper(list[0].url);
+              localStorage.setItem(LS_BING_URL, list[0].url);
+              renderBingList(list, list[0].url);
+              bingRotateIdx = 0;
+            } else {
+              // 拉取失败(网络/接口)或没有可用图:**照旧排下一次**。
+              // 原实现在这里直接 return,链条就断了 —— Bing 抖动一次,这一页从此再也不会自动换图,
+              // 且没有任何提示(必须刷新页面才恢复)
+              MtDebug.warn('Bing 零点换图失败,已排下一次零点重试');
+            }
             scheduleMidnight();
           });
         }, midnight.getTime() - now.getTime());
@@ -2749,7 +2802,7 @@ if (engineSelectorEl && engineListEl) {
     }
     injectCustomEngines();
     populateEngineManager();
-    if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
+    applyEngineVisibility();
     showToast(t('toastDeleteSuccess'));
   });
 
@@ -2792,7 +2845,7 @@ if (engineSelectorEl && engineListEl) {
     saveCustomEngines(list);
     injectCustomEngines();
     populateEngineManager();
-    if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
+    applyEngineVisibility();
     // 改的是当前正在用的引擎时,立即刷新搜索框图标,不必等刷新页面
     if (ceEditingId && ceEditingId === currentEngine) {
       const cur = document.querySelector('.engine-item[data-engine="' + ceEditingId + '"]');
@@ -2946,6 +2999,7 @@ if (engineSelectorEl && engineListEl) {
   }
 
   // 渲染引擎管理列表(启用开关 + 自定义引擎编辑按钮)
+  // 顺序即 DOM 顺序(静态引擎在前、自定义按创建顺序在后),不再需要 data-index 排序
   function populateEngineManager() {
     const items = Array.from(document.querySelectorAll('.engine-item'));
     const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
@@ -2972,7 +3026,7 @@ if (engineSelectorEl && engineListEl) {
         const cur = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
         if (!cb.checked) cur.add(key); else cur.delete(key);
         localStorage.setItem(LS_DISABLED, JSON.stringify(Array.from(cur)));
-        if (typeof applyEngineVisibility === 'function') applyEngineVisibility();
+        applyEngineVisibility();
       });
       const toggleSwitch = document.createElement('span');
       toggleSwitch.className = 'toggle-switch';
@@ -2998,7 +3052,6 @@ if (engineSelectorEl && engineListEl) {
         row.appendChild(cb);
         row.appendChild(toggleSwitch);
       }
-  // 顺序即 DOM 顺序(静态引擎在前、自定义按创建顺序在后),不再需要 data-index 排序
       engineManager.appendChild(row);
     });
     const addBtn = document.createElement('button');
@@ -3058,7 +3111,14 @@ if (engineSelectorEl && engineListEl) {
     },
     bing: function() {
       fetchBingWallpapers(function(list) {
-        if (!list || list.length < 2) {
+        // null = 拉取失败(网络/接口),与"拉到了但只有一张"是两回事:
+        // 原实现把两者都报成"需要至少两张壁纸",把网络故障说成了配置不足
+        if (!list) {
+          MtDebug.warn('Bing 壁纸拉取失败(右键切换壁纸)');
+          showToast(t('toastWallpaperFetchFailed'), 2000);
+          return;
+        }
+        if (list.length < 2) {
           showToast(t('toastNeedTwoWallpapers'), 2000);
           return;
         }
@@ -3122,79 +3182,8 @@ if (engineSelectorEl && engineListEl) {
   });
 })();
 
-// 引擎显示隐藏:禁用项移入隐藏归档,并保证始终有选中引擎
-(function(){
-  const el = document.getElementById('engineList');
-  if (!el) return;
-  let archive = document.getElementById('engineArchive');
-  if (!archive) {
-    archive = document.createElement('div');
-    archive.id = 'engineArchive';
-    archive.style.display = 'none';
-    document.body.appendChild(archive);
-  }
-
-  Array.from(document.querySelectorAll('.engine-item')).forEach((item, idx) => {
-    if (!item.hasAttribute('data-index')) item.setAttribute('data-index', idx);
-  });
-
-  // 按启用状态整理引擎列表,禁用时回退到默认引擎
-  function applyEngineVisibility() {
-    const disabled = new Set(JSON.parse(localStorage.getItem(LS_DISABLED) || '[]'));
-
-    Array.from(document.querySelectorAll('.engine-item')).forEach(item => {
-      const key = item.getAttribute('data-engine') || '';
-      const inList = !!item.closest('#engineList');
-      if (disabled.has(key)) {
-        if (inList) archive.appendChild(item);
-      } else if (!inList) {
-        const column = el.querySelector('.engine-column');
-        if (!column) { el.appendChild(item); return; }
-        const idx = Number(item.getAttribute('data-index') || 9999);
-        const siblings = Array.from(column.querySelectorAll('.engine-item'));
-        let inserted = false;
-        for (const sib of siblings) {
-          if (Number(sib.getAttribute('data-index') || 9999) > idx) {
-            column.insertBefore(item, sib); inserted = true; break;
-          }
-        }
-        if (!inserted) column.appendChild(item);
-      }
-    });
-
-    const column = el.querySelector('.engine-column');
-    if (column) {
-      Array.from(column.querySelectorAll('.engine-item'))
-        .sort((a, b) => (Number(a.getAttribute('data-index') || 9999) - Number(b.getAttribute('data-index') || 9999)))
-        .forEach(item => column.appendChild(item));
-    }
-
-    const active = el.querySelector('.engine-item.active');
-    if (!active || disabled.has(active.getAttribute('data-engine'))) {
-      var defEngine = localStorage.getItem(LS_DEFAULT_ENGINE) || 'bing';
-      var fallback = el.querySelector('.engine-item[data-engine="' + defEngine + '"]') || el.querySelector('.engine-item');
-      if (fallback) {
-        document.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
-        fallback.classList.add('active');
-        currentEngine = fallback.getAttribute('data-engine');
-        currentEngineIcon = fallback.getAttribute('data-default');
-        currentEngineIconMask = iconMaskOf(fallback);
-        const wIcon = document.getElementById('currentEngineIconWhite');
-        const dIcon = document.getElementById('currentEngineIconDefault');
-        if (wIcon) { var wUrl = currentEngineIconMask; if (wUrl) { wIcon.style.maskImage = 'url(' + wUrl + ')'; wIcon.style.webkitMaskImage = 'url(' + wUrl + ')'; } }
-        if (dIcon) dIcon.src = fallback.getAttribute('data-default') || dIcon.src;
-      }
-    }
-
-    const sidebarEl = document.getElementById('sidebar');
-    if (sidebarEl && sidebarEl.classList.contains('open')) {
-      if (typeof syncEngineManager === 'function') syncEngineManager();
-      if (typeof syncDefaultEngineManager === 'function') syncDefaultEngineManager();
-    }
-  }
-  applyEngineVisibility();
-  window.applyEngineVisibility = applyEngineVisibility;
-})();
+// 引擎显示/隐藏:等自定义引擎注入完、顺序号补齐后再应用一次(实现见文件上方的 applyEngineVisibility)
+applyEngineVisibility();
 
 // 清空搜索历史按钮
 document.getElementById('clear-history-btn').addEventListener('click', () => {
@@ -3250,9 +3239,9 @@ if (defaultEngineManager) defaultEngineManager.addEventListener('change', (e) =>
   const radio = e.target;
   if (!radio || radio.name !== 'defaultEngine') return;
   localStorage.setItem(LS_DEFAULT_ENGINE, radio.value);
-  const item = engineListEl.querySelector(`.engine-item[data-engine="${radio.value}"]`);
+  const item = engineListEl.querySelector(`.engine-item[data-engine="${radio.value}"]:not(.engine-hidden)`);
   if (item) {
-    engineListEl.querySelectorAll('.engine-item').forEach(i => i.classList.remove('active'));
+    engineListEl.querySelectorAll('.engine-item:not(.engine-hidden)').forEach(i => i.classList.remove('active'));
     item.classList.add('active');
     currentEngine = radio.value;
     currentEngineIcon = item.dataset.default;

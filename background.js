@@ -5,6 +5,7 @@
 // "Uncaught SyntaxError: Unexpected token 'export'" 且整份引擎失效(v1.4.5 踩过此坑)。
 importScripts('translate-engine.js');
 importScripts('translation-cache.js');
+importScripts('mt-debug.js');
 
 
 // 从 chrome.storage 读取当前翻译引擎及其配置字段
@@ -95,7 +96,8 @@ function toggleTabEnabled(tabId) {
       var enabled = !(tabs[tabId] && tabs[tabId].enabled);
       tabs[tabId] = { enabled: enabled };
       writeTabs(tabs);
-      try { chrome.tabs.sendMessage(tabId, { type: 'PAGE_TRANSLATE_STATE', enabled: enabled }); } catch (e) {}
+      try { chrome.tabs.sendMessage(tabId, { type: 'PAGE_TRANSLATE_STATE', enabled: enabled }); }
+      catch (e) { MtDebug.warn('向标签页广播翻译开关失败(该页悬浮球状态会停在旧值)', tabId, e); }
       resolve(enabled);
     });
   });
@@ -114,7 +116,8 @@ function resetAllTabs() {
     var ids = Object.keys(tabs).filter(function (id) { return tabs[id] && tabs[id].enabled; });
     writeTabs({});
     ids.forEach(function (id) {
-      try { chrome.tabs.sendMessage(parseInt(id, 10), { type: 'PAGE_TRANSLATE_STATE', enabled: false }); } catch (e) {}
+      try { chrome.tabs.sendMessage(parseInt(id, 10), { type: 'PAGE_TRANSLATE_STATE', enabled: false }); }
+      catch (e) { MtDebug.warn('关闭标签页翻译的广播失败', id, e); }
     });
   });
 }
@@ -214,7 +217,8 @@ chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
   if (msg && msg.type === 'PAGE_TRANSLATE_RESET_CACHE') {
     var cleared = clearTranslationCache();
     if (msg.tabId != null) {
-      try { chrome.tabs.sendMessage(msg.tabId, { type: 'PAGE_TRANSLATE_RESCAN', cleared: cleared }); } catch (e) {}
+      try { chrome.tabs.sendMessage(msg.tabId, { type: 'PAGE_TRANSLATE_RESCAN', cleared: cleared }); }
+      catch (e) { MtDebug.warn('把清缓存结果回报给标签页失败(该页不会弹提示/不会重译)', msg.tabId, e); }
     }
     sendResponse({ ok: true, cleared: cleared });
     return false;   // 同步应答,不需要保持消息通道

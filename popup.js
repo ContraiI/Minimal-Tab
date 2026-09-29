@@ -40,7 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const resp = await chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_QUERY', tabId });
       return !!(resp && resp.enabled);
-    } catch (err) { return false; }
+    } catch (err) {
+      MtDebug.warn('查询整页翻译状态失败,按未开启显示', err);
+      return false;
+    }
   }
   let stateSeq = 0;
   async function refreshPageBtn() {
@@ -50,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const enabled = await queryState(tabId);
       if (id === stateSeq) renderPageBtn(enabled);
     } catch (err) {
+      MtDebug.warn('刷新整页翻译按钮失败,按未开启显示', err);
       if (id === stateSeq) renderPageBtn(false);
     }
   }
@@ -61,7 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (tabId == null) return;
       const resp = await chrome.runtime.sendMessage({ type: 'PAGE_TRANSLATE_TOGGLE', tabId });
       if (id === stateSeq) renderPageBtn(!!(resp && resp.enabled));
-    } catch (err) {}
+    } catch (err) {
+      MtDebug.warn('切换整页翻译失败(按钮不会有反应)', err);
+    }
   });
 
   // 其它标签页切换插件语言时,实时刷新弹窗文案

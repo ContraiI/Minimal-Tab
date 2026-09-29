@@ -257,6 +257,14 @@ body::before {
   background-color: rgba(var(--accent-rgb), 0.5);
 }
 
+/* 被禁用的引擎:留在 DOM 里、只靠这个类收起来(状态是类名,不是"节点被搬到别处")。
+   之所以不收进一个隐藏容器,是因为那样一来 engineListEl 作用域的查询会自动"看不见"它,
+   而 document 作用域的查询又看得见 —— 两套语义容易漏改。现在的规矩是一条:
+   **engineListEl 作用域的查询一律带 :not(.engine-hidden)** */
+.engine-item.engine-hidden {
+  display: none;
+}
+
 .engine-item span {
   font-size: 14px;
   color: #ffffff;
