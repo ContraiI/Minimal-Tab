@@ -357,7 +357,7 @@ body::before {
   left: 0;
   right: 0;
   background: transparent;
-  border-radius: 0 0 25px 25px;
+  border-radius: 0 0 var(--search-radius, 25px) var(--search-radius, 25px);
   border: 2px solid;
   border-color: var(--search-color, #ffffff);
   border-top: none;
